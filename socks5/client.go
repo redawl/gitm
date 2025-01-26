@@ -2,6 +2,9 @@ package socks5
 
 import (
 	"fmt"
+	"log/slog"
+	"net"
+	"regexp"
 )
 
 type ClientGreeting struct {
@@ -11,11 +14,12 @@ type ClientGreeting struct {
 }
 
 type ClientConnRequest struct {
-    Ver     byte
-    Cmd     byte
-    Rsv     byte
-    DstIp   string
-    DstPort uint16
+    Ver       byte
+    Cmd       byte
+    Rsv       byte
+    DstIpType byte
+    DstIp     string
+    DstPort   uint16
 }
 
 func ParseClientGreeting (message []byte) (*ClientGreeting) {
@@ -34,13 +38,26 @@ func ParseClientGreeting (message []byte) (*ClientGreeting) {
 }
 
 func ParseClientConnRequest (message []byte) (*ClientConnRequest) {
+    ipStr := ""
+    dstPort := uint16(0)
+    if message[3] == 0x01 {
+        ipStr = fmt.Sprintf("%d.%d.%d.%d", message[4], message[5], message[6], message[7])
+        dstPort = uint16(message[8]) + uint16(message[9])
+    } else if message[3] == 0x03 {
+        domain := string(message[5:5+int(message[4])])
+        ipStrs, _ := net.LookupIP(domain)
+        ipStr = ipStrs[0].String()
+        dstPort = uint16(message[5+int(message[4])]) << 8 + uint16(message[6 + int(message[4])])
+        slog.Info("dstPort", "dstPort", dstPort)
+    }
+
     return &ClientConnRequest{
         Ver: message[0],
         Cmd: message[1],
         Rsv: message[2],
-        // Ignore Type byte, only supporting ipv4 addresses for now
-        DstIp: fmt.Sprintf("%d.%d.%d.%d", message[4], message[5], message[6], message[7]),
-        DstPort: uint16(message[8]) + uint16(message[9]),
+        DstIpType: message[3],
+        DstIp: ipStr,
+        DstPort: dstPort,
     }
 }
 

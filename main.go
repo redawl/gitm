@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"slices"
+	"strings"
 
 	"com.github.redawl.mitmproxy/socks5"
 )
@@ -23,33 +24,25 @@ func ReadLen (connection net.Conn, length int) ([]byte) {
         data := bytes.TrimLeft(data, "\x00")
 
         if len(data) > length {
-            return data[:length]
+            return data
         }
     }
 
     return data[:length]
 }
 
-func connToChan(channel chan []byte, conn net.Conn) {
-
-    buff := make([]byte, 100)
+func serverToClient(conn1 net.Conn, conn2 net.Conn) {
+    buff := make([]byte, 1)
+    out := strings.Builder{}
     for {
-        _, err := conn.Read(buff)
+        _, err := conn1.Read(buff)
         if err != nil {
             slog.Info("Connection terminated", "error", err)
+            slog.Info("Request", "request", out.String())
             return
         }
-        channel <- buff
-        slog.Info("connToChan", "buff", buff, "localip", conn.LocalAddr(), "remoteip", conn.RemoteAddr())
-    }
-}
-
-func chanToConn(channel chan []byte, conn net.Conn) {
-    for {
-        buff := <- channel
-
-        conn.Write(buff)
-        slog.Info("chanToCon", "buff", buff, "localip", conn.LocalAddr(), "remoteip", conn.RemoteAddr())
+        conn2.Write(buff)
+        out.Write(buff)
     }
 }
 
@@ -99,28 +92,18 @@ func main () {
                     }))
                 } else {
                     slog.Info("Connection proxied")
-                    connection.Write(socks5.FormatConnResponse(&socks5.ServerConnResponse{
+                    response:= socks5.FormatConnResponse(&socks5.ServerConnResponse{
                         Ver: 0x05,
                         Status: 0x00,
                         Rsv: 0x00,
                         BndAddr: connectRequest.DstIp,
                         BndPort: connectRequest.DstPort,
-                    }))
+                    })
+                    connection.Write(response)
+                    slog.Info("Message parsed", "parsed", response)
 
-                    clientToServer := make(chan []byte)
-                    serverToClient := make(chan []byte)
-                    
-                    // client -> chan
-                    go connToChan(clientToServer, connection)
-
-                    // chan -> server
-                    go chanToConn(clientToServer, connection)
-
-                    // server -> chan
-                    go connToChan(serverToClient, conn)
-
-                    // chan -> client
-                    go chanToConn(serverToClient, conn)
+                    go serverToClient(conn, connection)
+                    go serverToClient(connection, conn)
                 }
             } else {
                 slog.Info("Cannot handle request")

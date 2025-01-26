@@ -2,7 +2,6 @@ package socks5
 
 import (
 	"fmt"
-	"log/slog"
 )
 
 type ServerChoice struct {
@@ -29,7 +28,7 @@ func FormatConnResponse(response *ServerConnResponse) ([]byte) {
         response.Ver,
         response.Status,
         response.Rsv,
-        i1, i2, i3, i4,
+        0x01, i1, i2, i3, i4, // Again, only supporting ipv4 for now
         byte(response.BndPort >> 8),
         byte(response.BndPort & 0xFF),
     }
