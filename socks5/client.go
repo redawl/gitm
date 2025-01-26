@@ -1,10 +1,9 @@
 package socks5
 
 import (
+	"errors"
 	"fmt"
-	"log/slog"
 	"net"
-	"regexp"
 )
 
 type ClientGreeting struct {
@@ -22,42 +21,81 @@ type ClientConnRequest struct {
     DstPort   uint16
 }
 
-func ParseClientGreeting (message []byte) (*ClientGreeting) {
-    ver := message[0]
-    nauth := message[1]
-    auth := make([]byte, nauth)
-    for i := range(nauth) {
-        auth[i] = message[2+i]
+func ParseClientGreeting (conn net.Conn) (*ClientGreeting, error) {
+    buff, err := read(conn, 2)
+
+    if err != nil {
+        return nil, err
+    }
+    
+    ver := buff[0]
+    nauth := buff[1]
+    auth, err := read(conn, int(nauth))
+
+    if err != nil {
+        return nil, err
     }
 
     return &ClientGreeting{
         Ver: ver,
         Nauth: nauth,
         Auth: auth,
-    }
+    }, nil
 }
 
-func ParseClientConnRequest (message []byte) (*ClientConnRequest) {
-    ipStr := ""
-    dstPort := uint16(0)
-    if message[3] == 0x01 {
-        ipStr = fmt.Sprintf("%d.%d.%d.%d", message[4], message[5], message[6], message[7])
-        dstPort = uint16(message[8]) + uint16(message[9])
-    } else if message[3] == 0x03 {
-        domain := string(message[5:5+int(message[4])])
-        ipStrs, _ := net.LookupIP(domain)
-        ipStr = ipStrs[0].String()
-        dstPort = uint16(message[5+int(message[4])]) << 8 + uint16(message[6 + int(message[4])])
-        slog.Info("dstPort", "dstPort", dstPort)
+func ParseClientConnRequest (conn net.Conn) (*ClientConnRequest, error) {
+    buff, err := read(conn, 4)
+
+    if err != nil {
+        return nil, err
     }
 
-    return &ClientConnRequest{
-        Ver: message[0],
-        Cmd: message[1],
-        Rsv: message[2],
-        DstIpType: message[3],
-        DstIp: ipStr,
-        DstPort: dstPort,
+    ver := buff[0]
+    cmd := buff[1]
+    rsv := buff[2]
+    dstIpType := buff[3]
+    dstIp := ""
+
+    if dstIpType == 0x01 {
+        buff, err = read(conn, 4)
+        if err != nil {
+            return nil, err
+        }
+        dstIp = fmt.Sprintf("%d.%d.%d.%d", buff[0], buff[1], buff[2], buff[3])
+    } else if dstIpType == 0x03 {
+        domainLength, err := read(conn, 1)
+        if err != nil {
+            return nil, err
+        }
+
+        domain, err := read(conn, int(domainLength[0]))
+        if err != nil {
+            return nil, err
+        }
+        lookups, err := net.LookupIP(string(domain))
+        if err != nil {
+            return nil, err
+        }
+        dstIp = lookups[0].String()
+    } else {
+        return nil, errors.New(fmt.Sprintf("Ip type %d is unsupported", dstIpType))
     }
+
+    buff, err = read(conn, 2)
+    
+    if err != nil {
+        return nil, err
+    }
+
+    dstPort := uint16(buff[0]) << 8 + uint16(buff[1])
+
+    return &ClientConnRequest{
+        Ver: ver,
+        Cmd: cmd,
+        Rsv: rsv,
+        DstIpType: dstIpType,
+        DstIp: dstIp,
+        DstPort: dstPort,
+    }, nil
 }
 
