@@ -38,11 +38,21 @@ func main () {
     }
 
     socks5.StartTransparentSocksProxy(args.ListenUri, func(p packet.Packet) {
+        if len(p.Data) == 0 {
+            return 
+        }
+
         if p.Data[0] >= 0x14 && p.Data[0] <= 0x18 {
             records := tls.ParseTLSRecords(p.Data)
             slog.Info("Found tls records", "count", len(records))
             for _, record := range(records) {
-                slog.Info("Packet", "src", p.SrcIp, "dst", p.DstIp, "data", record)
+                attrs := []slog.Attr{
+                    slog.String("src", p.SrcIp),
+                    slog.String("dst", p.DstIp),
+                }
+                attrs = append(attrs, record.LogAttrs()...)
+                logger := slog.New(slog.Default().Handler().WithAttrs(attrs)) 
+                logger.Info("Packet")
             }
         } else {
             slog.Info("Packet", "src", p.SrcIp, "dst", p.DstIp, "data", string(p.Data))

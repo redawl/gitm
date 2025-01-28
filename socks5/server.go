@@ -117,7 +117,7 @@ func transparentProxy (client net.Conn, server net.Conn, packetHandler func(pack
 
 func connToConn(conn1 net.Conn, conn2 net.Conn, outChan chan []byte) {
     buff := make([]byte, 8192)
-    var out []byte
+    out := make([]byte, 0)
     for {
         count, err := conn1.Read(buff)
         if err != nil && count == 0 {
