@@ -1,133 +1,56 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log/slog"
-	"net"
-	"slices"
-	"strings"
-	"time"
+	"os"
 
+	"com.github.redawl.mitmproxy/packet"
 	"com.github.redawl.mitmproxy/socks5"
+	"com.github.redawl.mitmproxy/tls"
 )
 
-func serverToClient(conn1 net.Conn, conn2 net.Conn, outChan chan string) {
-    conn1.SetDeadline(time.Now().Add(time.Second))
-    conn2.SetDeadline(time.Now().Add(time.Second))
-    buff := make([]byte, 1)
-    out := strings.Builder{}
-    for {
-        count, err := conn1.Read(buff)
-        if err != nil {
-            slog.Debug("Connection terminated", "error", err)
-            outChan <- out.String()
-            return
-        } else if count == 0 {
-            slog.Debug("Read zero count")
-            outChan <- out.String()
-            return
-        }
-        count, err = conn2.Write(buff)
-
-        if err != nil {
-            slog.Debug("Connection terminated", "error", err)
-            outChan <- out.String()
-            return
-        } else if count == 0 {
-            slog.Debug("Read zero count")
-            outChan <- out.String()
-            return
-        }
-
-        out.Write(buff)
-    }
+type Args struct {
+    ListenUri string
 }
 
 func main () {
-    slog.Info("Starting proxy on :8080")
+    args := &Args{}
 
-    ln, err := net.Listen("tcp", ":8080")
-                    
+    flag.StringVar(&args.ListenUri, "l", "0.0.0.0:8080", "ip:port to bind to")
 
-    outChan := make(chan string)
+    flag.Parse()
 
-    go func() {
-        for {
-            packet := <- outChan
-            slog.Info("Packet", "packet", packet)
-        }
-    }()
-    
+    logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+        Level: slog.LevelDebug,
+    }))
+
+    slog.SetDefault(logger)
+
+    slog.Info(fmt.Sprintf("Starting proxy on %s", args.ListenUri))
+
+    outFile, err := os.OpenFile(fmt.Sprintf("%s/mitmproxy.log", os.TempDir()), os.O_RDWR | os.O_CREATE, 0666)
+
     if err != nil {
-        // handle error
+        slog.Error("Failed to open logfile", "error", err)
+        return
     }
-    for {
-        conn, err := ln.Accept()
-        if err != nil {
-            // handle error
+
+    socks5.StartTransparentSocksProxy(args.ListenUri, func(p packet.Packet) {
+        if p.Data[0] >= 0x14 && p.Data[0] <= 0x18 {
+            records := tls.ParseTLSRecords(p.Data)
+            slog.Info("Found tls records", "count", len(records))
+            for _, record := range(records) {
+                slog.Info("Packet", "src", p.SrcIp, "dst", p.DstIp, "data", record)
+            }
+        } else {
+            slog.Info("Packet", "src", p.SrcIp, "dst", p.DstIp, "data", string(p.Data))
         }
-        go func(connection net.Conn){
-            slog.Debug("Recieved connection", "RemoteAddr", connection.RemoteAddr())
 
-            clientGreeting, err := socks5.ParseClientGreeting(connection)
+        if err := p.WritePacket(*outFile); err != nil {
+            slog.Error("Couldn't write packet to outfile", "error", err)
+        }
+    })
 
-            if err != nil {
-                slog.Error("Error occurred parsing greeting", "error", err)
-                return
-            }
-
-            slog.Debug("Parsed client greeting", "clientGreeting", clientGreeting)
-
-            if clientGreeting.Ver == 0x05 && slices.Contains(clientGreeting.Auth, 0x00) {
-                slog.Debug("Can handle request")
-                connection.Write(socks5.FormatServerChoice(&socks5.ServerChoice{
-                    Ver: 0x05, 
-                    Cauth: 0x00,
-                }))
-    
-                connectRequest, err := socks5.ParseClientConnRequest(connection)
-
-                if err != nil {
-                    slog.Debug("Error occurred parsing conn request", "error", err)
-                    return
-                }
-
-                slog.Debug("Parsed conn request", "request", connectRequest)
-
-                conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", connectRequest.DstIp, connectRequest.DstPort))
-
-                if err != nil {
-                    slog.Debug("Couldn't connect to requested location", "error", err)
-                    connection.Write(socks5.FormatConnResponse(&socks5.ServerConnResponse{
-                        Ver: 0x05,
-                        Status: 0x04,
-                        Rsv: 0x00,
-                        BndAddr: connectRequest.DstIp,
-                        BndPort: connectRequest.DstPort,
-                    }))
-                } else {
-                    slog.Debug("Connection proxied")
-                    response := socks5.FormatConnResponse(&socks5.ServerConnResponse{
-                        Ver: 0x05,
-                        Status: 0x00,
-                        Rsv: 0x00,
-                        BndAddr: connectRequest.DstIp,
-                        BndPort: connectRequest.DstPort,
-                    })
-
-                    connection.Write(response)
-                    slog.Debug("Message parsed", "parsed", response)
-                    
-                    go serverToClient(conn, connection, outChan)
-                    go serverToClient(connection, conn, outChan)
-                }
-            } else {
-                slog.Debug("Cannot handle request")
-                connection.Write(socks5.FormatServerChoice(&socks5.ServerChoice{
-                    Ver: 0x05,
-                    Cauth: 0xFF,
-                }))
-            }
-        }(conn)
-    }
 }

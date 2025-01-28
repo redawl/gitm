@@ -1,28 +1,14 @@
 package socks5
 
 import (
-	"errors"
 	"fmt"
 	"net"
+
+	"com.github.redawl.mitmproxy/util"
 )
 
-type ClientGreeting struct {
-    Ver   byte
-    Nauth uint8
-    Auth  []byte
-}
-
-type ClientConnRequest struct {
-    Ver       byte
-    Cmd       byte
-    Rsv       byte
-    DstIpType byte
-    DstIp     string
-    DstPort   uint16
-}
-
 func ParseClientGreeting (conn net.Conn) (*ClientGreeting, error) {
-    buff, err := read(conn, 2)
+    buff, err := util.Read(conn, 2)
 
     if err != nil {
         return nil, err
@@ -30,7 +16,7 @@ func ParseClientGreeting (conn net.Conn) (*ClientGreeting, error) {
     
     ver := buff[0]
     nauth := buff[1]
-    auth, err := read(conn, int(nauth))
+    auth, err := util.Read(conn, int(nauth))
 
     if err != nil {
         return nil, err
@@ -44,7 +30,7 @@ func ParseClientGreeting (conn net.Conn) (*ClientGreeting, error) {
 }
 
 func ParseClientConnRequest (conn net.Conn) (*ClientConnRequest, error) {
-    buff, err := read(conn, 4)
+    buff, err := util.Read(conn, 4)
 
     if err != nil {
         return nil, err
@@ -57,18 +43,18 @@ func ParseClientConnRequest (conn net.Conn) (*ClientConnRequest, error) {
     dstIp := ""
 
     if dstIpType == 0x01 {
-        buff, err = read(conn, 4)
+        buff, err = util.Read(conn, 4)
         if err != nil {
             return nil, err
         }
         dstIp = fmt.Sprintf("%d.%d.%d.%d", buff[0], buff[1], buff[2], buff[3])
     } else if dstIpType == 0x03 {
-        domainLength, err := read(conn, 1)
+        domainLength, err := util.Read(conn, 1)
         if err != nil {
             return nil, err
         }
 
-        domain, err := read(conn, int(domainLength[0]))
+        domain, err := util.Read(conn, int(domainLength[0]))
         if err != nil {
             return nil, err
         }
@@ -78,10 +64,10 @@ func ParseClientConnRequest (conn net.Conn) (*ClientConnRequest, error) {
         }
         dstIp = lookups[0].String()
     } else {
-        return nil, errors.New(fmt.Sprintf("Ip type %d is unsupported", dstIpType))
+        return nil, fmt.Errorf("Ip type %d is unsupported", dstIpType)
     }
 
-    buff, err = read(conn, 2)
+    buff, err = util.Read(conn, 2)
     
     if err != nil {
         return nil, err
