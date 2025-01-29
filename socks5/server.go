@@ -5,7 +5,6 @@ import (
 	"io"
 	"log/slog"
 	"net"
-	"slices"
 
 	"com.github.redawl.mitmproxy/packet"
 )
@@ -44,10 +43,9 @@ func handleConnection(client net.Conn, PacketHandler func(packet.Packet)) (error
     
     if greeting.CanHandle() {
         slog.Debug("Handling Request")
-        client.Write(FormatServerChoice(&ServerChoice{
-            Ver: 0x05,
-            Cauth: 0x00,
-        }))
+        client.Write(
+            FormatServerChoice(SOCKS_VER_5, METHOD_NO_AUTH_REQUIRED),
+        )
 
         request, err := ParseClientConnRequest(client)
 
@@ -60,32 +58,25 @@ func handleConnection(client net.Conn, PacketHandler func(packet.Packet)) (error
         server, err := net.Dial("tcp", fmt.Sprintf("%s:%d", request.DstIp, request.DstPort))
 
         if err != nil {
-            client.Write(FormatConnResponse(&ServerConnResponse{
-                Ver: 0x05,
-                Status: 0x04,
-                Rsv: 0x00,
-                BndAddr: request.DstIp,
-                BndPort: request.DstPort,
-            }))
+            client.Write(FormatConnResponse(
+                SOCKS_VER_5,
+                STATUS_HOST_UNREACHABLE,
+                server.LocalAddr(),
+            ))
             return err
         }
 
         slog.Debug("Proxy success")
-        client.Write(FormatConnResponse(&ServerConnResponse{
-            Ver: 0x05,
-            Status: 0x00,
-            Rsv: 0x00,
-            BndAddr: request.DstIp,
-            BndPort: request.DstPort,
-        }))
+        client.Write(FormatConnResponse(
+            SOCKS_VER_5,
+            STATUS_SUCCEEDED,
+            server.LocalAddr(),
+        ))
 
         transparentProxy(client, server, PacketHandler)
     } else {
         slog.Debug("Cannot handle request")
-        client.Write(FormatServerChoice(&ServerChoice{
-            Ver: 0x05,
-            Cauth: 0xFF,
-        }))
+        client.Write(FormatServerChoice(SOCKS_VER_5, METHOD_NO_ACCEPTABLE_METHODS))
     }
 
     return nil
@@ -161,6 +152,3 @@ func connToConn(conn1 net.Conn, conn2 net.Conn, outChan chan []byte) {
     }
 }
 
-func (greeting *ClientGreeting) CanHandle() (bool) {
-    return greeting.Ver == 0x05 && slices.Contains(greeting.Auth, 0x00)
-}

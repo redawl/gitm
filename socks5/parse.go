@@ -42,13 +42,13 @@ func ParseClientConnRequest (conn net.Conn) (*ClientConnRequest, error) {
     dstIpType := buff[3]
     dstIp := ""
 
-    if dstIpType == 0x01 {
+    if dstIpType == ADDRESS_TYPE_IPV4 {
         buff, err = util.Read(conn, 4)
         if err != nil {
             return nil, err
         }
         dstIp = fmt.Sprintf("%d.%d.%d.%d", buff[0], buff[1], buff[2], buff[3])
-    } else if dstIpType == 0x03 {
+    } else if dstIpType == ADDRESS_TYPE_DOMAINNAME {
         domainLength, err := util.Read(conn, 1)
         if err != nil {
             return nil, err
