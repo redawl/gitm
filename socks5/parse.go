@@ -29,11 +29,11 @@ func ParseClientGreeting (conn net.Conn) (*ClientGreeting, error) {
     }, nil
 }
 
-func ParseClientConnRequest (conn net.Conn) (*ClientConnRequest, error) {
+func ParseClientConnRequest (conn net.Conn) (*ClientConnRequest, byte) {
     buff, err := util.Read(conn, 4)
 
     if err != nil {
-        return nil, err
+        return nil, STATUS_GENERAL_FAILURE
     }
 
     ver := buff[0]
@@ -42,35 +42,39 @@ func ParseClientConnRequest (conn net.Conn) (*ClientConnRequest, error) {
     dstIpType := buff[3]
     dstIp := ""
 
+    if cmd != CMD_CONNECT {
+        return nil, STATUS_COMMAND_NOT_SUPPORTED
+    }
+
     if dstIpType == ADDRESS_TYPE_IPV4 {
         buff, err = util.Read(conn, 4)
         if err != nil {
-            return nil, err
+            return nil, STATUS_GENERAL_FAILURE
         }
         dstIp = fmt.Sprintf("%d.%d.%d.%d", buff[0], buff[1], buff[2], buff[3])
     } else if dstIpType == ADDRESS_TYPE_DOMAINNAME {
         domainLength, err := util.Read(conn, 1)
         if err != nil {
-            return nil, err
+            return nil, STATUS_GENERAL_FAILURE
         }
 
         domain, err := util.Read(conn, int(domainLength[0]))
         if err != nil {
-            return nil, err
+            return nil, STATUS_GENERAL_FAILURE
         }
         lookups, err := net.LookupIP(string(domain))
         if err != nil {
-            return nil, err
+            return nil, STATUS_HOST_UNREACHABLE
         }
         dstIp = lookups[0].String()
     } else {
-        return nil, fmt.Errorf("Ip type %d is unsupported", dstIpType)
+        return nil, STATUS_ADDRESS_TYPE_NOT_SUPPORTED
     }
 
     buff, err = util.Read(conn, 2)
     
     if err != nil {
-        return nil, err
+        return nil, STATUS_GENERAL_FAILURE
     }
 
     dstPort := uint16(buff[0]) << 8 + uint16(buff[1])
@@ -82,6 +86,6 @@ func ParseClientConnRequest (conn net.Conn) (*ClientConnRequest, error) {
         DstIpType: dstIpType,
         DstIp: dstIp,
         DstPort: dstPort,
-    }, nil
+    }, STATUS_SUCCEEDED
 }
 

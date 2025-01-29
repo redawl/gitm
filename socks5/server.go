@@ -47,10 +47,15 @@ func handleConnection(client net.Conn, PacketHandler func(packet.Packet)) (error
             FormatServerChoice(SOCKS_VER_5, METHOD_NO_AUTH_REQUIRED),
         )
 
-        request, err := ParseClientConnRequest(client)
+        request, status := ParseClientConnRequest(client)
 
-        if err != nil {
-            return err
+        if status != STATUS_SUCCEEDED {
+            client.Write(FormatConnResponse(
+                SOCKS_VER_5,
+                status,
+                client.LocalAddr(),
+            ))
+            return fmt.Errorf("Error parsing client connection request: %d", status)
         }
 
         slog.Debug("Parsed conn request", "request", request)

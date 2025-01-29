@@ -36,6 +36,12 @@ const (
     ADDRESS_TYPE_IPV6       = 0x04
 )
 
+const (
+    CMD_CONNECT       = 0x01
+    CMD_BIND          = 0x02
+    CMD_UDP_ASSOCIATE = 0x03
+)
+
 type ClientGreeting struct {
     Ver   byte
     Nauth uint8
