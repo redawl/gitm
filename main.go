@@ -18,7 +18,7 @@ type Args struct {
 func main () {
     args := &Args{}
 
-    flag.StringVar(&args.ListenUri, "l", "0.0.0.0:8080", "ip:port to bind to")
+    flag.StringVar(&args.ListenUri, "l", "0.0.0.0:1080", "ip:port to bind to")
 
     flag.Parse()
 
