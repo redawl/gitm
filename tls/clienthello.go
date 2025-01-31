@@ -1,10 +1,13 @@
 package tls
 
-import "log/slog"
+import (
+	"encoding/json"
+	"log/slog"
+)
 
 type ClientHello struct {
     HandshakeMessage
-    LegacyVersion string
+    LegacyVersion [2]byte
     Random                      [32]byte
     // LegacySessionId length 0-32 bytes
     LegacySessionId             []byte
@@ -16,7 +19,7 @@ type ClientHello struct {
 func (clientHello ClientHello) GetLogAttrs () []slog.Attr {
     attrs := clientHello.HandshakeMessage.GetLogAttrs()
     additionalAttrs := []slog.Attr{
-        slog.String("LegacyVersion", clientHello.LegacyVersion),
+        slog.String("LegacyVersion", mapVersionToString(clientHello.LegacyVersion[1], clientHello.LegacyVersion[0])),
         slog.Any("Random", clientHello.Random),
         slog.Any("LegacySessionId", clientHello.LegacySessionId),
         slog.Any("CipherSuites", clientHello.CipherSuites),
@@ -31,9 +34,21 @@ func (clientHello ClientHello) GetLogAttrs () []slog.Attr {
     return attrs
 }
 
+func (clientHello ClientHello) MarshalJSON() ([]byte, error) {
+    valueMap := clientHello.HandshakeMessage.getValueMap()
+    valueMap["LegacyVersion"] = mapVersionToString(clientHello.LegacyVersion[1], clientHello.LegacyVersion[0])
+    valueMap["Random"] = clientHello.Random
+    valueMap["LegacySessionId"] = clientHello.LegacySessionId
+    valueMap["CipherSuites"] = clientHello.CipherSuites
+    valueMap["LegacyCompressionMethods"] = clientHello.LegacyCompressionMethods
+    valueMap["Extensions"] = clientHello.Extensions
+
+    return json.Marshal(valueMap)
+}
+
 func parseClientHelloMessage(handshake *HandshakeMessage, messageData []byte) ClientHello {
     i := 0
-    legacyVersion := mapVersionToString(messageData[i+1], messageData[i])
+    legacyVersion := [2]byte{messageData[i+1], messageData[i]}
     i += 2
     random := messageData[i:i+32]
     i += 32

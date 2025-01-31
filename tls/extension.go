@@ -98,33 +98,41 @@ type Extension interface {
 type extension struct {
     Type [2]byte
     Length byte
-    Data []byte
 }
 
 func (ext extension) GetLogAttr() slog.Attr {
     return slog.Group("Extension", 
         slog.String("type", mapTypeToString(ext.Type)),
         slog.Any("length", ext.Length),
-        slog.Any("data", ext.Data),
     )
 }
 
-func (ext extension) MarshalJSON() ([]byte, error) {
+func (ext extension) getValueMap () map[string]any {
     valueMap := make(map[string]any)
     valueMap["type"] = mapTypeToString(ext.Type)
     valueMap["length"] = int(ext.Length)
-    valueMap["data"] = ext.Data
 
-    return json.Marshal(valueMap)
+    return valueMap
+}
+
+func (ext extension) MarshalJSON() ([]byte, error) {
+    return json.Marshal(ext.getValueMap())
 }
 
 func CreateExtension(extType [2]byte, extLength byte, extData []byte) Extension {
+    ext := extension{
+        Type: extType,
+        Length: extLength,
+    }
+
     switch t := int(extType[0]) << 8 + int(extType[1]); t {
+        case EXT_SERVER_NAME: {
+            return parseServerNameIndication(ext, extData)
+        }
         default: 
             return extension{
                 Type: extType,
                 Length: extLength,
-                Data: extData,
             }
     }
 }

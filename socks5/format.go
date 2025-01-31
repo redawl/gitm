@@ -22,7 +22,7 @@ func FormatConnResponse(
     port, err := strconv.Atoi(parts[1])
 
     if err != nil {
-        slog.Error("Cannot parse port %d", parts[1])
+        slog.Error("Cannot parse port", "port", parts[1])
     }
 
     var i1, i2, i3, i4 byte

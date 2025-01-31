@@ -1,6 +1,9 @@
 package tls
 
-import "log/slog"
+import (
+	"encoding/json"
+	"log/slog"
+)
 
 type ServerHello struct {
     HandshakeMessage
@@ -28,6 +31,18 @@ func (serverHello ServerHello) GetLogAttrs () []slog.Attr {
     }
 
     return attrs
+}
+
+func (serverHello ServerHello) MarshalJSON() ([]byte, error) {
+    valueMap := make(map[string]any)
+    valueMap["LegacyVersion"] = mapVersionToString(serverHello.LegacyVersion[1], serverHello.LegacyVersion[0])
+    valueMap["Random"] = serverHello.Random
+    valueMap["LegacySessionIdEcho"] = serverHello.LegacySessionIdEcho
+    valueMap["CipherSuite"] = serverHello.CipherSuite
+    valueMap["LegacyCompressionMethod"] = serverHello.LegacyCompressionMethod
+    valueMap["Extensions"] = serverHello.Extensions
+
+    return json.Marshal(valueMap)
 }
 
 func parseServerHelloMessage(handshake *HandshakeMessage, messageData []byte) ServerHello {

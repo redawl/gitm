@@ -53,12 +53,16 @@ func (message HandshakeMessage) GetLogAttrs () []slog.Attr {
     return attrs
 }
 
-func (message HandshakeMessage) MarshalJSON() ([]byte, error) {
+func (message HandshakeMessage) getValueMap() map[string]any {
     valueMap := make(map[string]any)
     valueMap["MessageType"] = mapMTtoString(message.MessageType)
     valueMap["HandshakeMessageDataLength"] = message.HandshakeMessageDataLength.IntValue()
 
-    return json.Marshal(valueMap)
+    return valueMap
+}
+
+func (message HandshakeMessage) MarshalJSON() ([]byte, error) {
+    return json.Marshal(message.getValueMap())
 }
 
 func parseHandshakeRecords(protocolMessages []byte) ([]ProtocolMessage) {
