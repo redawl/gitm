@@ -1,5 +1,7 @@
 package tls
 
+import "encoding/json"
+
 type Uint24 struct {
     value [3]uint8
 }
@@ -12,6 +14,10 @@ func NewUint24(b1 byte, b2 byte, b3 byte) (Uint24) {
     return uint24
 }
 
-func (u *Uint24) IntValue() int {
+func (u Uint24) IntValue() int {
     return int(u.value[0]) << 16 + int(u.value[1]) << 8 + int(u.value[2])
+}
+
+func (u Uint24) MarshalJSON() ([]byte, error) {
+    return json.Marshal(u.IntValue())
 }

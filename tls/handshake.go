@@ -1,6 +1,7 @@
 package tls
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 )
@@ -39,47 +40,54 @@ func mapMTtoString(mt byte) string {
 }
 
 type HandshakeMessage struct {
-    MessageType string
+    MessageType byte
     HandshakeMessageDataLength Uint24
-    HandshakeMessageData []byte
 }
 
-type ClientHello struct {
-    LegacyVersion string
-    Random                      [32]byte
-    LegacySessionId             [32]byte
-    CipherSuites                []string
-    LegacyCompressionMethods    []string
-    Extensions                  []string
-}
-
-func (message *HandshakeMessage) GetLogAttrs () []slog.Attr {
+func (message HandshakeMessage) GetLogAttrs () []slog.Attr {
     attrs := []slog.Attr{
-        slog.String("MessageType", message.MessageType),
+        slog.String("MessageType", mapMTtoString(message.MessageType)),
         slog.Int("HandshakeMessageDataLength", message.HandshakeMessageDataLength.IntValue()),
-        slog.Any("HandshakeMessageData", message.HandshakeMessageData),
     }
 
     return attrs
+}
+
+func (message HandshakeMessage) MarshalJSON() ([]byte, error) {
+    valueMap := make(map[string]any)
+    valueMap["MessageType"] = mapMTtoString(message.MessageType)
+    valueMap["HandshakeMessageDataLength"] = message.HandshakeMessageDataLength.IntValue()
+
+    return json.Marshal(valueMap)
 }
 
 func parseHandshakeRecords(protocolMessages []byte) ([]ProtocolMessage) {
     messages := []ProtocolMessage{}
     length := 0
     for length < len(protocolMessages) {
-        messageType := mapMTtoString(protocolMessages[length])
-        switch protocolMessages[length] {
-            case MTClientHello: {
-                
-            }
-        }
+        messageType := protocolMessages[length]
         messageLength := NewUint24(protocolMessages[length+1], protocolMessages[length+2], protocolMessages[length+3])
-        messageData := protocolMessages[length+4:length+4+messageLength.IntValue()]
-        messages = append(messages, &HandshakeMessage{
+
+        handshakeRecord := &HandshakeMessage{
             MessageType: messageType,
             HandshakeMessageDataLength: messageLength,
-            HandshakeMessageData: messageData,
-        })
+        }
+
+        var protocolMessage ProtocolMessage
+
+        switch messageType {
+            case MTClientHello: {
+                protocolMessage = parseClientHelloMessage(handshakeRecord, protocolMessages[length+4:length+4+messageLength.IntValue()])
+            }
+            case MTServerHello: {
+                protocolMessage = parseServerHelloMessage(handshakeRecord, protocolMessages[length+4:length+4+messageLength.IntValue()])
+            }
+            default: {
+                protocolMessage = handshakeRecord
+            }
+        }
+
+        messages = append(messages, protocolMessage)
         length += 4 + messageLength.IntValue()
     } 
 

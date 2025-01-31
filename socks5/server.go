@@ -95,19 +95,33 @@ func transparentProxy (client net.Conn, server net.Conn, packetHandler func(pack
     go connToConn(server, client, serverToClient)
 
     go func() {
-        data := <- clientToServer
-        packetHandler(packet.Packet{
-            SrcIp: client.RemoteAddr().String(),
-            DstIp: server.RemoteAddr().String(),
-            Data: data,
-        })
+        for {
+            data := <- clientToServer
+            if len(data) > 0 {
+                packetHandler(packet.CreatePacket(
+                    client.RemoteAddr().String(),
+                    server.RemoteAddr().String(),
+                    data,
+                ))
+            } else {
+                slog.Error("Received empty packet", "src", server.RemoteAddr().String(), "dst", client.RemoteAddr().String())
+            }
+        }
+    }()
 
-        data = <- serverToClient
-        packetHandler(packet.Packet{
-            SrcIp: server.RemoteAddr().String(),
-            DstIp: client.RemoteAddr().String(),
-            Data: data,
-        })
+    go func() {
+        for {
+            data := <- serverToClient
+            if len(data) > 0 {
+                packetHandler(packet.CreatePacket(
+                    server.RemoteAddr().String(),
+                    client.RemoteAddr().String(),
+                    data,
+                ))
+            } else {
+                slog.Error("Received empty packet", "src", server.RemoteAddr().String(), "dst", client.RemoteAddr().String())
+            }
+        }
     }()
 }
 

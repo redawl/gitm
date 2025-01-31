@@ -1,6 +1,9 @@
 package tls
 
-import "log/slog"
+import (
+	"encoding/json"
+	"log/slog"
+)
 
 // TODO: Implement level and description mappings
 const (
@@ -20,11 +23,19 @@ type AlertMessage struct {
     Description byte
 }
 
-func (message *AlertMessage) GetLogAttrs () []slog.Attr {
+func (message AlertMessage) GetLogAttrs () []slog.Attr {
     return []slog.Attr{
         slog.Any("Level", message.Level),
         slog.Any("Description", message.Description),
     }
+}
+
+func (message AlertMessage) MarshalJSON() ([]byte, error) {
+    valueMap := make(map[string]any)
+    valueMap["Level"] = message.Level
+    valueMap["Description"] = message.Description
+
+    return json.Marshal(message)
 }
 
 func parseAlertRecords(protocolMessages []byte) ([]ProtocolMessage) {

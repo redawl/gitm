@@ -1,6 +1,7 @@
 package tls
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 )
@@ -33,9 +34,10 @@ func mapCTtoString(ct byte) string {
 }
 
 func mapVersionToString(major byte, minor byte) string {
-    if major != 0x03 {
-        return fmt.Sprintf("Unknown: %d.%d", major, minor)
-    }
+    // Commenting out for now, some clients are sending 0x01 instead of 0x03
+    // if major != 0x03 {
+    //     return fmt.Sprintf("Unknown: %d.%d", major, minor)
+    // }
 
     switch minor {
         case SSL30: return "SSL 3.0"
@@ -50,9 +52,9 @@ func mapVersionToString(major byte, minor byte) string {
 // TLSRecord This is the general format of all TLS records. 
 type TLSRecord struct {
     // This field identifies the Record Layer Protocol Type contained in this record.
-    ContentType        string
+    ContentType        byte
     // 
-    Version            string
+    Version            [2]byte
     // The length of "protocol message(s)", "MAC" and "padding" fields combined (i.e. q−5), not to exceed 214 bytes (16 KiB).
     Length             uint16
     ProtocolMessages   []ProtocolMessage
@@ -64,7 +66,7 @@ type TLSRecord struct {
 
 type ProtocolMessage interface {
     GetLogAttrs() []slog.Attr
-
+    MarshalJSON() ([]byte, error)
 }
 
 func ParseTLSRecords(message []byte) ([]TLSRecord) {
@@ -81,14 +83,14 @@ func ParseTLSRecords(message []byte) ([]TLSRecord) {
 }
 
 func (record *TLSRecord) Parse(message []byte) {
-    record.ContentType = mapCTtoString(message[0])
-    record.Version = mapVersionToString(message[2], message[1])
+    record.ContentType = message[0]
+    record.Version = [2]byte{message[2], message[1]}
     record.Length = uint16(message[3]) << 8 + uint16(message[4])
     record.ProtocolMessages = []ProtocolMessage{}
 
     protocolMessages := message[5:5+int(record.Length)]
 
-    switch message[0] {
+    switch record.ContentType {
         case CTHandshake: {
             record.ProtocolMessages = parseHandshakeRecords(protocolMessages)
         }
@@ -111,11 +113,11 @@ func (record *TLSRecord) Parse(message []byte) {
     }
 }
 
-func (record *TLSRecord) LogAttrs() ([]slog.Attr) {
+func (record TLSRecord) LogAttrs() ([]slog.Attr) {
     attrs := []slog.Attr{
-            slog.String("ContentType", record.ContentType),
-            slog.String("Version", record.Version),
-            slog.Any("Length", record.Length),
+            slog.String("ContentType", mapCTtoString(record.ContentType)),
+            slog.String("Version", mapVersionToString(record.Version[1], record.Version[0])),
+            slog.Int("Length", int(record.Length)),
     }
 
     for _, message := range(record.ProtocolMessages) {
@@ -125,3 +127,13 @@ func (record *TLSRecord) LogAttrs() ([]slog.Attr) {
     return attrs
 }
 
+func (record TLSRecord) MarshalJSON() ([]byte, error) {
+    valueMap := make(map[string]any)
+
+    valueMap["ContentType"] = mapCTtoString(record.ContentType)
+    valueMap["Version"] = mapVersionToString(record.Version[1], record.Version[0])
+    valueMap["Length"] = int(record.Length)
+    valueMap["ProtocolMessages"] = record.ProtocolMessages
+
+    return json.Marshal(valueMap)
+}
