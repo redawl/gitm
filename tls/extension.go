@@ -129,6 +129,12 @@ func CreateExtension(extType [2]byte, extLength byte, extData []byte) Extension 
         case EXT_SERVER_NAME: {
             return parseServerNameIndication(ext, extData)
         }
+        // case EXT_MAX_FRAGMENT_LENGTH: {
+        // return parseMaximumFragmentLength(ext, extData)
+        // }
+        case EXT_EC_POINT_FORMATS: {
+            return parseECPointFormats(ext, extData)
+        }
         default: 
             return extension{
                 Type: extType,
