@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"net"
 
-	"com.github.redawl.mitmproxy/packet"
+	"com.github.redawl.mitmproxy/config"
 )
 
-func StartTransparentSocksProxy(ListenUri string, PacketHandler func(packet.Packet)) (error) {
+func StartTransparentSocksProxy(ListenUri string, conf config.Config) (error) {
     ln, err := net.Listen("tcp", ListenUri)
 
     if err != nil {
@@ -23,14 +23,14 @@ func StartTransparentSocksProxy(ListenUri string, PacketHandler func(packet.Pack
             continue
         }
         
-        if err := handleConnection(client, PacketHandler); err != nil {
+        if err := handleConnection(client, conf); err != nil {
             slog.Error("Error handling connection", "error", err)
             continue
         }
     }
 }
 
-func handleConnection(client net.Conn, PacketHandler func(packet.Packet)) (error) {
+func handleConnection(client net.Conn, conf config.Config) (error) {
     slog.Debug("Received connection", "Address", client.RemoteAddr())
 
     greeting, err := ParseClientGreeting(client)
@@ -57,28 +57,71 @@ func handleConnection(client net.Conn, PacketHandler func(packet.Packet)) (error
             ))
             return fmt.Errorf("Error parsing client connection request: %d", status)
         }
-
+        
         slog.Debug("Parsed conn request", "request", request)
+        if request.DstPort == 80 {
+            server, err := net.Dial("tcp", conf.HttpListenUri)
+            if err != nil {
+                slog.Error("Error contacting http proxy server", "error", err)
+                client.Write(FormatConnResponse(
+                    SOCKS_VER_5,
+                    STATUS_HOST_UNREACHABLE,
+                    server.LocalAddr(),
+                ))
+                return err
+            }
 
-        server, err := net.Dial("tcp", fmt.Sprintf("%s:%d", request.DstIp, request.DstPort))
-
-        if err != nil {
+            slog.Debug("Proxy success")
             client.Write(FormatConnResponse(
                 SOCKS_VER_5,
-                STATUS_HOST_UNREACHABLE,
+                STATUS_SUCCEEDED,
                 server.LocalAddr(),
             ))
-            return err
+
+            transparentProxy(client, server)
+
+        } else if request.DstPort == 443 {
+            server, err := net.Dial("tcp", conf.TlsListenUri)
+            if err != nil {
+                slog.Error("Error contacting https proxy server", "error", err)
+                client.Write(FormatConnResponse(
+                    SOCKS_VER_5,
+                    STATUS_HOST_UNREACHABLE,
+                    server.LocalAddr(),
+                ))
+                return err
+            }
+
+            slog.Debug("Proxy success")
+            client.Write(FormatConnResponse(
+                SOCKS_VER_5,
+                STATUS_SUCCEEDED,
+                server.LocalAddr(),
+            ))
+
+            transparentProxy(client, server)
+        } else {
+            slog.Error("Unrecognized port, forwarding without logging", "request", request)
+            server, err := net.Dial("tcp", fmt.Sprintf("%s:%d", request.DstIp, request.DstPort))
+            if err != nil {
+                client.Write(FormatConnResponse(
+                    SOCKS_VER_5,
+                    STATUS_HOST_UNREACHABLE,
+                    server.LocalAddr(),
+                ))
+                return err
+            }
+
+            slog.Debug("Proxy success")
+            client.Write(FormatConnResponse(
+                SOCKS_VER_5,
+                STATUS_SUCCEEDED,
+                server.LocalAddr(),
+            ))
+
+            transparentProxy(client, server)
         }
 
-        slog.Debug("Proxy success")
-        client.Write(FormatConnResponse(
-            SOCKS_VER_5,
-            STATUS_SUCCEEDED,
-            server.LocalAddr(),
-        ))
-
-        transparentProxy(client, server, PacketHandler)
     } else {
         slog.Debug("Cannot handle request")
         client.Write(FormatServerChoice(SOCKS_VER_5, METHOD_NO_ACCEPTABLE_METHODS))
@@ -87,47 +130,13 @@ func handleConnection(client net.Conn, PacketHandler func(packet.Packet)) (error
     return nil
 }
 
-func transparentProxy (client net.Conn, server net.Conn, packetHandler func(packet.Packet)) {
-    clientToServer := make(chan []byte)
-    serverToClient := make(chan []byte)
-
-    go connToConn(client, server, clientToServer)
-    go connToConn(server, client, serverToClient)
-
-    go func() {
-        for {
-            data := <- clientToServer
-            if len(data) > 0 {
-                packetHandler(packet.CreatePacket(
-                    client.RemoteAddr().String(),
-                    server.RemoteAddr().String(),
-                    data,
-                ))
-            } else {
-                slog.Error("Received empty packet", "src", server.RemoteAddr().String(), "dst", client.RemoteAddr().String())
-            }
-        }
-    }()
-
-    go func() {
-        for {
-            data := <- serverToClient
-            if len(data) > 0 {
-                packetHandler(packet.CreatePacket(
-                    server.RemoteAddr().String(),
-                    client.RemoteAddr().String(),
-                    data,
-                ))
-            } else {
-                slog.Error("Received empty packet", "src", server.RemoteAddr().String(), "dst", client.RemoteAddr().String())
-            }
-        }
-    }()
+func transparentProxy (client net.Conn, server net.Conn) {
+    go connToConn(client, server)
+    go connToConn(server, client)
 }
 
-func connToConn(conn1 net.Conn, conn2 net.Conn, outChan chan []byte) {
+func connToConn(conn1 net.Conn, conn2 net.Conn) {
     buff := make([]byte, 8192)
-    out := make([]byte, 0)
     for {
         count, err := conn1.Read(buff)
         if err != nil && count == 0 {
@@ -136,18 +145,10 @@ func connToConn(conn1 net.Conn, conn2 net.Conn, outChan chan []byte) {
             } else {
                 slog.Error("Connection closed unexpectedly", "error", err, "count", count)
             }
-
-            err = conn2.Close()
-            if err != nil {
-                slog.Error("Error closing connection2", "error", err)
-            }
-
-            outChan <- out
             return
         } else if err != nil {
             slog.Error("Connection terminated but contained data", "error", err, "count", count)
         }
-        out = append(out, buff[:count]...)
         count, err = conn2.Write(buff[:count])
 
         if err != nil && count != 0 {
@@ -156,16 +157,8 @@ func connToConn(conn1 net.Conn, conn2 net.Conn, outChan chan []byte) {
             } else {
                 slog.Error("Connection closed unexpectedly", "error", err, "count", count)
             }
-            conn1.Close()
-            outChan <- out
-            return
         } else if err != nil {
             slog.Error("Connection terminated but didn't write all data", "error", err, "count", count)
-            err = conn1.Close()
-            if err != nil {
-                slog.Error("Error closing connection1", "error", err)
-            }
-            outChan <- out
             return
         }
     }
