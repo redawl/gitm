@@ -1,9 +1,13 @@
 package util
 
 import (
+	"errors"
+	"fmt"
+	"log/slog"
 	"net"
-    "fmt"
+	"os"
 )
+
 // Read reads at most length bytes from conn.
 // If less than length bytes are read from conn, the bytes are returned along with an err
 func Read(conn net.Conn, length int) ([]byte, error) {
@@ -19,3 +23,23 @@ func Read(conn net.Conn, length int) ([]byte, error) {
     return buff, nil
 }
 
+func GetConfigDir () (string, error) {
+    userCfgDir, err := os.UserConfigDir()
+
+    if err != nil {
+        return "", err
+    }
+
+    cfgDir := userCfgDir + "/mitmproxy"
+
+    if _, err := os.Stat(cfgDir); errors.Is(err, os.ErrNotExist) {
+        slog.Debug("Config dir doesn't exist, creating")
+        err := os.Mkdir(cfgDir, 0700)
+
+        if err != nil {
+            return "", err
+        }
+    }
+
+    return cfgDir, nil
+}

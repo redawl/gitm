@@ -14,20 +14,22 @@ func Handler(conf config.Config, httpPacketHandler func(packet.Packet)) http.Han
         hostName := r.Host
         slog.Debug("Handling request", "method", r.Method, "path", "http://" + hostName + r.URL.String(), "request", r)
 
-        req, err := http.NewRequest(r.Method, "http://" + hostName + r.URL.String(), r.Body)
-        if err != nil {
-            // TODO: What to do here
-            slog.Error("Error forwarding http request", "error", err)
-            return
+        req := &http.Request{
+            Method: r.Method,
+            URL: r.URL,
+            Body: r.Body,
+            Proto: r.Proto,
+            ProtoMajor: r.ProtoMajor,
+            ProtoMinor: r.ProtoMinor,
+            Header: r.Header,
         }
 
-        // Set headers
-        for header, value := range r.Header {
-            for _, v := range value {
-                req.Header.Add(header, v)
-            }
+        if r.TLS != nil {
+            req.URL.Scheme = "https"
+        } else {
+            req.URL.Scheme = "http"
         }
-
+        req.URL.Host = r.Host
         resp, err := http.DefaultTransport.RoundTrip(req)
 
         if err != nil {
@@ -37,14 +39,15 @@ func Handler(conf config.Config, httpPacketHandler func(packet.Packet)) http.Han
         }
 
         
-        // Set status code
-        w.WriteHeader(resp.StatusCode)
         // Set headers
         for header, value := range resp.Header {
             for _, v := range value {
                 w.Header().Add(header, v)
             }
         }
+
+        // Set status code
+        w.WriteHeader(resp.StatusCode)
         
         slog.Debug("Response from proxied server", "response", resp)
 
