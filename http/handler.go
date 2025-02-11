@@ -9,7 +9,7 @@ import (
 	"com.github.redawl.mitmproxy/packet"
 )
 
-func Handler(conf config.Config, httpPacketHandler func(packet.Packet)) http.HandlerFunc {
+func Handler(conf config.Config, httpPacketHandler func(packet.HttpPacket)) http.HandlerFunc {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         hostName := r.Host
         slog.Debug("Handling request", "method", r.Method, "path", "http://" + hostName + r.URL.String(), "request", r)
@@ -59,10 +59,11 @@ func Handler(conf config.Config, httpPacketHandler func(packet.Packet)) http.Han
         }
 
         if httpPacketHandler != nil {
+            // TODO: Get request body correctly 
+            slog.Info("Request", "r", r)
             httpPacketHandler(
-                packet.CreatePacket(r.RemoteAddr, r.RemoteAddr, resp.StatusCode, resp.Header, body),
+                packet.CreatePacket(r.RemoteAddr, r.Host, resp.StatusCode, r.URL.String(), resp.Header, body, r.Header, []byte{}),
             )
-
         }
 
         w.Write(body)

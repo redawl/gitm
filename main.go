@@ -3,17 +3,16 @@ package main
 import (
 	"log/slog"
 	"os"
-	"slices"
 
 	"com.github.redawl.mitmproxy/cacert"
 	"com.github.redawl.mitmproxy/config"
-	"com.github.redawl.mitmproxy/db"
 	"com.github.redawl.mitmproxy/http"
 	"com.github.redawl.mitmproxy/packet"
 	"com.github.redawl.mitmproxy/socks5"
+	"com.github.redawl.mitmproxy/ui"
 )
 
-func main () {
+func setupbackend (httpHandler func(packet.HttpPacket), httpsHandler func(packet.HttpPacket)) {
     logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
         Level: slog.LevelInfo,
     }))
@@ -25,37 +24,30 @@ func main () {
         TlsListenUri: "127.0.0.1:8443",
     }
 
-    domains, err := db.GetDomains()
-
-    if err != nil {
-        slog.Error("Error getting domains", "error", err)
-        return
-    }
-
-    if !slices.Contains(domains, "example.com") {
-        if err := cacert.AddHostname("example.com"); err != nil {
-            slog.Error("Error adding domain", "error", err)
-            return
-        }
-    }
     slog.Info("Starting Cacert server")
     go cacert.ListenAndServe("0.0.0.0:9090")
 
     slog.Info("Starting http server")
-    go http.ListenAndServe(conf, func(p packet.Packet) {
-        slog.Info("Received packet", "packet", p)
-    })
+    go http.ListenAndServe(conf, httpHandler)
     
     slog.Info("Starting https server")
-    go http.ListenAndServeTls(conf, func(p packet.Packet) {
-        slog.Info("Received tls packet", "packet", p)
-    })
-
+    go http.ListenAndServeTls(conf, httpsHandler)
     
     slog.Info("Starting socks5 proxy")
-    err = socks5.StartTransparentSocksProxy("127.0.0.1:1080", conf)
-
-    if err != nil {
-        slog.Error("Error serving socks proxy", "error", err)
-    }
+    go socks5.StartTransparentSocksProxy("0.0.0.0:1080", conf)
 }
+
+func main() {
+    packetChan := make(chan packet.HttpPacket)
+    setupbackend(func(p packet.HttpPacket){
+        slog.Info("adawdawdaw", "packet", p.Path)
+        packetChan <- p
+    }, 
+    func(p packet.HttpPacket){
+        slog.Info("adawdawdaw", "packet", p.Path)
+        packetChan <- p
+    })
+    
+    ui.ShowAndRun(packetChan)
+}
+

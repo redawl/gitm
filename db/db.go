@@ -2,10 +2,13 @@ package db
 
 import (
 	"database/sql"
+	"sync"
 
 	"com.github.redawl.mitmproxy/util"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+var lock sync.Mutex
 
 func getConn() (*sql.DB, error) {
     configDir, err := util.GetConfigDir()
@@ -28,6 +31,8 @@ func getConn() (*sql.DB, error) {
 }
 
 func GetDomains() ([]string, error) {
+    lock.Lock()
+    defer lock.Unlock()
     conn, err := getConn()
 
     if err != nil {
@@ -55,6 +60,8 @@ func GetDomains() ([]string, error) {
 }
 
 func AddDomain(domain string) error {
+    lock.Lock()
+    defer lock.Unlock()
     conn, err := getConn()
 
     if err != nil {

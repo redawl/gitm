@@ -13,7 +13,7 @@ import (
 	"com.github.redawl.mitmproxy/util"
 )
 
-func ListenAndServe(conf config.Config, httpPacketHandler func(packet.Packet)) error {
+func ListenAndServe(conf config.Config, httpPacketHandler func(packet.HttpPacket)) error {
     err := http.ListenAndServe(conf.HttpListenUri, Handler(conf, httpPacketHandler))
 
     slog.Error("Error serving http proxy server", "error", err)
@@ -21,7 +21,7 @@ func ListenAndServe(conf config.Config, httpPacketHandler func(packet.Packet)) e
     return err
 }
 
-func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.Packet)) {
+func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPacket)) {
     configDir, err := util.GetConfigDir()
     if err != nil {
         slog.Error("Error getting config dir", "error", err)
