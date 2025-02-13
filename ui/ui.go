@@ -6,6 +6,7 @@ import (
 	"com.github.redawl.mitmproxy/packet"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 )
@@ -15,30 +16,32 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
     w := a.NewWindow("MITMProxy")
     w.Resize(fyne.NewSize(1440, 810))
     packetList := make([]*packet.HttpPacket, 0)
-    content := widget.NewLabel("TEWDWDWDW")
+    content := widget.NewMultiLineEntry()
+    content.TextStyle = fyne.TextStyle{
+        Monospace: true,
+    }
 
-    table := widget.NewTableWithHeaders(func() (rows int, cols int) {
-        return len(packetList), 5
+    table := widget.NewList(func() (int) {
+        return len(packetList)
     }, func() fyne.CanvasObject {
-        label := widget.NewLabel("")
+        label := canvas.NewText("", nil)
         return label
-    }, func(tci widget.TableCellID, co fyne.CanvasObject) {
-        label := co.(*widget.Label)
-        if packetList[tci.Row] != nil {
-            p := packetList[tci.Row]
-
-            switch(tci.Col) {
-                case 0: label.SetText(p.Path)
-                case 1: label.SetText(p.ClientIp)
-                default: label.SetText("")
+    }, func(li widget.ListItemID, co fyne.CanvasObject) {
+        label := co.(*canvas.Text)
+        if packetList[li] != nil {
+            p := packetList[li]
+            encoding := p.RespHeaders["Content-Encoding"]
+            if len(encoding) > 0 {
+                label.Text = p.Path + " - " + p.RespHeaders["Content-Encoding"][0]
+            } else {
+                label.Text = p.Path
             }
             label.Refresh()
         }
     })
 
-    table.OnSelected = func(id widget.TableCellID) {
-        slog.Info("I ran", "packet", packetList[id.Row])
-        content.SetText(string(packetList[id.Row].RespContent))
+    table.OnSelected = func(id widget.ListItemID) {
+        content.SetText(string(packetList[id].RespContent))
         content.Refresh()
         table.RefreshItem(id)
     }
@@ -53,7 +56,7 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
     packetListContainer := container.NewBorder(widget.NewLabel("Hello world"), nil, nil, nil, table)
     packetListContainer.Show()
 
-    masterLayout := container.NewGridWithColumns(2, packetListContainer, container.NewScroll(content))
+    masterLayout := container.NewAdaptiveGrid(2, packetListContainer, container.NewScroll(content))
     w.SetContent(masterLayout)
 
     slog.Info("Showing ui")

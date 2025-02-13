@@ -37,7 +37,9 @@ func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPac
         return
     }
 
-    cfg := &tls.Config{}
+    cfg := &tls.Config{
+        MinVersion: 1.0,
+    }
 
     certMap := make(map[string]*tls.Certificate, len(hostnames))
 

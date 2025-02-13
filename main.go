@@ -40,11 +40,9 @@ func setupbackend (httpHandler func(packet.HttpPacket), httpsHandler func(packet
 func main() {
     packetChan := make(chan packet.HttpPacket)
     setupbackend(func(p packet.HttpPacket){
-        slog.Info("adawdawdaw", "packet", p.Path)
         packetChan <- p
     }, 
     func(p packet.HttpPacket){
-        slog.Info("adawdawdaw", "packet", p.Path)
         packetChan <- p
     })
     
