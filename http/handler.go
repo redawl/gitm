@@ -38,7 +38,6 @@ func Handler(conf config.Config, httpPacketHandler func(packet.HttpPacket)) http
             return
         }
 
-        
         // Set headers
         for header, value := range resp.Header {
             for _, v := range value {
@@ -62,10 +61,21 @@ func Handler(conf config.Config, httpPacketHandler func(packet.HttpPacket)) http
             // TODO: Get request body correctly 
             slog.Info("Request", "r", r)
             httpPacketHandler(
-                packet.CreatePacket(r.RemoteAddr, r.Host, resp.StatusCode, r.URL.String(), resp.Header, body, r.Header, []byte{}),
+                packet.CreatePacket(
+                    r.RemoteAddr, 
+                    r.Host, 
+                    r.Method,
+                    resp.StatusCode, 
+                    r.URL.Host + r.URL.RequestURI(), 
+                    resp.Header, 
+                    body, 
+                    r.Header,
+                    []byte{},
+                ),
             )
         }
 
         w.Write(body)
     })
 }
+
