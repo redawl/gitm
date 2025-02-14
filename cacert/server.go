@@ -22,7 +22,7 @@ import (
 
 func ListenAndServe(listenUri string) error {
     return http.ListenAndServe(listenUri, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        slog.Info("Request to Cacert server", "path", r.URL.Path)
+        slog.Debug("Request to Cacert server", "path", r.URL.Path)
         if r.URL.Path == "/ca.crt" {
             configDir, err := util.GetConfigDir()
 

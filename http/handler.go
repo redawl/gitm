@@ -59,7 +59,6 @@ func Handler(conf config.Config, httpPacketHandler func(packet.HttpPacket)) http
 
         if httpPacketHandler != nil {
             // TODO: Get request body correctly 
-            slog.Info("Request", "r", r)
             httpPacketHandler(
                 packet.CreatePacket(
                     r.RemoteAddr, 
