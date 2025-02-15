@@ -1,7 +1,10 @@
 package ui
 
 import (
+	"bytes"
+	"compress/gzip"
 	"fmt"
+	"io"
 	"log/slog"
 	"strings"
 
@@ -49,16 +52,17 @@ func (row *PacketRow) UpdateRow (p packet.HttpPacket, content *widget.Entry) {
     row.HttpLine.Text = fmt.Sprintf("%s %s HTTP/1.1", p.Method, path)
     row.HttpLine.Refresh()
 
+    request := row.HttpLine.Text + "\n" + formatHeaders(p.ReqHeaders) + "\n\n" + decodeBody(p.ReqContent, p.ReqHeaders["Content-Encoding"])
+    response := fmt.Sprintf("HTTP/1.1 %d FIXME", p.Status) + "\n" + formatHeaders(p.RespHeaders) + "\n" + decodeBody(p.RespContent, p.RespHeaders["Content-Encoding"])
+
     row.ViewReq.OnTapped = func() {
-        content.SetText(
-            row.HttpLine.Text + "\n" + formatHeaders(p.ReqHeaders) + "\n\n" + string(p.ReqContent),
-        )
+        content.SetText(request)
+        content.Refresh()
     }
 
     row.ViewResp.OnTapped = func() {
-        content.SetText(
-            fmt.Sprintf("HTTP/1.1 %d FIXME", p.Status) + "\n" + formatHeaders(p.RespHeaders) + "\n\n" + string(p.RespContent),
-        )
+        content.SetText(response)
+        content.Refresh()
     }
     
     row.ExtendBaseWidget(row)
@@ -86,4 +90,37 @@ func formatHeaders (headers map[string][]string) string {
     }
 
     return builder.String()
+}
+
+func decodeBody(body []byte, contentTypes []string) string {
+    if len(contentTypes) > 0 {
+        decoded := bytes.NewReader(body)
+        for _, contentType := range contentTypes {
+            switch contentType {
+                case "gzip": {
+                    decoded, err := gzip.NewReader(decoded)
+
+                    if err != nil {
+                        slog.Error("Failed decoding gzip", "error", err)
+                    }
+
+                    ret, err := io.ReadAll(decoded)
+
+                    if err != nil {
+                        slog.Error("Failed reading stream", "error", err)
+                        break
+                    }
+
+                    return string(ret)
+                }
+                case "UTF-8":
+                default: {
+                    slog.Error("Unhandled compression", "compression", contentType)
+                    break
+                }
+            }
+        }
+    }
+
+    return string(body)
 }

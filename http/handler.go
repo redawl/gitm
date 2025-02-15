@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bytes"
 	"io"
 	"log/slog"
 	"net/http"
@@ -13,11 +14,17 @@ func Handler(conf config.Config, httpPacketHandler func(packet.HttpPacket)) http
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         hostName := r.Host
         slog.Debug("Handling request", "method", r.Method, "path", "http://" + hostName + r.URL.String(), "request", r)
+        requestBody, err := io.ReadAll(r.Body)
+
+        if err != nil {
+            slog.Error("Error reading request body", "error", err)
+            return
+        }
 
         req := &http.Request{
             Method: r.Method,
             URL: r.URL,
-            Body: r.Body,
+            Body:  io.NopCloser(bytes.NewReader(requestBody)),
             Proto: r.Proto,
             ProtoMajor: r.ProtoMajor,
             ProtoMinor: r.ProtoMinor,
@@ -69,7 +76,7 @@ func Handler(conf config.Config, httpPacketHandler func(packet.HttpPacket)) http
                     resp.Header, 
                     body, 
                     r.Header,
-                    []byte{},
+                    requestBody,
                 ),
             )
         }
