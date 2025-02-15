@@ -2,7 +2,6 @@ package http
 
 import (
 	"crypto/tls"
-	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -10,7 +9,6 @@ import (
 	"com.github.redawl.mitmproxy/config"
 	"com.github.redawl.mitmproxy/db"
 	"com.github.redawl.mitmproxy/packet"
-	"com.github.redawl.mitmproxy/util"
 )
 
 func ListenAndServe(conf config.Config, httpPacketHandler func(packet.HttpPacket)) error {
@@ -22,15 +20,7 @@ func ListenAndServe(conf config.Config, httpPacketHandler func(packet.HttpPacket
 }
 
 func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPacket)) {
-    configDir, err := util.GetConfigDir()
-    if err != nil {
-        slog.Error("Error getting config dir", "error", err)
-        return
-    }
-
-    certDir := configDir + "/certs"
-
-    hostnames, err := db.GetDomains()
+    hostnameInfos, err := db.GetDomains()
 
     if err != nil {
         slog.Error("Error getting domains", "error", err)
@@ -41,35 +31,41 @@ func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPac
         MinVersion: 1.0,
     }
 
-    certMap := make(map[string]*tls.Certificate, len(hostnames))
+    certMap := make(map[string]*tls.Certificate, len(hostnameInfos))
 
-    for _, hostname := range hostnames {
-        cert, err := tls.LoadX509KeyPair(fmt.Sprintf("%s/%s.pem", certDir, hostname), fmt.Sprintf("%s/%s-priv.pem", certDir, hostname))
+    for _, hostnameInfo := range hostnameInfos {
+        cert, err := tls.X509KeyPair(hostnameInfo.Cert, hostnameInfo.PrivKey)
 
         if err != nil {
             slog.Error("Error loading x509 keypair", "error", err)
             return
         }
 
-        certMap[hostname] = &cert
+        certMap[hostnameInfo.Domain] = &cert
     }
 
     cfg.GetCertificate = func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
-        hostname := chi.ServerName
-        cert, found := certMap[chi.ServerName]
-
-        if found {
-            return cert, nil
-        }
-
-        err := cacert.AddHostname(chi.ServerName)
+        domainInfo, err := db.GetDomain(chi.ServerName)
 
         if err != nil {
             return nil, err
         }
 
+        if domainInfo == nil {
+            err = cacert.AddHostname(chi.ServerName)
 
-        certificate, err := tls.LoadX509KeyPair(fmt.Sprintf("%s/%s.pem", certDir, hostname), fmt.Sprintf("%s/%s-priv.pem", certDir, hostname))
+            if err != nil {
+                return nil, err
+            }
+
+            domainInfo, err = db.GetDomain(chi.ServerName)
+
+            if err != nil {
+                return nil, err
+            }
+        }
+
+        certificate, err := tls.X509KeyPair(domainInfo.Cert, domainInfo.PrivKey)
 
         if err != nil {
             return nil, err
@@ -88,3 +84,4 @@ func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPac
 
     slog.Error("Error serving https proxy server", "error", err)
 }
+

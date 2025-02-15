@@ -58,22 +58,6 @@ func ListenAndServe(listenUri string) error {
 }
 
 func AddHostname (hostname string) error {
-    configDir, err := util.GetConfigDir()
-
-    if err != nil {
-        return err
-    }
-
-    certDir := configDir + "/certs"
-
-    if _, err := os.Stat(certDir); errors.Is(err, os.ErrNotExist) {
-        err := os.Mkdir(certDir, 0700)
-
-        if err != nil {
-            return err
-        }
-    }
-
     ca, caPrivKey, err := getCaCert()
 
     serialNumber, err := createSerialNumer()
@@ -131,18 +115,7 @@ func AddHostname (hostname string) error {
         Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
     })
 
-    err = os.WriteFile(fmt.Sprintf("%s/%s.pem", certDir, hostname), append(certPem.Bytes(), caPem.Bytes()...), 0400)
-    if err != nil {
-        return err
-    }
-
-    err = os.WriteFile(fmt.Sprintf("%s/%s-priv.pem", certDir, hostname), certPrivKeyPem.Bytes(), 0400)
-
-    if err != nil {
-        return err
-    }
-
-    err = db.AddDomain(hostname) 
+    err = db.AddDomain(hostname, append(certPem.Bytes(), caPem.Bytes()...), certPrivKeyPem.Bytes())
 
     if err != nil {
         return err

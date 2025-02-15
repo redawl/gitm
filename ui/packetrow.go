@@ -102,6 +102,7 @@ func decodeBody(body []byte, contentTypes []string) string {
 
                     if err != nil {
                         slog.Error("Failed decoding gzip", "error", err)
+                        break
                     }
 
                     ret, err := io.ReadAll(decoded)
@@ -114,6 +115,7 @@ func decodeBody(body []byte, contentTypes []string) string {
                     return string(ret)
                 }
                 case "UTF-8":
+                case "none":
                 default: {
                     slog.Error("Unhandled compression", "compression", contentType)
                     break
