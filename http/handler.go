@@ -6,11 +6,10 @@ import (
 	"log/slog"
 	"net/http"
 
-	"com.github.redawl.mitmproxy/config"
 	"com.github.redawl.mitmproxy/packet"
 )
 
-func Handler(conf config.Config, httpPacketHandler func(packet.HttpPacket)) http.HandlerFunc {
+func Handler(httpPacketHandler func(packet.HttpPacket)) http.HandlerFunc {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         hostName := r.Host
         slog.Debug("Handling request", "method", r.Method, "path", "http://" + hostName + r.URL.String(), "request", r)
@@ -36,6 +35,7 @@ func Handler(conf config.Config, httpPacketHandler func(packet.HttpPacket)) http
         } else {
             req.URL.Scheme = "http"
         }
+
         req.URL.Host = r.Host
         resp, err := http.DefaultTransport.RoundTrip(req)
 
@@ -45,19 +45,16 @@ func Handler(conf config.Config, httpPacketHandler func(packet.HttpPacket)) http
             return
         }
 
-        // Set headers
         for header, value := range resp.Header {
             for _, v := range value {
                 w.Header().Add(header, v)
             }
         }
 
-        // Set status code
         w.WriteHeader(resp.StatusCode)
         
         slog.Debug("Response from proxied server", "response", resp)
 
-        // Set body
         body, err := io.ReadAll(resp.Body)
 
         if err != nil {
@@ -65,7 +62,6 @@ func Handler(conf config.Config, httpPacketHandler func(packet.HttpPacket)) http
         }
 
         if httpPacketHandler != nil {
-            // TODO: Get request body correctly 
             httpPacketHandler(
                 packet.CreatePacket(
                     r.RemoteAddr, 

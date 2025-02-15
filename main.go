@@ -13,16 +13,19 @@ import (
 )
 
 func setupbackend (httpHandler func(packet.HttpPacket), httpsHandler func(packet.HttpPacket)) {
+    conf := config.ParseFlags()
+
+    logLevel := slog.LevelInfo
+
+    if conf.Debug {
+        logLevel = slog.LevelDebug
+    }
+
     logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-        Level: slog.LevelInfo,
+        Level: logLevel,
     }))
 
     slog.SetDefault(logger)
-
-    conf := config.Config{
-        HttpListenUri: "127.0.0.1:8080",
-        TlsListenUri: "127.0.0.1:8443",
-    }
 
     slog.Info("Starting Cacert server")
     go cacert.ListenAndServe("0.0.0.0:9090")
@@ -48,4 +51,5 @@ func main() {
     
     ui.ShowAndRun(packetChan)
 }
+
 

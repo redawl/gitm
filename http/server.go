@@ -11,37 +11,13 @@ import (
 	"com.github.redawl.mitmproxy/packet"
 )
 
-func ListenAndServe(conf config.Config, httpPacketHandler func(packet.HttpPacket)) error {
-    err := http.ListenAndServe(conf.HttpListenUri, Handler(conf, httpPacketHandler))
-
-    slog.Error("Error serving http proxy server", "error", err)
-
-    return err
+func ListenAndServe(conf config.Config, httpPacketHandler func(packet.HttpPacket)) {
+    slog.Error("Error serving http proxy server", "error", http.ListenAndServe(conf.HttpListenUri, Handler(httpPacketHandler)))
 }
 
 func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPacket)) {
-    hostnameInfos, err := db.GetDomains()
-
-    if err != nil {
-        slog.Error("Error getting domains", "error", err)
-        return
-    }
-
     cfg := &tls.Config{
         MinVersion: 1.0,
-    }
-
-    certMap := make(map[string]*tls.Certificate, len(hostnameInfos))
-
-    for _, hostnameInfo := range hostnameInfos {
-        cert, err := tls.X509KeyPair(hostnameInfo.Cert, hostnameInfo.PrivKey)
-
-        if err != nil {
-            slog.Error("Error loading x509 keypair", "error", err)
-            return
-        }
-
-        certMap[hostnameInfo.Domain] = &cert
     }
 
     cfg.GetCertificate = func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -76,12 +52,10 @@ func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPac
 
     server := &http.Server{
         Addr: conf.TlsListenUri,
-        Handler: Handler(conf, httpPacketHandler),
+        Handler: Handler(httpPacketHandler),
         TLSConfig: cfg,
     }
 
-    err = server.ListenAndServeTLS("", "")
-
-    slog.Error("Error serving https proxy server", "error", err)
+    slog.Error("Error serving https proxy server", "error", server.ListenAndServeTLS("", ""))
 }
 
