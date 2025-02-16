@@ -3,9 +3,11 @@ package ui
 import (
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"strconv"
 	"strings"
 
 	"com.github.redawl.mitmproxy/packet"
@@ -49,11 +51,16 @@ func (row *PacketRow) UpdateRow (p packet.HttpPacket, content *widget.Entry) {
         path = "/"
     }
 
-    row.HttpLine.Text = fmt.Sprintf("%s %s HTTP/1.1", p.Method, path)
+    if len(path)> 5000 {
+        row.HttpLine.Text = fmt.Sprintf("%s %s %s", p.Method, path[:5000], p.ReqProto)
+    } else {
+        row.HttpLine.Text = fmt.Sprintf("%s %s %s", p.Method, path, p.ReqProto)
+    }
+    
     row.HttpLine.Refresh()
 
     request := row.HttpLine.Text + "\n" + formatHeaders(p.ReqHeaders) + "\n\n" + decodeBody(p.ReqContent, p.ReqHeaders["Content-Encoding"])
-    response := fmt.Sprintf("HTTP/1.1 %d FIXME", p.Status) + "\n" + formatHeaders(p.RespHeaders) + "\n" + decodeBody(p.RespContent, p.RespHeaders["Content-Encoding"])
+    response := fmt.Sprintf("%s %s", p.RespProto, p.Status) + "\n" + formatHeaders(p.RespHeaders) + "\n" + decodeBody(p.RespContent, p.RespHeaders["Content-Encoding"])
 
     row.ViewReq.OnTapped = func() {
         content.SetText(request)
@@ -93,6 +100,7 @@ func formatHeaders (headers map[string][]string) string {
 }
 
 func decodeBody(body []byte, contentTypes []string) string {
+    ret := body
     if len(contentTypes) > 0 {
         decoded := bytes.NewReader(body)
         for _, contentType := range contentTypes {
@@ -105,14 +113,12 @@ func decodeBody(body []byte, contentTypes []string) string {
                         break
                     }
 
-                    ret, err := io.ReadAll(decoded)
+                    ret, err = io.ReadAll(decoded)
 
                     if err != nil {
                         slog.Error("Failed reading stream", "error", err)
                         break
                     }
-
-                    return string(ret)
                 }
                 case "UTF-8":
                 case "none":
@@ -123,6 +129,8 @@ func decodeBody(body []byte, contentTypes []string) string {
             }
         }
     }
-
-    return string(body)
+    if len(ret) > 2000 {
+        return strconv.QuoteToASCII(string(ret[:2000])) + "MITM TRUNC"
+    }
+    return strconv.QuoteToASCII(string(ret))
 }

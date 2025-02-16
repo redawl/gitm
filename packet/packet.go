@@ -5,8 +5,10 @@ type HttpPacket struct {
     ClientIp string
     ServerIp string
     Method string
-    Status int
+    Status string
     Path string
+    ReqProto string
+    RespProto string
     RespHeaders map[string][]string
     RespContent []byte
     ReqHeaders map[string][]string
@@ -17,8 +19,10 @@ func CreatePacket (
     clientIp string, 
     serverIp string, 
     method string,
-    status int, 
+    status string, 
     path string,
+    respProto string,
+    reqProto string,
     respHeaders map[string][]string, 
     respContent []byte, 
     reqHeaders map[string][]string, 
@@ -30,6 +34,8 @@ func CreatePacket (
         Method: method,
         Status: status,
         Path: path,
+        ReqProto: reqProto,
+        RespProto: respProto,
         RespHeaders: respHeaders,
         RespContent: respContent,
         ReqHeaders: reqHeaders,

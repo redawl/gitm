@@ -41,7 +41,7 @@ func Handler(httpPacketHandler func(packet.HttpPacket)) http.HandlerFunc {
 
         if err != nil {
             // TODO: What to do here
-            slog.Error("Error forwarding http request", "error", err)
+            slog.Error("Error forwarding http request", "error", err, "request", req)
             return
         }
 
@@ -67,8 +67,10 @@ func Handler(httpPacketHandler func(packet.HttpPacket)) http.HandlerFunc {
                     r.RemoteAddr, 
                     r.Host, 
                     r.Method,
-                    resp.StatusCode, 
+                    resp.Status, 
                     r.URL.Host + r.URL.RequestURI(), 
+                    resp.Proto,
+                    r.Proto,
                     resp.Header, 
                     body, 
                     r.Header,

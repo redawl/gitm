@@ -17,7 +17,10 @@ func ListenAndServe(conf config.Config, httpPacketHandler func(packet.HttpPacket
 
 func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPacket)) {
     cfg := &tls.Config{
-        MinVersion: 1.0,
+        // Make sure we can forward ALL tls traffic
+        MinVersion: tls.VersionTLS10,
+        // If client doesn't care about verifying, neither do we
+        InsecureSkipVerify: true, 
     }
 
     cfg.GetCertificate = func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {

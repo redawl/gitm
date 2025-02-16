@@ -9,8 +9,8 @@ import (
 	"com.github.redawl.mitmproxy/config"
 )
 
-func StartTransparentSocksProxy(ListenUri string, conf config.Config) (error) {
-    ln, err := net.Listen("tcp", ListenUri)
+func StartTransparentSocksProxy(conf config.Config) (error) {
+    ln, err := net.Listen("tcp", conf.SocksListenUri)
 
     if err != nil {
         return err

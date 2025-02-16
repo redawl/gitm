@@ -2,6 +2,7 @@ package ui
 
 import (
 	"log/slog"
+	"strings"
 
 	"com.github.redawl.mitmproxy/packet"
 	"fyne.io/fyne/v2"
@@ -10,22 +11,40 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-func makeMenu () *fyne.MainMenu {
+func makeMenu (recordHandler func(), clearHandler func()) *fyne.MainMenu {
+    saveItem := fyne.NewMenuItem("Save", func() {
+        
+    })
 
-    file := fyne.NewMenu("File")
+    clearItem := fyne.NewMenuItem("Clear", clearHandler)
 
-    mainMenu := *fyne.NewMainMenu(file)
+    recordItem := fyne.NewMenuItem("Record", recordHandler)
+    fileMenu := fyne.NewMenu("File", clearItem, recordItem, saveItem)
+
+    mainMenu := *fyne.NewMainMenu(fileMenu)
     return &mainMenu
 }
 
 func ShowAndRun (packetChan chan packet.HttpPacket) {
+    shouldRecord := false
+    isRecording := widget.NewLabel("Recording: off")
     a := app.New()
     w := a.NewWindow("MITMProxy")
+    packetFullList := make([]*packet.HttpPacket, 0)
     packetList := make([]*packet.HttpPacket, 0)
     content := widget.NewMultiLineEntry()
     content.TextStyle = fyne.TextStyle{
         Monospace: true,
     }
+
+    filterContent := widget.NewEntry()
+
+    filterType := widget.NewSelect([]string{
+        "Filter hostname",
+        "Filter method",
+    }, func(s string){})
+
+    filterType.SetSelectedIndex(0)
 
     table := widget.NewList(func() int {
         return len(packetList)
@@ -33,28 +52,74 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
         return NewPacketRow()
     }, func(li widget.ListItemID, co fyne.CanvasObject) {
         row := co.(*PacketRow)
-        if packetList[li] != nil {
+        if li < len(packetList) && packetList[li] != nil {
             p := packetList[li]
             row.UpdateRow(*p, content)
         }
     })
 
+    filterContent.OnChanged = func(s string) {
+        packetList = filterPacketList(packetFullList, s, filterType.Selected)
+        table.Refresh()
+    }
+
     go func() {
         for {
             packet := <- packetChan
-            packetList = append(packetList, &packet)
-            table.Refresh()
+            if shouldRecord {
+                packetFullList = append(packetFullList, &packet)
+                packetList = filterPacketList(packetFullList, filterContent.Text, filterType.Selected)
+                table.Refresh()
+            }
         }
     }()
 
-    packetListContainer := container.NewBorder(widget.NewLabel("MITMProxy"), nil, nil, nil, table)
+    packetListContainer := container.NewBorder(container.NewBorder(
+        nil, nil, container.NewVBox(filterType, isRecording), nil, filterContent,
+    ), nil, nil, nil, table)
     packetListContainer.Show()
 
     masterLayout := container.NewGridWithRows(2, packetListContainer, container.NewScroll(content))
-    w.SetMainMenu(makeMenu())
+    w.SetMainMenu(makeMenu(func() {
+        shouldRecord = !shouldRecord
+        if shouldRecord {
+            isRecording.SetText("Recording: on")
+        } else {
+            isRecording.SetText("Recording: off")
+        }
+
+        isRecording.Refresh()
+    }, func() {
+        packetFullList = make([]*packet.HttpPacket, 0)
+        packetList = make([]*packet.HttpPacket, 0)
+    }))
     w.SetContent(masterLayout)
 
     slog.Info("Showing ui")
     w.ShowAndRun()
 }
 
+func filterPacketList(packetFullList []*packet.HttpPacket, filter string, filterType string) []*packet.HttpPacket {
+    if len(filter) == 0 {
+        return packetFullList 
+    }
+
+    packetList := []*packet.HttpPacket{}
+
+    for _, p := range packetFullList {
+        switch filterType {
+            case "Filter hostname": {
+                if strings.Contains(p.ServerIp, filter) {
+                    packetList = append(packetList, p)
+                }
+            }
+            case "Filter method": {
+                if strings.Contains(p.Method, filter) {
+                    packetList = append(packetList, p)
+                }
+            }
+        }
+    }
+
+    return packetList
+}

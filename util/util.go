@@ -43,3 +43,4 @@ func GetConfigDir () (string, error) {
 
     return cfgDir, nil
 }
+

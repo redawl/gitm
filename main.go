@@ -28,7 +28,7 @@ func setupbackend (httpHandler func(packet.HttpPacket), httpsHandler func(packet
     slog.SetDefault(logger)
 
     slog.Info("Starting Cacert server")
-    go cacert.ListenAndServe("0.0.0.0:9090")
+    go cacert.ListenAndServe(conf.CacertListenUri)
 
     slog.Info("Starting http server")
     go http.ListenAndServe(conf, httpHandler)
@@ -37,7 +37,7 @@ func setupbackend (httpHandler func(packet.HttpPacket), httpsHandler func(packet
     go http.ListenAndServeTls(conf, httpsHandler)
     
     slog.Info("Starting socks5 proxy")
-    go socks5.StartTransparentSocksProxy("0.0.0.0:1080", conf)
+    go socks5.StartTransparentSocksProxy(conf)
 }
 
 func main() {
@@ -51,5 +51,4 @@ func main() {
     
     ui.ShowAndRun(packetChan)
 }
-
 
