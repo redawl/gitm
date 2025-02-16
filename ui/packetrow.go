@@ -3,11 +3,9 @@ package ui
 import (
 	"bytes"
 	"compress/gzip"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
-	"strconv"
 	"strings"
 
 	"com.github.redawl.mitmproxy/packet"
@@ -130,7 +128,7 @@ func decodeBody(body []byte, contentTypes []string) string {
         }
     }
     if len(ret) > 2000 {
-        return strconv.QuoteToASCII(string(ret[:2000])) + "MITM TRUNC"
+        return string(ret[:2000]) + "MITM TRUNC"
     }
-    return strconv.QuoteToASCII(string(ret))
+    return string(ret)
 }
