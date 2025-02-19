@@ -4,12 +4,12 @@ import (
 	"log/slog"
 	"os"
 
-	"com.github.redawl.mitmproxy/cacert"
-	"com.github.redawl.mitmproxy/config"
-	"com.github.redawl.mitmproxy/http"
-	"com.github.redawl.mitmproxy/packet"
-	"com.github.redawl.mitmproxy/socks5"
-	"com.github.redawl.mitmproxy/ui"
+	"com.github.redawl.gitm/cacert"
+	"com.github.redawl.gitm/config"
+	"com.github.redawl.gitm/http"
+	"com.github.redawl.gitm/packet"
+	"com.github.redawl.gitm/socks5"
+	"com.github.redawl.gitm/ui"
 )
 
 func setupbackend (httpHandler func(packet.HttpPacket), httpsHandler func(packet.HttpPacket)) {

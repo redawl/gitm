@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"com.github.redawl.mitmproxy/packet"
+	"com.github.redawl.gitm/packet"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
@@ -29,7 +29,7 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
     shouldRecord := false
     isRecording := widget.NewLabel("Recording: off")
     a := app.New()
-    w := a.NewWindow("MITMProxy")
+    w := a.NewWindow("GITM")
     packetFullList := make([]*packet.HttpPacket, 0)
     packetList := make([]*packet.HttpPacket, 0)
     content := widget.NewMultiLineEntry()

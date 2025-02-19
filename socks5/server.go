@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net"
 
-	"com.github.redawl.mitmproxy/config"
+	"com.github.redawl.gitm/config"
 )
 
 func StartTransparentSocksProxy(conf config.Config) (error) {
@@ -42,7 +42,7 @@ func handleConnection(client net.Conn, conf config.Config) (error) {
     slog.Debug("Parsed client greeting", "greeting", greeting)
     
     if greeting.CanHandle() {
-        slog.Debug("Handling Request")
+        slog.Debug("Handlin Request")
         client.Write(
             FormatServerChoice(SOCKS_VER_5, METHOD_NO_AUTH_REQUIRED),
         )

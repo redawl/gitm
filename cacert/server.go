@@ -16,8 +16,8 @@ import (
 	"os"
 	"time"
 
-	"com.github.redawl.mitmproxy/db"
-	"com.github.redawl.mitmproxy/util"
+	"com.github.redawl.gitm/db"
+	"com.github.redawl.gitm/util"
 )
 
 func ListenAndServe(listenUri string) error {
@@ -232,11 +232,11 @@ func createSerialNumer() (*big.Int, error) {
 
 func getName() (*pkix.Name) {
     return &pkix.Name{
-        CommonName: "MITMProxy Inc",
-        OrganizationalUnit: []string{"MITMProxy Inc"},
-        Organization: []string{"MITMProxy Inc"},
-        Country: []string{"MITMProxy Inc"},
-        Province: []string{"MITMProxy Inc"},
-        Locality: []string{"MITMProxy Inc"},
+        CommonName: "GITM Inc",
+        OrganizationalUnit: []string{"GITM Inc"},
+        Organization: []string{"GITM Inc"},
+        Country: []string{"GITM Inc"},
+        Province: []string{"GITM Inc"},
+        Locality: []string{"GITM Inc"},
     }
 }

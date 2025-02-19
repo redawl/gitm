@@ -1,8 +1,8 @@
-Website = "https://github.com/redawl/mitmproxy"
+Website = "https://github.com/redawl/gitm"
 
 [Details]
   Icon = "Icon.png"
-  Name = "mitmproxy"
-  ID = "com.github.redawl.mitmproxy"
+  Name = "gitm"
+  ID = "com.github.redawl.gitm"
   Version = "0.0.0"
   Build = 3

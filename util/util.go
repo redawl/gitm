@@ -30,7 +30,7 @@ func GetConfigDir () (string, error) {
         return "", err
     }
 
-    cfgDir := userCfgDir + "/mitmproxy"
+    cfgDir := userCfgDir + "/gitm"
 
     if _, err := os.Stat(cfgDir); errors.Is(err, os.ErrNotExist) {
         slog.Debug("Config dir doesn't exist, creating")

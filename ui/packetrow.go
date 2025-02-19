@@ -10,7 +10,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"com.github.redawl.mitmproxy/packet"
+	"com.github.redawl.gitm/packet"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"

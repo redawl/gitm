@@ -1,6 +1,5 @@
 package packet
 
-
 type HttpPacket struct {
     ClientIp string
     ServerIp string

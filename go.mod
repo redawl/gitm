@@ -1,4 +1,4 @@
-module com.github.redawl.mitmproxy
+module com.github.redawl.gitm
 
 go 1.23.5
 

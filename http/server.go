@@ -5,10 +5,10 @@ import (
 	"log/slog"
 	"net/http"
 
-	"com.github.redawl.mitmproxy/cacert"
-	"com.github.redawl.mitmproxy/config"
-	"com.github.redawl.mitmproxy/db"
-	"com.github.redawl.mitmproxy/packet"
+	"com.github.redawl.gitm/cacert"
+	"com.github.redawl.gitm/config"
+	"com.github.redawl.gitm/db"
+	"com.github.redawl.gitm/packet"
 )
 
 func ListenAndServe(conf config.Config, httpPacketHandler func(packet.HttpPacket)) {

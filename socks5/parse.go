@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"com.github.redawl.mitmproxy/util"
+	"com.github.redawl.gitm/util"
 )
 
 func ParseClientGreeting (conn net.Conn) (*ClientGreeting, error) {
