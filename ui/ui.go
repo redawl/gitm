@@ -33,6 +33,7 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
     packetFullList := make([]*packet.HttpPacket, 0)
     packetList := make([]*packet.HttpPacket, 0)
     content := widget.NewMultiLineEntry()
+    content.Wrapping = fyne.TextWrapBreak
     content.TextStyle = fyne.TextStyle{
         Monospace: true,
     }
@@ -42,6 +43,7 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
     filterType := widget.NewSelect([]string{
         "Filter hostname",
         "Filter method",
+        "Filter statuscode",
     }, func(s string){})
 
     filterType.SetSelectedIndex(0)
@@ -115,6 +117,11 @@ func filterPacketList(packetFullList []*packet.HttpPacket, filter string, filter
             }
             case "Filter method": {
                 if strings.Contains(p.Method, filter) {
+                    packetList = append(packetList, p)
+                }
+            }
+            case "Filter statuscode": {
+                if strings.Contains(p.Status, filter) {
                     packetList = append(packetList, p)
                 }
             }

@@ -2,7 +2,9 @@ package ui
 
 import (
 	"bytes"
+	"compress/flate"
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -47,18 +49,28 @@ func (row *PacketRow) UpdateRow (p packet.HttpPacket, content *widget.Entry) {
 
     if len(path) == 0 {
         path = "/"
+    } else if len(path) > 100 {
+        path = path[:100] + "..."
     }
 
-    if len(path)> 5000 {
-        row.HttpLine.Text = fmt.Sprintf("%s %s %s", p.Method, path[:5000], p.ReqProto)
-    } else {
-        row.HttpLine.Text = fmt.Sprintf("%s %s %s", p.Method, path, p.ReqProto)
-    }
+    row.HttpLine.Text = fmt.Sprintf("%s %s %s - %s %s", p.Method, path, p.ReqProto, p.RespProto, p.Status)
     
     row.HttpLine.Refresh()
 
-    request := row.HttpLine.Text + "\n" + formatHeaders(p.ReqHeaders) + "\n\n" + decodeBody(p.ReqContent, p.ReqHeaders["Content-Encoding"])
-    response := fmt.Sprintf("%s %s", p.RespProto, p.Status) + "\n" + formatHeaders(p.RespHeaders) + "\n" + decodeBody(p.RespContent, p.RespHeaders["Content-Encoding"])
+    request := fmt.Sprintf(
+        "%s %s %s\n%s\n%s", 
+        p.Method, 
+        "/" + strings.Join(strings.Split(p.Path, "/")[1:], "/"),
+        p.ReqProto, 
+        formatHeaders(p.ReqHeaders), decodeBody(p.ReqContent, p.ReqHeaders["Content-Encoding"], p.ReqHeaders["Content-Type"]),
+    )
+
+    response := fmt.Sprintf(
+        "%s %s\n%s\n%s", 
+        p.RespProto, 
+        p.Status, 
+        formatHeaders(p.RespHeaders), decodeBody(p.RespContent, p.RespHeaders["Content-Encoding"], p.ReqHeaders["Content-Type"]),
+    )
 
     row.ViewReq.OnTapped = func() {
         content.SetText(request)
@@ -97,12 +109,12 @@ func formatHeaders (headers map[string][]string) string {
     return builder.String()
 }
 
-func decodeBody(body []byte, contentTypes []string) string {
+func decodeBody(body []byte, contentEncodings []string, contentTypes []string) string {
     ret := body
-    if len(contentTypes) > 0 {
+    if len(contentEncodings) > 0 {
         decoded := bytes.NewReader(body)
-        for _, contentType := range contentTypes {
-            switch contentType {
+        for _, contentEncoding := range contentEncodings {
+            switch contentEncoding {
                 case "gzip": {
                     decoded, err := gzip.NewReader(decoded)
 
@@ -118,17 +130,60 @@ func decodeBody(body []byte, contentTypes []string) string {
                         break
                     }
                 }
+                case "deflate": {
+                    decoded := flate.NewReader(decoded)
+
+                    var err error
+                    ret, err = io.ReadAll(decoded)
+
+                    if err != nil {
+                        slog.Error("Failed reading stream", "error", err) 
+                        break
+                    }
+                }
                 case "UTF-8":
                 case "none":
                 default: {
-                    slog.Error("Unhandled compression", "compression", contentType)
+                    slog.Error("Unhandled compression", "compression", contentEncoding)
                     break
                 }
             }
         }
     }
-    if len(ret) > 2000 {
-        return string(ret[:2000]) + "MITM TRUNC"
+
+    if len(contentTypes) > 0 {
+        for _, contentType := range contentTypes {
+            switch contentType {
+                case "application/json": {
+                    buff := bytes.NewBuffer([]byte{})
+                    err := json.Compact(buff, ret)
+
+                    if err != nil {
+                        slog.Error("Error compacting json", "error", err, "content", ret)
+                        break
+                    }
+
+                    err = json.Indent(buff, buff.Bytes(), "\t", "")
+
+                    if err != nil {
+                        slog.Error("Error indenting json", "error", err, "content", ret)
+                        break
+                    }
+
+                    ret, err = io.ReadAll(buff)
+
+                    if err != nil {
+                        slog.Error("Error reading indented json", "error", err)
+                        break
+                    }
+                }
+                case "text/html":
+                default: {
+                    slog.Error("Unhandled content type", "content-type", contentType)
+                }
+            }
+        }
     }
+
     return string(ret)
 }
