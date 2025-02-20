@@ -107,7 +107,7 @@ func handleConnection(client net.Conn, conf config.Config) (error) {
                 client.Write(FormatConnResponse(
                     SOCKS_VER_5,
                     STATUS_HOST_UNREACHABLE,
-                    server.LocalAddr(),
+                    client.RemoteAddr(),
                 ))
                 return err
             }
