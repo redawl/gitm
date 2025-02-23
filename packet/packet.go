@@ -1,44 +1,41 @@
 package packet
 
 type HttpPacket struct {
-    ClientIp string
-    ServerIp string
+    Hostname string
     Method string
     Status string
     Path string
     ReqProto string
     RespProto string
     RespHeaders map[string][]string
-    RespContent []byte
+    RespBody []byte
     ReqHeaders map[string][]string
-    ReqContent []byte
+    ReqBody []byte
 }
 
 func CreatePacket (
-    clientIp string, 
-    serverIp string, 
+    hostname string, 
     method string,
     status string, 
     path string,
     respProto string,
     reqProto string,
     respHeaders map[string][]string, 
-    respContent []byte, 
+    respBody []byte, 
     reqHeaders map[string][]string, 
-    reqContent []byte,
+    reqBody []byte,
 ) (HttpPacket) {
     return HttpPacket{
-        ClientIp: clientIp,
-        ServerIp: serverIp,
+        Hostname: hostname,
         Method: method,
         Status: status,
         Path: path,
         ReqProto: reqProto,
         RespProto: respProto,
         RespHeaders: respHeaders,
-        RespContent: respContent,
+        RespBody: respBody,
         ReqHeaders: reqHeaders,
-        ReqContent: reqContent,
+        ReqBody: reqBody,
     }
 }
 

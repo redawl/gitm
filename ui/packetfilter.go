@@ -7,6 +7,16 @@ import (
 	"com.github.redawl.gitm/packet"
 )
 
+const (
+    FILTER_HOSTNAME  = "hostname"
+    FILTER_METHOD    = "method"
+    FILTER_PATH      = "path"
+    FILTER_REQ_BODY  = "reqbody"
+    // TODO filter on version?
+    FILTER_STATUS    = "status"
+    FILTER_RESP_BODY = "respbody"
+)
+
 type filterPair struct {
     filterType string
     negate bool
@@ -107,34 +117,22 @@ func FilterPackets (filterString string, packets []*packet.HttpPacket) []*packet
     for _, p := range packets {
         passed := true
         for _, filterPair := range filterPairs {
+            filterStr := ""
             switch filterPair.filterType {
-                case "host": {
-                    if filterPair.negate == (strings.Contains(p.ServerIp, filterPair.filterContent)) {
-                        passed = false
-                        break
-                    }
-                }
-                case "statuscode": {
-                    if filterPair.negate == (strings.Contains(p.Status, filterPair.filterContent)) {
-                        passed = false
-                        break
-                    }
-                }
-                case "content": {
-                    if filterPair.negate == (strings.Contains(string(p.RespContent), filterPair.filterContent)) {
-                        passed = false
-                        break
-                    }
-                }
-                case "method": {
-                    if filterPair.negate == (strings.Contains(p.Method, filterPair.filterContent)) {
-                        passed = false
-                        break
-                    }
-                }
+                case FILTER_HOSTNAME: filterStr = p.Hostname
+                case FILTER_METHOD: filterStr = p.Method
+                case FILTER_PATH: filterStr = p.Path
+                case FILTER_REQ_BODY: filterStr = string(p.ReqBody)
+                case FILTER_STATUS: filterStr = p.Status
+                case FILTER_RESP_BODY: filterStr = string(p.RespBody)
                 default: {
                     slog.Warn("Unknown filter specified", "filterType", filterPair.filterType, "filterContent", filterPair.filterContent)
                 }
+            }
+
+            if len(filterStr) > 0 && filterPair.negate == (strings.Contains(filterStr, filterPair.filterContent)) {
+                passed = false
+                break
             }
         }
         // Passed all filters

@@ -10,33 +10,33 @@ import (
 )
 
 func Handler(httpPacketHandler func(packet.HttpPacket)) http.HandlerFunc {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        hostName := r.Host
-        slog.Debug("Handling request", "method", r.Method, "path", "http://" + hostName + r.URL.String(), "request", r)
-        requestBody, err := io.ReadAll(r.Body)
+    return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+        hostName := request.Host
+        slog.Debug("Handling request", "method", request.Method, "path", "http://" + hostName + request.URL.String(), "request", request)
+        requestBody, err := io.ReadAll(request.Body)
 
         if err != nil {
-            slog.Error("Error reading request body", "error", err)
+            slog.Error("Error reading request responseBody", "error", err)
             return
         }
 
         req := &http.Request{
-            Method: r.Method,
-            URL: r.URL,
+            Method: request.Method,
+            URL: request.URL,
             Body:  io.NopCloser(bytes.NewReader(requestBody)),
-            Proto: r.Proto,
-            ProtoMajor: r.ProtoMajor,
-            ProtoMinor: r.ProtoMinor,
-            Header: r.Header,
+            Proto: request.Proto,
+            ProtoMajor: request.ProtoMajor,
+            ProtoMinor: request.ProtoMinor,
+            Header: request.Header,
         }
 
-        if r.TLS != nil {
+        if request.TLS != nil {
             req.URL.Scheme = "https"
         } else {
             req.URL.Scheme = "http"
         }
 
-        req.URL.Host = r.Host
+        req.URL.Host = request.Host
         resp, err := http.DefaultTransport.RoundTrip(req)
 
         if err != nil {
@@ -55,7 +55,7 @@ func Handler(httpPacketHandler func(packet.HttpPacket)) http.HandlerFunc {
         
         slog.Debug("Response from proxied server", "response", resp)
 
-        body, err := io.ReadAll(resp.Body)
+        responseBody, err := io.ReadAll(resp.Body)
 
         if err != nil {
             slog.Error("Error forwarding http request", "error", err)
@@ -64,22 +64,21 @@ func Handler(httpPacketHandler func(packet.HttpPacket)) http.HandlerFunc {
         if httpPacketHandler != nil {
             httpPacketHandler(
                 packet.CreatePacket(
-                    r.RemoteAddr, 
-                    r.Host, 
-                    r.Method,
+                    request.URL.Hostname(), 
+                    request.Method,
                     resp.Status, 
-                    r.URL.Host + r.URL.RequestURI(), 
+                    request.URL.RequestURI(), 
                     resp.Proto,
-                    r.Proto,
+                    request.Proto,
                     resp.Header, 
-                    body, 
-                    r.Header,
+                    responseBody, 
+                    request.Header,
                     requestBody,
                 ),
             )
         }
 
-        w.Write(body)
+        w.Write(responseBody)
     })
 }
 

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/flate"
 	"compress/gzip"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -53,23 +52,25 @@ func (row *PacketRow) UpdateRow (p packet.HttpPacket, content *widget.Entry) {
         path = path[:100] + "..."
     }
 
-    row.HttpLine.Text = fmt.Sprintf("%s %s %s - %s %s", p.Method, path, p.ReqProto, p.RespProto, p.Status)
+    row.HttpLine.Text = fmt.Sprintf("%s: %s %s %s -> %s %s", p.Hostname, p.Method, path, p.ReqProto, p.RespProto, p.Status)
     
     row.HttpLine.Refresh()
 
     request := fmt.Sprintf(
         "%s %s %s\n%s\n%s", 
         p.Method, 
-        "/" + strings.Join(strings.Split(p.Path, "/")[1:], "/"),
+        p.Path,
         p.ReqProto, 
-        formatHeaders(p.ReqHeaders), decodeBody(p.ReqContent, p.ReqHeaders["Content-Encoding"], p.ReqHeaders["Content-Type"]),
+        formatHeaders(p.ReqHeaders),
+        decodeBody(p.ReqBody, p.ReqHeaders["Content-Encoding"]),
     )
 
     response := fmt.Sprintf(
         "%s %s\n%s\n%s", 
         p.RespProto, 
         p.Status, 
-        formatHeaders(p.RespHeaders), decodeBody(p.RespContent, p.RespHeaders["Content-Encoding"], p.ReqHeaders["Content-Type"]),
+        formatHeaders(p.RespHeaders),
+        decodeBody(p.RespBody, p.RespHeaders["Content-Encoding"]),
     )
 
     row.ViewReq.OnTapped = func() {
@@ -109,7 +110,7 @@ func formatHeaders (headers map[string][]string) string {
     return builder.String()
 }
 
-func decodeBody(body []byte, contentEncodings []string, contentTypes []string) string {
+func decodeBody(body []byte, contentEncodings []string) string {
     ret := body
     if len(contentEncodings) > 0 {
         decoded := bytes.NewReader(body)
@@ -146,40 +147,6 @@ func decodeBody(body []byte, contentEncodings []string, contentTypes []string) s
                 default: {
                     slog.Error("Unhandled compression", "compression", contentEncoding)
                     break
-                }
-            }
-        }
-    }
-
-    if len(contentTypes) > 0 {
-        for _, contentType := range contentTypes {
-            switch contentType {
-                case "application/json": {
-                    buff := bytes.NewBuffer([]byte{})
-                    err := json.Compact(buff, ret)
-
-                    if err != nil {
-                        slog.Error("Error compacting json", "error", err, "content", ret)
-                        break
-                    }
-
-                    err = json.Indent(buff, buff.Bytes(), "\t", "")
-
-                    if err != nil {
-                        slog.Error("Error indenting json", "error", err, "content", ret)
-                        break
-                    }
-
-                    ret, err = io.ReadAll(buff)
-
-                    if err != nil {
-                        slog.Error("Error reading indented json", "error", err)
-                        break
-                    }
-                }
-                case "text/html":
-                default: {
-                    slog.Error("Unhandled content type", "content-type", contentType)
                 }
             }
         }
