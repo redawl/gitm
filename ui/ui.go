@@ -2,7 +2,6 @@ package ui
 
 import (
 	"log/slog"
-	"strings"
 
 	"com.github.redawl.gitm/packet"
 	"fyne.io/fyne/v2"
@@ -61,7 +60,7 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
     })
 
     filterContent.OnChanged = func(s string) {
-        packetList = filterPacketList(packetFullList, s, filterType.Selected)
+        packetList = FilterPackets(s, packetFullList)
         table.Refresh()
     }
 
@@ -70,14 +69,14 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
             packet := <- packetChan
             if shouldRecord {
                 packetFullList = append(packetFullList, &packet)
-                packetList = filterPacketList(packetFullList, filterContent.Text, filterType.Selected)
+                packetList = FilterPackets(filterContent.Text, packetFullList)
                 table.Refresh()
             }
         }
     }()
 
     packetListContainer := container.NewBorder(container.NewBorder(
-        nil, nil, container.NewVBox(filterType, isRecording), nil, filterContent,
+        nil, nil, isRecording, nil, filterContent,
     ), nil, nil, nil, table)
     packetListContainer.Show()
 
@@ -101,32 +100,3 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
     w.ShowAndRun()
 }
 
-func filterPacketList(packetFullList []*packet.HttpPacket, filter string, filterType string) []*packet.HttpPacket {
-    if len(filter) == 0 {
-        return packetFullList 
-    }
-
-    packetList := []*packet.HttpPacket{}
-
-    for _, p := range packetFullList {
-        switch filterType {
-            case "Filter hostname": {
-                if strings.Contains(p.ServerIp, filter) {
-                    packetList = append(packetList, p)
-                }
-            }
-            case "Filter method": {
-                if strings.Contains(p.Method, filter) {
-                    packetList = append(packetList, p)
-                }
-            }
-            case "Filter statuscode": {
-                if strings.Contains(p.Status, filter) {
-                    packetList = append(packetList, p)
-                }
-            }
-        }
-    }
-
-    return packetList
-}
