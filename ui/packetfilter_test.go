@@ -80,3 +80,27 @@ func testGetTokensOnlyFilterType (t *testing.T) {
         t.Errorf("filterType = \"%s\" && filterContent = \"%s\", expected host && \"\"", filterPairs[0].filterType, filterPairs[0].filterContent)
     }
 }
+
+func testGetTokensNegate (t *testing.T) {
+    filterString := "host:-google.com"
+
+    filterPairs := getTokens(filterString)
+
+    if len(filterPairs) != 1 {
+        t.Errorf("len(getTokens(\"%s\")) = %d. expected 1", filterString, len(filterPairs))
+    } else if filterPairs[0].filterType != "host" || filterPairs[0].filterContent != "google.com" || !filterPairs[0].negate {
+        t.Errorf("filterType = \"%s\" && filterContent = \"%s\" && negate = %t, expected host && google.com && true", filterPairs[0].filterType, filterPairs[0].filterContent, filterPairs[0].negate)
+    }
+}
+
+func testGetTokensNegateEmpty (t *testing.T) {
+    filterString := "host:-"
+
+    filterPairs := getTokens(filterString)
+
+    if len(filterPairs) != 1 {
+        t.Errorf("len(getTokens(\"%s\")) = %d. expected 1", filterString, len(filterPairs))
+    } else if filterPairs[0].filterType != "host" || filterPairs[0].filterContent != "" || !filterPairs[0].negate {
+        t.Errorf("filterType = \"%s\" && filterContent = \"%s\" && negate = %t, expected host && \"\" && true", filterPairs[0].filterType, filterPairs[0].filterContent, filterPairs[0].negate)
+    }
+}

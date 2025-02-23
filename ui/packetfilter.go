@@ -59,6 +59,13 @@ func getTokens (filterString string) []filterPair {
             fp.negate = false
         }
 
+        if len(filterStringStripped) <= colonIndex + 1 {
+            // found filterType without filterContent
+            fp.negate = false
+            filterPairs = append(filterPairs, fp)
+            return filterPairs
+        }
+
         if filterStringStripped[colonIndex + 1] == '"' {
             quoteIndex := strings.Index(filterStringStripped[colonIndex+2:], "\"")
             if quoteIndex == -1 {
