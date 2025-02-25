@@ -69,7 +69,7 @@ func TestGetTokensWithQuotes (t *testing.T) {
     }
 }
 
-func testGetTokensOnlyFilterType (t *testing.T) {
+func TestGetTokensOnlyFilterType (t *testing.T) {
     filterString := "host:"
 
     filterPairs := getTokens(filterString)
@@ -81,7 +81,7 @@ func testGetTokensOnlyFilterType (t *testing.T) {
     }
 }
 
-func testGetTokensNegate (t *testing.T) {
+func TestGetTokensNegate (t *testing.T) {
     filterString := "host:-google.com"
 
     filterPairs := getTokens(filterString)
@@ -93,7 +93,7 @@ func testGetTokensNegate (t *testing.T) {
     }
 }
 
-func testGetTokensNegateEmpty (t *testing.T) {
+func TestGetTokensNegateEmpty (t *testing.T) {
     filterString := "host:-"
 
     filterPairs := getTokens(filterString)

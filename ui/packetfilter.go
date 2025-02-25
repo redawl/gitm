@@ -71,7 +71,6 @@ func getTokens (filterString string) []filterPair {
 
         if len(filterStringStripped) <= colonIndex + 1 {
             // found filterType without filterContent
-            fp.negate = false
             filterPairs = append(filterPairs, fp)
             return filterPairs
         }

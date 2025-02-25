@@ -14,14 +14,13 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-func makeMenu (recordHandler func(), clearHandler func(), saveHandler func(), loadHandler func()) *fyne.MainMenu {
+func makeMenu (clearHandler func(), saveHandler func(), loadHandler func()) *fyne.MainMenu {
     saveItem := fyne.NewMenuItem("Save", saveHandler)
     loadItem := fyne.NewMenuItem("Load", loadHandler)
 
     clearItem := fyne.NewMenuItem("Clear", clearHandler)
 
-    recordItem := fyne.NewMenuItem("Record", recordHandler)
-    fileMenu := fyne.NewMenu("File", loadItem, clearItem, recordItem, saveItem)
+    fileMenu := fyne.NewMenu("File", loadItem, clearItem, saveItem)
 
     mainMenu := *fyne.NewMainMenu(fileMenu)
     return &mainMenu
@@ -29,9 +28,21 @@ func makeMenu (recordHandler func(), clearHandler func(), saveHandler func(), lo
 
 func ShowAndRun (packetChan chan packet.HttpPacket) {
     shouldRecord := false
-    isRecording := widget.NewLabel("Recording: off")
+    isRecording := widget.NewButton("Recording: off", func() {})
+
+    isRecording.OnTapped = func() {
+        shouldRecord = !shouldRecord
+        if shouldRecord {
+            isRecording.SetText("Recording: on")
+        } else {
+            isRecording.SetText("Recording: off")
+        }
+
+        isRecording.Refresh()
+    }
     a := app.New()
     w := a.NewWindow("GITM")
+    w.Resize(fyne.NewSize(1920, 1080))
 
     packetFullList := make([]*packet.HttpPacket, 0)
     packetList := make([]*packet.HttpPacket, 0)
@@ -76,26 +87,16 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
     ), nil, nil, nil, table)
     packetListContainer.Show()
 
-
     masterLayout := container.NewGridWithRows(2, packetListContainer, container.NewScroll(content))
     w.SetMainMenu(
         makeMenu(
             func() {
-                shouldRecord = !shouldRecord
-                if shouldRecord {
-                    isRecording.SetText("Recording: on")
-                } else {
-                    isRecording.SetText("Recording: off")
-                }
-
-                isRecording.Refresh()
-            }, 
-            func() {
                 packetFullList = make([]*packet.HttpPacket, 0)
                 packetList = make([]*packet.HttpPacket, 0)
+                table.Refresh()
             },
             func() {
-                jsonString, err := json.Marshal(packetList)
+                jsonString, err := json.Marshal(packetFullList)
 
                 if err != nil {
                     slog.Error("Error marshalling packetList", "error", err)
@@ -104,6 +105,15 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
                 }
 
                 saveFileDialog := dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
+                    if err != nil {
+                        slog.Error("Error saving to file", "filename", writer.URI().Path(), "error", err)
+                        dialog.ShowError(err, w)
+                        return
+                    }
+
+                    if writer == nil {
+                        return
+                    }
                     _, err = writer.Write(jsonString)
 
                     if err != nil {
@@ -119,27 +129,53 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
                 saveFileDialog.Show()
             },
             func() {
-                openFileDialog := dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
-                    packetList = make([]*packet.HttpPacket, 0)
-                    fileContents, err := io.ReadAll(reader)
+                showConfirmDialog := func() {
+                    openFileDialog := dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
+                        if err != nil {
+                            slog.Error("Error saving to file", "filename", reader.URI().Path(), "error", err)
+                            dialog.ShowError(err, w)
+                            return
+                        }
 
-                    if err != nil {
-                        slog.Error("Error reading from file", "filename", reader.URI().Path(), "error", err)
-                        dialog.ShowError(err, w)
-                        return
-                    }
-                    err = json.Unmarshal(fileContents, &packetList)
+                        if reader == nil {
+                            return
+                        }
 
-                    if err != nil {
-                        slog.Error("Error unmarshalling file contents", "filename", reader.URI().Path(), "error", err)
-                        dialog.ShowError(err, w)
-                        return
-                    }
-                    
-                    packetFullList = packetList
-                }, w)
+                        packetFullList = make([]*packet.HttpPacket, 0)
+                        fileContents, err := io.ReadAll(reader)
 
-                openFileDialog.Show()
+                        if err != nil {
+                            slog.Error("Error reading from file", "filename", reader.URI().Path(), "error", err)
+                            dialog.ShowError(err, w)
+                            return
+                        }
+                        err = json.Unmarshal(fileContents, &packetFullList)
+
+                        if err != nil {
+                            slog.Error("Error unmarshalling file contents", "filename", reader.URI().Path(), "error", err)
+                            dialog.ShowError(err, w)
+                            return
+                        }
+                        
+                        packetList = FilterPackets(filterContent.Text, packetFullList)
+                        table.Refresh()
+                    }, w)
+
+                    openFileDialog.Show()
+                }
+
+                if len(packetFullList) > 0 {
+                    confirmDialog := dialog.NewConfirm("Overwrite packets", "Are you sure you want to overwrite the currently displayed packets?", func(confirmed bool) {
+                        if confirmed {
+                            showConfirmDialog()
+                        }
+                    }, w)
+
+                    confirmDialog.Show()
+                } else {
+                    showConfirmDialog()
+                }
+
             },
         ),
     )
