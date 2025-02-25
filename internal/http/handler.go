@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"com.github.redawl.gitm/packet"
+	"github.com/redawl/gitm/internal/packet"
 )
 
 func Handler(httpPacketHandler func(packet.HttpPacket)) http.HandlerFunc {

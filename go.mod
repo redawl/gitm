@@ -1,4 +1,4 @@
-module com.github.redawl.gitm
+module github.com/redawl/gitm
 
 go 1.23.5
 

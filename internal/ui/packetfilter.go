@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"com.github.redawl.gitm/packet"
+	"github.com/redawl/gitm/internal/packet"
 )
 
 const (

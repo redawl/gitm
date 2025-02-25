@@ -6,7 +6,7 @@ import (
 	"io"
 	"log/slog"
 
-	"com.github.redawl.gitm/packet"
+	"github.com/redawl/gitm/internal/packet"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
@@ -41,7 +41,7 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
         isRecording.Refresh()
     }
     a := app.New()
-    w := a.NewWindow("GITM")
+    w := a.NewWindow("Gopher in the middle")
     w.Resize(fyne.NewSize(1920, 1080))
 
     packetFullList := make([]*packet.HttpPacket, 0)

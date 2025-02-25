@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net"
 
-	"com.github.redawl.gitm/config"
+	"github.com/redawl/gitm/internal/config"
 )
 
 func StartTransparentSocksProxy(conf config.Config) (error) {

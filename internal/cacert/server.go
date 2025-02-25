@@ -16,8 +16,8 @@ import (
 	"os"
 	"time"
 
-	"com.github.redawl.gitm/db"
-	"com.github.redawl.gitm/util"
+	"github.com/redawl/gitm/internal/db"
+	"github.com/redawl/gitm/internal/util"
 )
 
 func ListenAndServe(listenUri string) error {
@@ -42,7 +42,7 @@ func ListenAndServe(listenUri string) error {
 
             w.Write(contents)
         } else if r.URL.Path == "/proxy.pac" {
-            contents, err := os.ReadFile("www/proxy.pac")
+            contents, err := os.ReadFile("assets/proxy.pac")
 
             if err != nil {
                 slog.Error("Error getting proxy file", "error", err)

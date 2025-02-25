@@ -3,7 +3,7 @@ package db
 import (
 	"database/sql"
 
-	"com.github.redawl.gitm/util"
+	"github.com/redawl/gitm/internal/util"
 	_ "github.com/mattn/go-sqlite3"
 )
 

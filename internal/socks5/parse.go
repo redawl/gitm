@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"com.github.redawl.gitm/util"
+	"github.com/redawl/gitm/internal/util"
 )
 
 func ParseClientGreeting (conn net.Conn) (*ClientGreeting, error) {
