@@ -11,12 +11,17 @@ type PacketDisplay struct {
 
 func NewPacketDisplay() *PacketDisplay {
     packetDisplay := &PacketDisplay{
-        Entry: *widget.NewMultiLineEntry(),
+        Entry: widget.Entry{
+            MultiLine: true,
+        },
     }
     packetDisplay.Wrapping = fyne.TextWrapBreak
     packetDisplay.TextStyle = fyne.TextStyle{
         Monospace: true,
     }
+    packetDisplay.Show()
+
+    packetDisplay.ExtendBaseWidget(packetDisplay)
 
     return packetDisplay
 }

@@ -46,11 +46,7 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
 
     packetFullList := make([]*packet.HttpPacket, 0)
     packetList := make([]*packet.HttpPacket, 0)
-    content := widget.NewMultiLineEntry()
-    content.Wrapping = fyne.TextWrapBreak
-    content.TextStyle = fyne.TextStyle{
-        Monospace: true,
-    }
+    content := NewPacketDisplay()
 
     filterContent := widget.NewEntry()
 

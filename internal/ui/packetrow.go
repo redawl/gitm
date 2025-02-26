@@ -43,7 +43,7 @@ func NewPacketRow() *PacketRow {
     return row
 }
 
-func (row *PacketRow) UpdateRow (p packet.HttpPacket, content *widget.Entry) {
+func (row *PacketRow) UpdateRow (p packet.HttpPacket, content *PacketDisplay) {
     path := p.Path
 
     if len(path) == 0 {
