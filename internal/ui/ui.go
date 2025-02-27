@@ -81,7 +81,6 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
     packetListContainer := container.NewBorder(container.NewBorder(
         nil, nil, isRecording, nil, filterContent,
     ), nil, nil, nil, table)
-    packetListContainer.Show()
 
     masterLayout := container.NewGridWithRows(2, packetListContainer, container.NewScroll(content))
     w.SetMainMenu(
@@ -171,7 +170,6 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
                 } else {
                     showConfirmDialog()
                 }
-
             },
         ),
     )

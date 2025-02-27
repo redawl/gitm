@@ -13,15 +13,16 @@ func NewPacketDisplay() *PacketDisplay {
     packetDisplay := &PacketDisplay{
         Entry: widget.Entry{
             MultiLine: true,
+            Wrapping: fyne.TextWrapBreak,
+            TextStyle: fyne.TextStyle{
+                Monospace: true,
+            },
         },
     }
-    packetDisplay.Wrapping = fyne.TextWrapBreak
-    packetDisplay.TextStyle = fyne.TextStyle{
-        Monospace: true,
-    }
-    packetDisplay.Show()
 
     packetDisplay.ExtendBaseWidget(packetDisplay)
+
+    packetDisplay.Show()
 
     return packetDisplay
 }
