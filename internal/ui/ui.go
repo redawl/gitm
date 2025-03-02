@@ -46,7 +46,8 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
 
     packetFullList := make([]*packet.HttpPacket, 0)
     packetList := make([]*packet.HttpPacket, 0)
-    content := NewPacketDisplay()
+    requestContent := NewPacketDisplay()
+    responseContent := NewPacketDisplay()
 
     filterContent := widget.NewEntry()
 
@@ -58,9 +59,16 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
         row := co.(*PacketRow)
         if li < len(packetList) && packetList[li] != nil {
             p := packetList[li]
-            row.UpdateRow(*p, content)
+            row.UpdateRow(*p)
         }
     })
+
+    table.OnSelected = func(id widget.ListItemID) {
+        requestContent.Text = FormatRequestContent(packetList[id])
+        responseContent.Text = FormatResponseContent(packetList[id])
+        requestContent.Refresh()
+        responseContent.Refresh()
+    }
 
     filterContent.OnChanged = func(s string) {
         packetList = FilterPackets(s, packetFullList)
@@ -82,7 +90,12 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
         nil, nil, isRecording, nil, filterContent,
     ), nil, nil, nil, table)
 
-    masterLayout := container.NewGridWithRows(2, packetListContainer, container.NewScroll(content))
+    masterLayout := container.NewGridWithRows(2, packetListContainer, 
+        container.NewGridWithColumns(2,
+            container.NewScroll(requestContent),
+            container.NewScroll(responseContent),
+        ),
+    )
     w.SetMainMenu(
         makeMenu(
             func() {
