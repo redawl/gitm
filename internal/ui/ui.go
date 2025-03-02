@@ -51,7 +51,7 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
 
     filterContent := widget.NewEntry()
 
-    table := widget.NewList(func() int {
+    uiList := widget.NewList(func() int {
         return len(packetList)
     }, func() fyne.CanvasObject {
         return NewPacketRow()
@@ -63,16 +63,16 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
         }
     })
 
-    table.OnSelected = func(id widget.ListItemID) {
-        requestContent.Text = FormatRequestContent(packetList[id])
-        responseContent.Text = FormatResponseContent(packetList[id])
+    uiList.OnSelected = func(id widget.ListItemID) {
+        requestContent.SetText(FormatRequestContent(packetList[id]))
+        responseContent.SetText(FormatResponseContent(packetList[id]))
         requestContent.Refresh()
         responseContent.Refresh()
     }
 
     filterContent.OnChanged = func(s string) {
         packetList = FilterPackets(s, packetFullList)
-        table.Refresh()
+        uiList.Refresh()
     }
 
     go func() {
@@ -81,14 +81,14 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
             if shouldRecord {
                 packetFullList = append(packetFullList, &packet)
                 packetList = FilterPackets(filterContent.Text, packetFullList)
-                table.Refresh()
+                uiList.Refresh()
             }
         }
     }()
 
     packetListContainer := container.NewBorder(container.NewBorder(
         nil, nil, isRecording, nil, filterContent,
-    ), nil, nil, nil, table)
+    ), nil, nil, nil, uiList)
 
     masterLayout := container.NewGridWithRows(2, packetListContainer, 
         container.NewGridWithColumns(2,
@@ -101,7 +101,7 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
             func() {
                 packetFullList = make([]*packet.HttpPacket, 0)
                 packetList = make([]*packet.HttpPacket, 0)
-                table.Refresh()
+                uiList.Refresh()
             },
             func() {
                 jsonString, err := json.Marshal(packetFullList)
@@ -166,7 +166,7 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
                         }
                         
                         packetList = FilterPackets(filterContent.Text, packetFullList)
-                        table.Refresh()
+                        uiList.Refresh()
                     }, w)
 
                     openFileDialog.Show()
@@ -186,6 +186,7 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
             },
         ),
     )
+
     w.SetContent(masterLayout)
 
     slog.Info("Showing ui")

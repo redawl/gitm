@@ -10,12 +10,15 @@ import (
 	"strings"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 	"github.com/redawl/gitm/internal/packet"
 )
 
 type PacketDisplay struct {
-    widget.Entry
+    widget.BaseWidget
+    Entry widget.Entry
+    scrollContainer *container.Scroll
 }
 
 func NewPacketDisplay() *PacketDisplay {
@@ -29,11 +32,20 @@ func NewPacketDisplay() *PacketDisplay {
         },
     }
 
+    packetDisplay.scrollContainer = container.NewScroll(&packetDisplay.Entry)
+
     packetDisplay.ExtendBaseWidget(packetDisplay)
 
-    packetDisplay.Show()
-
     return packetDisplay
+}
+
+func (pd *PacketDisplay) CreateRenderer() fyne.WidgetRenderer {
+    return widget.NewSimpleRenderer(pd.scrollContainer)
+}
+
+func (pd *PacketDisplay) SetText(text string) {
+    pd.Entry.SetText(text)
+    pd.scrollContainer.ScrollToTop()
 }
 
 func (p *PacketDisplay) TypedRune (r rune) {}
