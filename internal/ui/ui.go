@@ -90,8 +90,8 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
         nil, nil, isRecording, nil, filterContent,
     ), nil, nil, nil, uiList)
 
-    masterLayout := container.NewGridWithRows(2, packetListContainer, 
-        container.NewGridWithColumns(2,
+    masterLayout := container.NewVSplit(packetListContainer, 
+        container.NewHSplit(
             container.NewScroll(requestContent),
             container.NewScroll(responseContent),
         ),
