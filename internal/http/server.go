@@ -16,6 +16,9 @@ func ListenAndServe(conf config.Config, httpPacketHandler func(packet.HttpPacket
 }
 
 func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPacket)) {
+    // Disables certificate checking globally
+    http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} 
+
     cfg := &tls.Config{
         // Make sure we can forward ALL tls traffic
         MinVersion: tls.VersionTLS10,
