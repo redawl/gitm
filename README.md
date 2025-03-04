@@ -4,7 +4,7 @@ GITM is a man in the middle proxy that allows inspecting tls encrypted https dat
 It is currently in heavy development. More info to come!
 
 # Screenshot
-![Packet capture](screenshot-darkmode.png)
+![Packet capture](assets/screenshot-darkmode.png)
 
 # Installation
 ```bash
