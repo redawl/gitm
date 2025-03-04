@@ -87,13 +87,17 @@ func (row *PacketRow) UpdateRow (p packet.HttpPacket) {
     if len(path) == 0 {
         path = "/"
     }
+    if len(row.hostname.Text) == 0 {
+        row.hostname.SetText(p.Hostname)
+    }
 
-    row.hostname.SetText(p.Hostname)
-    row.request.SetText(fmt.Sprintf("%s %s %s", p.Method, path, p.ReqProto))
-    row.response.SetText(fmt.Sprintf("%s %s", p.RespProto, p.Status))
-    row.hostname.Refresh()
-    row.request.Refresh()
-    row.response.Refresh()
+    if len(row.request.Text) == 0 {
+        row.request.SetText(fmt.Sprintf("%s %s %s", p.Method, path, p.ReqProto))
+    }
+
+    if len(row.response.Text) == 0 {
+        row.response.SetText(fmt.Sprintf("%s %s", p.RespProto, p.Status))
+    }
 
     row.ExtendBaseWidget(row)
 }

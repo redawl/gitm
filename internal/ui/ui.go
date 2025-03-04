@@ -6,12 +6,12 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/redawl/gitm/internal/packet"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
+	"github.com/redawl/gitm/internal/packet"
 )
 
 func makeMenu (clearHandler func(), saveHandler func(), loadHandler func()) *fyne.MainMenu {
@@ -46,8 +46,8 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
 
     packetFullList := make([]*packet.HttpPacket, 0)
     packetList := make([]*packet.HttpPacket, 0)
-    requestContent := NewPacketDisplay()
-    responseContent := NewPacketDisplay()
+    requestContent := NewPacketDisplay("Request")
+    responseContent := NewPacketDisplay("Response")
 
     filterContent := widget.NewEntry()
 
@@ -66,8 +66,6 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
     uiList.OnSelected = func(id widget.ListItemID) {
         requestContent.SetText(FormatRequestContent(packetList[id]))
         responseContent.SetText(FormatResponseContent(packetList[id]))
-        requestContent.Refresh()
-        responseContent.Refresh()
     }
 
     filterContent.OnChanged = func(s string) {
@@ -86,8 +84,8 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
         }
     }()
 
-    packetListContainer := container.NewBorder(container.NewBorder(
-        nil, nil, isRecording, nil, filterContent,
+    packetListContainer := container.NewBorder(container.NewVBox(
+        container.NewHBox(isRecording), container.NewBorder(nil, nil, widget.NewLabel("Filter packets"), nil, filterContent),
     ), nil, nil, nil, uiList)
 
     masterLayout := container.NewVSplit(packetListContainer, 

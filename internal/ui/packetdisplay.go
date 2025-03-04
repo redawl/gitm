@@ -17,22 +17,28 @@ import (
 
 type PacketDisplay struct {
     widget.BaseWidget
-    Entry widget.Entry
+    entry widget.Entry
+    label widget.Label
     scrollContainer *container.Scroll
 }
 
-func NewPacketDisplay() *PacketDisplay {
+func NewPacketDisplay(label string) *PacketDisplay {
     packetDisplay := &PacketDisplay{
-        Entry: widget.Entry{
+        entry: widget.Entry{
             MultiLine: true,
             Wrapping: fyne.TextWrapBreak,
             TextStyle: fyne.TextStyle{
                 Monospace: true,
             },
         },
+        label : widget.Label{
+            Text: label,
+        },
     }
 
-    packetDisplay.scrollContainer = container.NewScroll(&packetDisplay.Entry)
+    packetDisplay.scrollContainer = container.NewScroll(
+        container.NewBorder(&packetDisplay.label, nil, nil, nil, &packetDisplay.entry),
+    )
 
     packetDisplay.ExtendBaseWidget(packetDisplay)
 
@@ -44,7 +50,7 @@ func (pd *PacketDisplay) CreateRenderer() fyne.WidgetRenderer {
 }
 
 func (pd *PacketDisplay) SetText(text string) {
-    pd.Entry.SetText(text)
+    pd.entry.SetText(text)
     pd.scrollContainer.ScrollToTop()
 }
 
