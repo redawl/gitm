@@ -131,36 +131,7 @@ func handleConnection(client net.Conn, conf config.Config) (error) {
 }
 
 func transparentProxy (client net.Conn, server net.Conn) {
-    go connToConn(client, server)
-    go connToConn(server, client)
-}
-
-func connToConn(conn1 net.Conn, conn2 net.Conn) {
-    buff := make([]byte, 8192)
-    for {
-        count, err := conn1.Read(buff)
-        if err != nil && count == 0 {
-            if err == io.EOF {
-                slog.Debug("Connection terminated", "error", err, "count", count)
-            } else {
-                slog.Error("Connection closed unexpectedly", "error", err, "count", count)
-            }
-            return
-        } else if err != nil {
-            slog.Error("Connection terminated but contained data", "error", err, "count", count)
-        }
-        count, err = conn2.Write(buff[:count])
-
-        if err != nil && count != 0 {
-            if err == io.EOF {
-                slog.Debug("Connection terminated", "error", err, "count", count)
-            } else {
-                slog.Error("Connection closed unexpectedly", "error", err, "count", count)
-            }
-        } else if err != nil {
-            slog.Error("Connection terminated but didn't write all data", "error", err, "count", count)
-            return
-        }
-    }
+    go io.Copy(client, server)
+    go io.Copy(server, client)
 }
 
