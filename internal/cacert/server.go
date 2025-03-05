@@ -23,7 +23,7 @@ import (
 // ListenAndServe serves an http server which gives the user access to the /ca.crt and /proxy.pac
 // endpoints at listenUri endpoint. 
 // If a fatal error is returned by the http server, an error is returned. All other errors are reported using slog.Error.
-func ListenAndServe(listenUri string) error {
+func ListenAndServe(listenUri string, proxyUri string) error {
     return http.ListenAndServe(listenUri, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         slog.Debug("Request to Cacert server", "path", r.URL.Path)
         if r.URL.Path == "/ca.crt" {
@@ -45,15 +45,7 @@ func ListenAndServe(listenUri string) error {
 
             w.Write(contents)
         } else if r.URL.Path == "/proxy.pac" {
-            contents, err := os.ReadFile("assets/proxy.pac")
-
-            if err != nil {
-                slog.Error("Error getting proxy file", "error", err)
-                w.WriteHeader(http.StatusInternalServerError)
-                return
-            }
-
-            w.Write(contents)
+            fmt.Fprintf(w, "function FindProxyForURL(url, host){return \"SOCKS %s\";}", proxyUri)
         } else {
             http.Error(w, "Not found", http.StatusNotFound)
         }

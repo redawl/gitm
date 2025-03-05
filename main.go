@@ -28,7 +28,7 @@ func setupbackend (httpHandler func(packet.HttpPacket)) {
     slog.SetDefault(logger)
 
     slog.Info("Starting Cacert server")
-    go cacert.ListenAndServe(conf.CacertListenUri)
+    go cacert.ListenAndServe(conf.CacertListenUri, conf.SocksListenUri)
 
     slog.Info("Starting http server")
     go http.ListenAndServe(conf, httpHandler)
