@@ -20,6 +20,9 @@ import (
 	"github.com/redawl/gitm/internal/util"
 )
 
+// ListenAndServe serves an http server which gives the user access to the /ca.crt and /proxy.pac
+// endpoints at listenUri endpoint. 
+// If a fatal error is returned by the http server, an error is returned. All other errors are reported using slog.Error.
 func ListenAndServe(listenUri string) error {
     return http.ListenAndServe(listenUri, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         slog.Debug("Request to Cacert server", "path", r.URL.Path)
@@ -57,6 +60,7 @@ func ListenAndServe(listenUri string) error {
     }))
 }
 
+// AddHostname creates a certificate for hostname, and adds it to the sqlite db stored in the config dir.
 func AddHostname (hostname string) error {
     ca, caPrivKey, err := getCaCert()
 

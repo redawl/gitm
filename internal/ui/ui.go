@@ -75,10 +75,17 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
 
     go func() {
         for {
-            packet := <- packetChan
+            p := <- packetChan
             if shouldRecord {
-                packetFullList = append(packetFullList, &packet)
-                packetList = FilterPackets(filterContent.Text, packetFullList)
+                existingPacket := packet.FindPacket(&p, packetFullList)
+
+                if existingPacket != nil {
+                    existingPacket.UpdatePacket(&p)
+                } else {
+                    packetFullList = append(packetFullList, &p)
+                    packetList = FilterPackets(filterContent.Text, packetFullList)
+                }
+
                 uiList.Refresh()
             }
         }

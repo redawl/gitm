@@ -37,6 +37,23 @@ func Handler(httpPacketHandler func(packet.HttpPacket)) http.HandlerFunc {
         }
 
         req.URL.Host = request.Host
+
+        httpPacket := packet.CreatePacket(
+            request.URL.Hostname(), 
+            request.Method,
+            "", 
+            request.URL.RequestURI(), 
+            "",
+            request.Proto,
+            nil, 
+            nil, 
+            request.Header,
+            requestBody,
+        )
+
+        if httpPacketHandler != nil {
+            httpPacketHandler(httpPacket)
+        }
         resp, err := http.DefaultTransport.RoundTrip(req)
 
         if err != nil {
@@ -59,23 +76,24 @@ func Handler(httpPacketHandler func(packet.HttpPacket)) http.HandlerFunc {
 
         if err != nil {
             slog.Error("Error forwarding http request", "error", err)
+            return
         }
 
         if httpPacketHandler != nil {
-            httpPacketHandler(
-                packet.CreatePacket(
-                    request.URL.Hostname(), 
-                    request.Method,
-                    resp.Status, 
-                    request.URL.RequestURI(), 
-                    resp.Proto,
-                    request.Proto,
-                    resp.Header, 
-                    responseBody, 
-                    request.Header,
-                    requestBody,
-                ),
+            completedPacket := packet.CreatePacket(
+                request.URL.Hostname(), 
+                request.Method,
+                resp.Status, 
+                request.URL.RequestURI(), 
+                resp.Proto,
+                request.Proto,
+                resp.Header, 
+                responseBody, 
+                request.Header,
+                requestBody,
             )
+            httpPacket.UpdatePacket(&completedPacket)
+            httpPacketHandler(httpPacket)
         }
 
         w.Write(responseBody)

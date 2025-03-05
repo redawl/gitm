@@ -23,6 +23,12 @@ func Read(conn net.Conn, length int) ([]byte, error) {
     return buff, nil
 }
 
+// GetConfigDir returns the path to the user config dir on the current machine as a string.
+// 
+// If the config dir does not exist, it is created. 
+// 
+// If the default location for config directories does not exist, or if there is an error creating 
+// the config dir, an error is returned.
 func GetConfigDir () (string, error) {
     userCfgDir, err := os.UserConfigDir()
 

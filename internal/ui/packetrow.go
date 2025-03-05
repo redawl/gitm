@@ -95,7 +95,7 @@ func (row *PacketRow) UpdateRow (p packet.HttpPacket) {
         row.request.SetText(fmt.Sprintf("%s %s %s", p.Method, path, p.ReqProto))
     }
 
-    if len(row.response.Text) == 0 {
+    if len(row.response.Text) == 0 && p.RespProto != "" && p.Status != "" {
         row.response.SetText(fmt.Sprintf("%s %s", p.RespProto, p.Status))
     }
 
