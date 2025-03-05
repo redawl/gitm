@@ -111,7 +111,7 @@ func getTokens (filterString string) []filterPair {
 
 func FilterPackets (filterString string, packets []*packet.HttpPacket) []*packet.HttpPacket {
     filterPairs := getTokens(filterString)
-    passedPackets := make([]*packet.HttpPacket, 0)
+    passedPackets := make([]*packet.HttpPacket, 0, len(packets))
 
     for _, p := range packets {
         passed := true

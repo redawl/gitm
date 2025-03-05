@@ -4,12 +4,16 @@ import (
 	"github.com/google/uuid"
 )
 
+// HttpPacket represents a captured packet from either the https or http proxy.
+// An HttpPacket contains all the information from the http request, as well as the information from the http response (once it has been captured).
 type HttpPacket struct {
     id uuid.UUID
     Hostname string
     Method string
     Status string
     Path string
+    // The request protocol version, i.e. "HTTP/1.1"
+    // The response protocol version, i.e. "HTTP/1.1"
     ReqProto string
     RespProto string
     RespHeaders map[string][]string

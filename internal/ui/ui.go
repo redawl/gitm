@@ -26,6 +26,7 @@ func makeMenu (clearHandler func(), saveHandler func(), loadHandler func()) *fyn
     return &mainMenu
 }
 
+// ShowAndRun Creates the Fyne UI for GITM, and then runs the UI event loop.
 func ShowAndRun (packetChan chan packet.HttpPacket) {
     shouldRecord := false
     isRecording := widget.NewButton("Recording: off", func() {})

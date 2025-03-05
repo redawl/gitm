@@ -12,7 +12,7 @@ import (
 	"github.com/redawl/gitm/internal/ui"
 )
 
-func setupbackend (httpHandler func(packet.HttpPacket), httpsHandler func(packet.HttpPacket)) {
+func setupbackend (httpHandler func(packet.HttpPacket)) {
     conf := config.ParseFlags()
 
     logLevel := slog.LevelInfo
@@ -34,7 +34,7 @@ func setupbackend (httpHandler func(packet.HttpPacket), httpsHandler func(packet
     go http.ListenAndServe(conf, httpHandler)
     
     slog.Info("Starting https server")
-    go http.ListenAndServeTls(conf, httpsHandler)
+    go http.ListenAndServeTls(conf, httpHandler)
     
     slog.Info("Starting socks5 proxy")
     go socks5.StartTransparentSocksProxy(conf)
@@ -43,9 +43,6 @@ func setupbackend (httpHandler func(packet.HttpPacket), httpsHandler func(packet
 func main() {
     packetChan := make(chan packet.HttpPacket)
     setupbackend(func(p packet.HttpPacket){
-        packetChan <- p
-    }, 
-    func(p packet.HttpPacket){
         packetChan <- p
     })
     
