@@ -57,8 +57,19 @@ func Handler(httpPacketHandler func(packet.HttpPacket)) http.HandlerFunc {
         resp, err := http.DefaultTransport.RoundTrip(req)
 
         if err != nil {
-            // TODO: What to do here
             slog.Error("Error forwarding http request", "error", err, "request", req)
+
+            // Attempt hijack to terminate the connection.
+            hijack, ok := w.(http.Hijacker)
+
+            if !ok {
+                slog.Error("Webserver doesn't support hijacking, sending internal server error")
+                http.Error(w, "Internal server error", http.StatusInternalServerError)
+            }
+
+            conn, _, _ := hijack.Hijack()
+
+            conn.Close()
             return
         }
 

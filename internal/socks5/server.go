@@ -10,28 +10,30 @@ import (
 )
 
 func StartTransparentSocksProxy(conf config.Config) (error) {
-    ln, err := net.Listen("tcp", conf.SocksListenUri)
+    listener, err := net.Listen("tcp", conf.SocksListenUri)
 
     if err != nil {
         return err
     }
 
-    for {
-        client, err := ln.Accept()
-        if err != nil {
-            slog.Error("Error accepting connection", "error", err)
-            continue
+    go func () {
+        for {
+            client, err := listener.Accept()
+            if err != nil {
+                slog.Error("Error accepting connection", "error", err)
+            }
+            
+            if err := handleConnection(client, conf); err != nil {
+                slog.Error("Error handling connection", "error", err)
+            }
         }
-        
-        if err := handleConnection(client, conf); err != nil {
-            slog.Error("Error handling connection", "error", err)
-            continue
-        }
-    }
+    }()
+
+    return nil
 }
 
 func handleConnection(client net.Conn, conf config.Config) (error) {
-    slog.Debug("Received connection", "Address", client.RemoteAddr())
+    slog.Debug("Received connection", "address", client.RemoteAddr())
 
     greeting, err := ParseClientGreeting(client)
 
@@ -42,7 +44,7 @@ func handleConnection(client net.Conn, conf config.Config) (error) {
     slog.Debug("Parsed client greeting", "greeting", greeting)
     
     if greeting.CanHandle() {
-        slog.Debug("Handlin Request")
+        slog.Debug("Handling Request")
         client.Write(
             FormatServerChoice(SOCKS_VER_5, METHOD_NO_AUTH_REQUIRED),
         )
@@ -59,6 +61,7 @@ func handleConnection(client net.Conn, conf config.Config) (error) {
         }
         
         slog.Debug("Parsed conn request", "request", request)
+
         if request.DstPort == 80 {
             server, err := net.Dial("tcp", conf.HttpListenUri)
             if err != nil {
@@ -72,6 +75,7 @@ func handleConnection(client net.Conn, conf config.Config) (error) {
             }
 
             slog.Debug("Proxy success")
+
             client.Write(FormatConnResponse(
                 SOCKS_VER_5,
                 STATUS_SUCCEEDED,
@@ -121,7 +125,8 @@ func handleConnection(client net.Conn, conf config.Config) (error) {
 
             transparentProxy(client, server)
         }
-
+        
+        slog.Debug("Finished proxying request")
     } else {
         slog.Debug("Cannot handle request")
         client.Write(FormatServerChoice(SOCKS_VER_5, METHOD_NO_ACCEPTABLE_METHODS))

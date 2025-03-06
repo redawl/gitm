@@ -36,8 +36,9 @@ func setupbackend (httpHandler func(packet.HttpPacket)) {
     slog.Info("Starting https server")
     go http.ListenAndServeTls(conf, httpHandler)
     
-    slog.Info("Starting socks5 proxy")
-    go socks5.StartTransparentSocksProxy(conf)
+    if err := socks5.StartTransparentSocksProxy(conf); err != nil {
+        slog.Info("Started socks5 proxy")
+    }
 }
 
 func main() {
