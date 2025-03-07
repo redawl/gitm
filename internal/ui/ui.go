@@ -7,27 +7,85 @@ import (
 	"log/slog"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
+	"github.com/redawl/gitm/internal/config"
 	"github.com/redawl/gitm/internal/packet"
 )
 
-func makeMenu (clearHandler func(), saveHandler func(), loadHandler func()) *fyne.MainMenu {
+func makeMenu (clearHandler func(), saveHandler func(), loadHandler func(), settingsHandler func()) *fyne.MainMenu {
     saveItem := fyne.NewMenuItem("Save", saveHandler)
     loadItem := fyne.NewMenuItem("Load", loadHandler)
+    settingsItem := fyne.NewMenuItem("Settings", settingsHandler)
 
     clearItem := fyne.NewMenuItem("Clear", clearHandler)
 
-    fileMenu := fyne.NewMenu("File", loadItem, clearItem, saveItem)
+    fileMenu := fyne.NewMenu("File", loadItem, clearItem, saveItem, settingsItem)
 
     mainMenu := *fyne.NewMainMenu(fileMenu)
     return &mainMenu
 }
 
+func makeSettingsUi(a fyne.App) {
+    w := a.NewWindow("Settings")
+    prefs := a.Preferences()
+    header := &canvas.Text{
+        Text: "GITM Settings",
+        TextSize: 40,
+    }
+
+    socks5Url := &widget.Entry{
+        Text: prefs.String(config.SOCKS_LISTEN_URI),
+    }
+
+    cacertUrl := &widget.Entry{
+        Text: prefs.String(config.CACERT_LISTEN_URI),
+    }
+
+    httpUrl   := &widget.Entry{
+        Text: prefs.String(config.HTTP_LISTEN_URI),
+    }
+
+    httpsUrl  := &widget.Entry{
+        Text: prefs.String(config.TLS_LISTEN_URI),
+    }
+
+    debugEnabled := &widget.Check{
+        Checked: prefs.Bool(config.ENABLE_DEBUG_LOGGING),
+    }
+
+    form := container.New(layout.NewFormLayout(),
+        widget.NewLabel("Socks5 proxy URL"), socks5Url,
+        widget.NewLabel("Cacert proxy URL"), cacertUrl,
+        widget.NewLabel("HTTP proxy URL"), httpUrl,
+        widget.NewLabel("HTTPS proxy URL"), httpsUrl,
+        widget.NewLabel("Enable debug logging"), debugEnabled,
+    )
+
+    formcontrols := container.NewHBox(widget.NewButton("Save", func() {
+        prefs.SetString(config.SOCKS_LISTEN_URI, socks5Url.Text)
+        prefs.SetString(config.CACERT_LISTEN_URI, cacertUrl.Text)
+        prefs.SetString(config.HTTP_LISTEN_URI, httpUrl.Text)
+        prefs.SetString(config.TLS_LISTEN_URI, httpsUrl.Text)
+        prefs.SetBool(config.ENABLE_DEBUG_LOGGING, debugEnabled.Checked)
+    }), widget.NewButton("Reset",func() {
+        socks5Url.SetText(prefs.String(config.SOCKS_LISTEN_URI))    
+        cacertUrl.SetText(prefs.String(config.CACERT_LISTEN_URI))
+        httpUrl.SetText(prefs.String(config.HTTP_LISTEN_URI))
+        httpsUrl.SetText(prefs.String(config.TLS_LISTEN_URI))
+        debugEnabled.SetChecked(prefs.Bool(config.ENABLE_DEBUG_LOGGING))
+    }))
+
+    w.SetContent(container.NewBorder(header, formcontrols, nil, nil, form))
+
+    w.Show()
+}
+
 // ShowAndRun Creates the Fyne UI for GITM, and then runs the UI event loop.
-func ShowAndRun (packetChan chan packet.HttpPacket) {
+func ShowAndRun (a fyne.App, packetChan chan packet.HttpPacket) {
     shouldRecord := false
     isRecording := widget.NewButton("Recording: off", func() {})
 
@@ -41,7 +99,6 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
 
         isRecording.Refresh()
     }
-    a := app.New()
     w := a.NewWindow("Gopher in the middle")
     w.Resize(fyne.NewSize(1920, 1080))
 
@@ -189,6 +246,9 @@ func ShowAndRun (packetChan chan packet.HttpPacket) {
                 } else {
                     showConfirmDialog()
                 }
+            },
+            func() {
+                makeSettingsUi(a)
             },
         ),
     )

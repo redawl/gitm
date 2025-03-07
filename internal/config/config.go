@@ -1,6 +1,8 @@
 package config
 
-import "flag"
+import (
+	"fyne.io/fyne/v2"
+)
 
 type Config struct {
     HttpListenUri string
@@ -10,16 +12,44 @@ type Config struct {
     Debug bool
 }
 
-func ParseFlags () Config {
-    conf := Config{}
+const (
+    HTTP_LISTEN_URI = "httpListenUri"
+    TLS_LISTEN_URI  = "tlsListenUri"
+    CACERT_LISTEN_URI = "cacertListenUri"
+    SOCKS_LISTEN_URI  = "socksListenUri"
+    ENABLE_DEBUG_LOGGING = "enableDebugLogging"
+)
 
-    flag.StringVar(&conf.HttpListenUri, "u", "127.0.0.1:8080", "HTTP server listen uri")
-    flag.StringVar(&conf.TlsListenUri, "us", "127.0.0.1:8443", "HTTPS server listen uri")
-    flag.StringVar(&conf.CacertListenUri, "uc", "127.0.0.1:9090", "Cacert server listen uri")
-    flag.StringVar(&conf.SocksListenUri, "u5", "127.0.0.1:1080", "Socks server listen uri")
-    flag.BoolVar(&conf.Debug, "d", false, "Enable debug logging")
+func stringWithFallbackSave(prefs fyne.Preferences, key string, defaultValue string) string {
+    value := prefs.String(key)
 
-    flag.Parse()
+    if value == "" {
+        prefs.SetString(key, defaultValue)
+        return defaultValue
+    }
+
+    return value
+}
+
+func boolWithFallbackSave(prefs fyne.Preferences, key string, defaultValue bool) bool {
+    value := prefs.Bool(key)
+
+    if value == false {
+        prefs.SetBool(key, defaultValue)
+        return defaultValue
+    }
+
+    return value
+}
+
+func ParseFlags (preferences fyne.Preferences) Config {
+    conf := Config{
+        HttpListenUri: stringWithFallbackSave(preferences, HTTP_LISTEN_URI, "127.0.0.1:8080"), 
+        TlsListenUri: stringWithFallbackSave(preferences, TLS_LISTEN_URI, "127.0.0.1:5443"),
+        CacertListenUri: stringWithFallbackSave(preferences, CACERT_LISTEN_URI, "127.0.0.1:9090"),
+        SocksListenUri: stringWithFallbackSave(preferences, SOCKS_LISTEN_URI, "127.0.0.1:1080"),
+        Debug: boolWithFallbackSave(preferences, ENABLE_DEBUG_LOGGING, false),
+    }
 
     return conf
 }

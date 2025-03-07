@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"os"
 
+	"fyne.io/fyne/v2/app"
 	"github.com/redawl/gitm/internal/cacert"
 	"github.com/redawl/gitm/internal/config"
 	"github.com/redawl/gitm/internal/http"
@@ -12,8 +13,7 @@ import (
 	"github.com/redawl/gitm/internal/ui"
 )
 
-func setupbackend (httpHandler func(packet.HttpPacket)) {
-    conf := config.ParseFlags()
+func setupbackend(conf config.Config, httpHandler func(packet.HttpPacket)) {
 
     logLevel := slog.LevelInfo
 
@@ -42,11 +42,15 @@ func setupbackend (httpHandler func(packet.HttpPacket)) {
 }
 
 func main() {
+    app := app.New()
+
+    conf := config.ParseFlags(app.Preferences())
+
     packetChan := make(chan packet.HttpPacket)
-    setupbackend(func(p packet.HttpPacket){
+    setupbackend(conf, func(p packet.HttpPacket){
         packetChan <- p
     })
     
-    ui.ShowAndRun(packetChan)
+    ui.ShowAndRun(app, packetChan)
 }
 
