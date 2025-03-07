@@ -4,5 +4,5 @@ Website = "https://github.com/redawl/gitm"
   Icon = "assets/Icon.png"
   Name = "gitm"
   ID = "com.github.redawl.gitm"
-  Version = "0.1.0"
+  Version = "0.2.0"
   Build = 7
