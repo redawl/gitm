@@ -24,6 +24,8 @@ import (
 // endpoints at listenUri endpoint. 
 // If a fatal error is returned by the http server, an error is returned. All other errors are reported using slog.Error.
 func ListenAndServe(listenUri string, proxyUri string) error {
+    // Init cacert if it doesn't already exist
+    getCaCert()
     return http.ListenAndServe(listenUri, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         slog.Debug("Request to Cacert server", "path", r.URL.Path)
         if r.URL.Path == "/ca.crt" {
