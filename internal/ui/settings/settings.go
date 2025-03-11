@@ -10,6 +10,36 @@ import (
 	"github.com/redawl/gitm/internal/config"
 )
 
+type entryLayout struct {}
+
+func (ll *entryLayout) MinSize (objs []fyne.CanvasObject) fyne.Size {
+    if len(objs) != 1 {
+        panic("Entrylayout can only take 1 object!")
+    }
+
+    entry, ok := objs[0].(*widget.Entry)
+
+    if !ok {
+        panic("Entrylayout can only take entries")
+    }
+
+    return fyne.NewSize(400, entry.MinSize().Height)
+}
+
+func (ll *entryLayout) Layout (objs []fyne.CanvasObject, size fyne.Size) {
+    if len(objs) != 1 {
+        panic("Entrylayout can only take 1 object!")
+    }
+
+    entry, ok := objs[0].(*widget.Entry)
+
+    if !ok {
+        panic("Entrylayout can only take entries")
+    }
+
+    entry.Resize(size)
+}
+
 func MakeSettingsUi(a fyne.App) {
     w := a.NewWindow("Settings")
     prefs := a.Preferences()
@@ -39,10 +69,10 @@ func MakeSettingsUi(a fyne.App) {
     }
 
     form := container.New(layout.NewFormLayout(),
-        widget.NewLabel("Socks5 proxy URL"), socks5Url,
-        widget.NewLabel("Cacert proxy URL"), cacertUrl,
-        widget.NewLabel("HTTP proxy URL"), httpUrl,
-        widget.NewLabel("HTTPS proxy URL"), httpsUrl,
+        widget.NewLabel("Socks5 proxy URL"), container.New(&entryLayout{}, socks5Url),
+        widget.NewLabel("Cacert proxy URL"), container.New(&entryLayout{}, cacertUrl),
+        widget.NewLabel("HTTP proxy URL"), container.New(&entryLayout{}, httpUrl),
+        widget.NewLabel("HTTPS proxy URL"), container.New(&entryLayout{}, httpsUrl),
         widget.NewLabel("Enable debug logging"), debugEnabled,
     )
 
@@ -65,7 +95,12 @@ func MakeSettingsUi(a fyne.App) {
         debugEnabled.SetChecked(prefs.Bool(config.ENABLE_DEBUG_LOGGING))
     }))
 
-    w.SetContent(container.NewVBox(header, form, formcontrols))
+    spacer := &layout.Spacer{}
+
+    spacer.Resize(fyne.NewSize(40, 0))
+    spacer.Show()
+
+    w.SetContent(container.NewVBox(header, spacer, form, formcontrols))
 
     w.Show()
 }
