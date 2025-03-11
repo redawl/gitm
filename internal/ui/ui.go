@@ -43,6 +43,7 @@ func ShowAndRun (a fyne.App, packetChan chan packet.HttpPacket) {
         isRecording.Refresh()
     }
     w := a.NewWindow("Gopher in the middle")
+    w.SetMaster()
     w.Resize(fyne.NewSize(1920, 1080))
 
     packetFullList := make([]*packet.HttpPacket, 0)

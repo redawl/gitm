@@ -43,10 +43,10 @@ func (ll *entryLayout) Layout (objs []fyne.CanvasObject, size fyne.Size) {
 func MakeSettingsUi(a fyne.App) {
     w := a.NewWindow("Settings")
     prefs := a.Preferences()
-    header := &canvas.Text{
+    header := container.NewPadded(&canvas.Text{
         Text: "GITM Settings",
         TextSize: 30,
-    }
+    })
 
     socks5Url := &widget.Entry{
         Text: prefs.String(config.SOCKS_LISTEN_URI),
@@ -95,12 +95,7 @@ func MakeSettingsUi(a fyne.App) {
         debugEnabled.SetChecked(prefs.Bool(config.ENABLE_DEBUG_LOGGING))
     }))
 
-    spacer := &layout.Spacer{}
-
-    spacer.Resize(fyne.NewSize(40, 0))
-    spacer.Show()
-
-    w.SetContent(container.NewVBox(header, spacer, form, formcontrols))
+    w.SetContent(container.NewVBox(header, form, formcontrols))
 
     w.Show()
 }

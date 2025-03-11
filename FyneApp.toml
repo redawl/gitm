@@ -5,4 +5,4 @@ Website = "https://github.com/redawl/gitm"
   Name = "gitm"
   ID = "com.github.redawl.gitm"
   Version = "0.3.0"
-  Build = 8
+  Build = 14
