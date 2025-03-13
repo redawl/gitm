@@ -1,10 +1,13 @@
 package ui
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -14,16 +17,50 @@ import (
 	"github.com/redawl/gitm/internal/ui/settings"
 )
 
-func makeMenu (clearHandler func(), saveHandler func(), loadHandler func(), settingsHandler func()) *fyne.MainMenu {
-    saveItem := fyne.NewMenuItem("Save", saveHandler)
-    loadItem := fyne.NewMenuItem("Load", loadHandler)
-    settingsItem := fyne.NewMenuItem("Settings", settingsHandler)
+func makeMenu (clearHandler func(), saveHandler func(), loadHandler func(), settingsHandler func(), getSelectedText func() string, w fyne.Window) *fyne.MainMenu {
+    mainMenu := *fyne.NewMainMenu(
+        fyne.NewMenu("File", 
+            fyne.NewMenuItem("Load", loadHandler), 
+            fyne.NewMenuItem("Clear", clearHandler), 
+            fyne.NewMenuItem("Save", saveHandler), 
+            fyne.NewMenuItem("Settings", settingsHandler),
+        ), 
+        fyne.NewMenu("Decode", 
+            fyne.NewMenuItem("Base64", func() {
+                if selectedText := getSelectedText(); selectedText != "" {
+                    reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(selectedText))
 
-    clearItem := fyne.NewMenuItem("Clear", clearHandler)
+                    decoded, err := io.ReadAll(reader)
 
-    fileMenu := fyne.NewMenu("File", loadItem, clearItem, saveItem, settingsItem)
+                    if err != nil {
+                        errDialog := dialog.NewError(err, w)
+                        errDialog.Show()
+                    } else {
+                        decodedDialog := dialog.NewInformation("Base64 decoded", string(decoded), w)
+                        decodedDialog.Show()
+                    }
+                }
+            }),
+            fyne.NewMenuItem("Hex", func() {
+                if selectedText := getSelectedText(); selectedText != "" {
+                    reader := hex.NewDecoder(strings.NewReader(selectedText))
 
-    mainMenu := *fyne.NewMainMenu(fileMenu)
+                    decoded, err := io.ReadAll(reader)
+
+                    if err != nil {
+                        errDialog := dialog.NewError(err, w)
+                        errDialog.Show()
+                    } else {
+                        decodedDialog := dialog.NewInformation("Hex decoded", string(decoded), w)
+                        decodedDialog.Show()
+                    }
+                }
+            }),
+            fyne.NewMenuItem("JWT", func() {
+
+            }),
+        ),
+    )
     return &mainMenu
 }
 
@@ -42,6 +79,7 @@ func ShowAndRun (a fyne.App, packetChan chan packet.HttpPacket) {
 
         isRecording.Refresh()
     }
+
     w := a.NewWindow("Gopher in the middle")
     w.SetMaster()
     w.Resize(fyne.NewSize(1920, 1080))
@@ -194,6 +232,16 @@ func ShowAndRun (a fyne.App, packetChan chan packet.HttpPacket) {
             func() {
                 settings.MakeSettingsUi(a)
             },
+            func() string {
+                if responseContent.HasSelectedText() {
+                    return responseContent.SelectedText()
+                } else if requestContent.HasSelectedText() {
+                    return requestContent.SelectedText()
+                }
+
+                return ""
+            },
+            w,
         ),
     )
 

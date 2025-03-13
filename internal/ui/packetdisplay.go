@@ -45,6 +45,14 @@ func NewPacketDisplay(label string) *PacketDisplay {
     return packetDisplay
 }
 
+func (pd *PacketDisplay) SelectedText() string {
+    return pd.entry.SelectedText()
+}
+
+func (pd *PacketDisplay) HasSelectedText() bool {
+    return pd.entry.SelectedText() != ""
+}
+
 func (pd *PacketDisplay) CreateRenderer() fyne.WidgetRenderer {
     return widget.NewSimpleRenderer(pd.scrollContainer)
 }
