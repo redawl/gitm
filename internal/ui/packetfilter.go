@@ -137,8 +137,6 @@ func FilterPackets (filterString string, packets []*packet.HttpPacket) []*packet
         // Passed all filters
         if passed {
             passedPackets = append(passedPackets, p)
-        } else {
-            passed = true
         }
     }
 

@@ -90,6 +90,7 @@ func ShowAndRun (a fyne.App, packetChan chan packet.HttpPacket) {
     responseContent := NewPacketDisplay("Response")
 
     filterContent := widget.NewEntry()
+    filterContent.Text = a.Preferences().String("PacketFilter")
 
     uiList := widget.NewList(func() int {
         return len(packetList)
@@ -109,6 +110,7 @@ func ShowAndRun (a fyne.App, packetChan chan packet.HttpPacket) {
     }
 
     filterContent.OnChanged = func(s string) {
+        a.Preferences().SetString("PacketFilter", s)
         packetList = FilterPackets(s, packetFullList)
         uiList.Refresh()
     }
