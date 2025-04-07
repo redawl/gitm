@@ -1,13 +1,10 @@
 package ui
 
 import (
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
-	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -18,6 +15,22 @@ import (
 )
 
 func makeMenu (clearHandler func(), saveHandler func(), loadHandler func(), settingsHandler func(), getSelectedText func() string, w fyne.Window) *fyne.MainMenu {
+    decodeEntries := make([]*fyne.MenuItem, 0)
+
+    for encodingKey := range GetEncodings() {
+        decodeEntries = append(decodeEntries, fyne.NewMenuItem(encodingKey, func() {
+            decoded, err := ExecuteEncoding(encodingKey, getSelectedText())
+
+            if err != nil {
+                errDialog := dialog.NewError(err, w)
+                errDialog.Show()
+            } else {
+                decodedDialog := dialog.NewInformation("Decode result", string(decoded), w)
+                decodedDialog.Show()
+            }
+        })) 
+    }
+
     mainMenu := *fyne.NewMainMenu(
         fyne.NewMenu("File", 
             fyne.NewMenuItem("Load", loadHandler), 
@@ -25,41 +38,7 @@ func makeMenu (clearHandler func(), saveHandler func(), loadHandler func(), sett
             fyne.NewMenuItem("Save", saveHandler), 
             fyne.NewMenuItem("Settings", settingsHandler),
         ), 
-        fyne.NewMenu("Decode", 
-            fyne.NewMenuItem("Base64", func() {
-                if selectedText := getSelectedText(); selectedText != "" {
-                    reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(selectedText))
-
-                    decoded, err := io.ReadAll(reader)
-
-                    if err != nil {
-                        errDialog := dialog.NewError(err, w)
-                        errDialog.Show()
-                    } else {
-                        decodedDialog := dialog.NewInformation("Base64 decoded", string(decoded), w)
-                        decodedDialog.Show()
-                    }
-                }
-            }),
-            fyne.NewMenuItem("Hex", func() {
-                if selectedText := getSelectedText(); selectedText != "" {
-                    reader := hex.NewDecoder(strings.NewReader(selectedText))
-
-                    decoded, err := io.ReadAll(reader)
-
-                    if err != nil {
-                        errDialog := dialog.NewError(err, w)
-                        errDialog.Show()
-                    } else {
-                        decodedDialog := dialog.NewInformation("Hex decoded", string(decoded), w)
-                        decodedDialog.Show()
-                    }
-                }
-            }),
-            fyne.NewMenuItem("JWT", func() {
-
-            }),
-        ),
+        fyne.NewMenu("Decode", decodeEntries...),
     )
     return &mainMenu
 }
