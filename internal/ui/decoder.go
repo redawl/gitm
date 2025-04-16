@@ -27,11 +27,9 @@ func ExecuteEncoding (encoding string, data string) (string, error) {
 }
 
 func init() {
-    if len(encodingsMap) == 0 {
-        encodingsMap["Url decode"] = url
-        encodingsMap["Base64 decode"] = b64
-        encodingsMap["Hex decode"] = _hex
-    }
+    encodingsMap["Url decode"] = url
+    encodingsMap["Base64 decode"] = b64
+    encodingsMap["Hex decode"] = _hex
 }
 
 func url(data string) (string, error) {
@@ -40,10 +38,18 @@ func url(data string) (string, error) {
     i := 0
 
     for i < len(data) {
-        if i == '%' && i < len(data) - 3 {
-            c := data[i+1]
-            c += data[i+2] << 4
-            out.WriteByte(c)
+        if data[i] == '%' && i < len(data) - 2 {
+            c := make([]byte, 1)
+            count, err := hex.Decode(c, []byte(data[i+1:i+3]))
+
+            if err != nil {
+                return "", err
+            }
+
+            if count != 1 {
+                return "", fmt.Errorf("Error decoding bytes: Expected decoding 1 byte, decoded %d bytes", count)
+            }
+            out.WriteByte(c[0])
             i += 3
         } else { 
             out.WriteByte(data[i])
