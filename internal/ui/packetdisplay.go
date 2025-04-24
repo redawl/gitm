@@ -15,30 +15,26 @@ import (
 	"github.com/redawl/gitm/internal/packet"
 )
 
+
 type PacketDisplay struct {
     widget.BaseWidget
-    entry widget.Entry
+    grid *PacketEntry
     label widget.Label
     scrollContainer *container.Scroll
 }
 
 func NewPacketDisplay(label string) *PacketDisplay {
     packetDisplay := &PacketDisplay{
-        entry: widget.Entry{
-            MultiLine: true,
-            Wrapping: fyne.TextWrapBreak,
-            TextStyle: fyne.TextStyle{
-                Monospace: true,
-            },
+        grid: &PacketEntry{
+            TextGrid: widget.TextGrid{Scroll: fyne.ScrollNone},
         },
         label : widget.Label{
             Text: label,
         },
     }
+    packetDisplay.grid.ExtendBaseWidget(packetDisplay.grid)
 
-    packetDisplay.scrollContainer = container.NewScroll(
-        container.NewBorder(&packetDisplay.label, nil, nil, nil, &packetDisplay.entry),
-    )
+    packetDisplay.scrollContainer = container.NewScroll(container.NewBorder(&packetDisplay.label, nil, nil, nil, packetDisplay.grid))
 
     packetDisplay.ExtendBaseWidget(packetDisplay)
 
@@ -46,11 +42,28 @@ func NewPacketDisplay(label string) *PacketDisplay {
 }
 
 func (pd *PacketDisplay) SelectedText() string {
-    return pd.entry.SelectedText()
+    // Short circuit if -1
+    if pd.grid.selectStartRow == -1 {
+        return "" 
+    }
+    builder := strings.Builder{}
+
+    startRow, startCol, endRow, endCol := pd.grid.getActualStartAndEnd()
+
+    builder.WriteString(pd.grid.RowText(startRow)[startCol:])
+    builder.WriteByte('\n')
+
+    for i := startRow + 1; i < endRow; i++ {
+        builder.WriteString(pd.grid.RowText(i))
+        builder.WriteByte('\n')
+    }
+    builder.WriteString(pd.grid.RowText(endRow)[:endCol])
+
+    return builder.String()
 }
 
 func (pd *PacketDisplay) HasSelectedText() bool {
-    return pd.entry.SelectedText() != ""
+    return pd.SelectedText() != ""
 }
 
 func (pd *PacketDisplay) CreateRenderer() fyne.WidgetRenderer {
@@ -58,7 +71,20 @@ func (pd *PacketDisplay) CreateRenderer() fyne.WidgetRenderer {
 }
 
 func (pd *PacketDisplay) SetText(text string) {
-    pd.entry.SetText(text)
+    // Workaround for fyne Bug
+    oldCount := len(pd.grid.Rows)
+    newCount := len(strings.Split(text, "\n"))
+    
+    if oldCount > newCount {
+        builder := strings.Builder{}
+        builder.WriteString(text)
+        for range oldCount - newCount {
+            builder.WriteByte('\n')
+        }
+        pd.grid.SetText(builder.String())
+    } else {
+        pd.grid.SetText(text)
+    }
     pd.scrollContainer.ScrollToTop()
 }
 

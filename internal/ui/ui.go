@@ -106,8 +106,7 @@ func ShowAndRun (a fyne.App, packetChan chan packet.HttpPacket) {
                     packetFullList = append(packetFullList, &p)
                     packetList = FilterPackets(filterContent.Text, packetFullList)
                 }
-
-                uiList.Refresh()
+                fyne.Do(uiList.Refresh)
             }
         }
     }()
