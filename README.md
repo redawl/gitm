@@ -11,8 +11,7 @@ It is currently in heavy development. More info to come!
 # Installation
 If you have go installed, you can grab the latest version of the package:
 ```bash
-go install fyne.io/tools/cmd/fyne@latest
-fyne get github.com/redawl/gitm
+go install github.com/redawl/gitm@latest
 ```
 
 Or, you can download precompiled binaries from the releases page:

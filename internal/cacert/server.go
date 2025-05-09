@@ -23,10 +23,10 @@ import (
 // ListenAndServe serves an http server which gives the user access to the /ca.crt and /proxy.pac
 // endpoints at listenUri endpoint. 
 // If a fatal error is returned by the http server, an error is returned. All other errors are reported using slog.Error.
-func ListenAndServe(listenUri string, proxyUri string) error {
+func ListenAndServe(listenUri string, proxyUri string) {
     // Init cacert if it doesn't already exist
     getCaCert()
-    return http.ListenAndServe(listenUri, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    err := http.ListenAndServe(listenUri, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         slog.Debug("Request to Cacert server", "path", r.URL.Path)
         if r.URL.Path == "/ca.crt" {
             configDir, err := util.GetConfigDir()
@@ -45,18 +45,24 @@ func ListenAndServe(listenUri string, proxyUri string) error {
                 return
             }
 
-            w.Write(contents)
+            _, _ = w.Write(contents)
         } else if r.URL.Path == "/proxy.pac" {
-            fmt.Fprintf(w, "function FindProxyForURL(url, host){return \"SOCKS %s\";}", proxyUri)
+            _, _ = fmt.Fprintf(w, "function FindProxyForURL(url, host){return \"SOCKS %s\";}", proxyUri)
         } else {
             http.Error(w, "Not found", http.StatusNotFound)
         }
     }))
+
+    slog.Error("Error starting server", "error", err)
 }
 
 // AddHostname creates a certificate for hostname, and adds it to the sqlite db stored in the config dir.
 func AddHostname (hostname string) error {
     ca, caPrivKey, err := getCaCert()
+
+    if err != nil {
+        return err
+    }
 
     serialNumber, err := createSerialNumer()
     
@@ -98,20 +104,32 @@ func AddHostname (hostname string) error {
     caPem   := new(bytes.Buffer)
     certPrivKeyPem := new(bytes.Buffer)
 
-    pem.Encode(certPem, &pem.Block{
+    err = pem.Encode(certPem, &pem.Block{
         Type:  "CERTIFICATE",
         Bytes: certBytes,
     })
 
-    pem.Encode(caPem, &pem.Block{
+    if err != nil {
+        return err
+    }
+
+    err = pem.Encode(caPem, &pem.Block{
         Type:  "CERTIFICATE",
         Bytes: ca.Raw,
     })
 
-    pem.Encode(certPrivKeyPem, &pem.Block{
+    if err != nil {
+        return err
+    }
+
+    err = pem.Encode(certPrivKeyPem, &pem.Block{
         Type:  "RSA PRIVATE KEY",
         Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
     })
+
+    if err != nil {
+        return err
+    }
 
     err = db.AddDomain(hostname, append(certPem.Bytes(), caPem.Bytes()...), certPrivKeyPem.Bytes())
 
@@ -163,14 +181,24 @@ func getCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
 
         caPem   := new(bytes.Buffer)
         caPrivKeyPem   := new(bytes.Buffer)
-        pem.Encode(caPem, &pem.Block{
+        err = pem.Encode(caPem, &pem.Block{
             Type: "CERTIFICATE",
             Bytes: caBytes,
         })
-        pem.Encode(caPrivKeyPem, &pem.Block{
+
+        if err != nil {
+            return nil, nil, err
+        }
+
+        err = pem.Encode(caPrivKeyPem, &pem.Block{
             Type:  "RSA PRIVATE KEY",
             Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
         })
+
+        if err != nil {
+            return nil, nil, err
+        }
+
         err = os.WriteFile(configDir + "/ca.crt", caBytes, 0400)
         if err != nil {
             return nil, nil, err
@@ -194,7 +222,7 @@ func getCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
     caBlock, rest := pem.Decode(caPem)
 
     if caBlock == nil || len(rest) > 0 {
-        return nil, nil, fmt.Errorf("Error parsing ca.pem")
+        return nil, nil, fmt.Errorf("parsing ca.pem, leftover bytes")
     }
 
     privKeyPem, err := os.ReadFile(configDir + "/privkey.pem")
@@ -206,7 +234,7 @@ func getCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
     privKeyBlock, rest := pem.Decode(privKeyPem)
 
     if privKeyBlock == nil || len(rest) > 0 {
-        return nil, nil, fmt.Errorf("Error parsing privkey.pem")
+        return nil, nil, fmt.Errorf("parsing privkey.pem, leftover bytes")
     }
 
     caCert, err := x509.ParseCertificate(caBlock.Bytes)
@@ -238,3 +266,4 @@ func getName() (*pkix.Name) {
         Locality: []string{"GITM Inc"},
     }
 }
+

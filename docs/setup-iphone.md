@@ -10,7 +10,7 @@ First, check what the cacert proxy url is in GITM. Make sure it is set to use th
 ![](Iphone-setup1.png)
 
 
-Then, navigate to "${CACERT_PROXY_URL}/ca.crt" in Safari. You should see the below popup:
+Then, navigate to "http://${CACERT_PROXY_URL}/ca.crt" in Safari. You should see the below popup:
 
 ![](Iphone-setup2.png)
 
@@ -30,3 +30,8 @@ Verify you see the GITM Configuration profile under "VPN Device and management":
 Under certificate trust settings, enable the GITM Inc Root certificate. 
 
 2. Configure iPhone to use the socks5 proxy
+
+The same proxy server we used in step one also servers a proxy.pac file, which tells the iPhone where the reverse proxy is.
+
+First navigate to the settings page for the wifi network the iPhone is connected to:
+

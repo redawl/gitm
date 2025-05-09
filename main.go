@@ -42,7 +42,7 @@ func setupbackend(conf config.Config, httpHandler func(packet.HttpPacket)) {
 }
 
 func main() {
-    app := app.New()
+    app := app.NewWithID("com.github.redawl.gitm")
 
     conf := config.ParseFlags(app.Preferences())
 
