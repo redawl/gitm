@@ -19,21 +19,19 @@ type PacketDisplay struct {
     widget.BaseWidget
     grid *PacketEntry
     label widget.Label
-    scrollContainer *container.Scroll
+    container *fyne.Container
 }
 
 func NewPacketDisplay(label string) *PacketDisplay {
     packetDisplay := &PacketDisplay{
-        grid: &PacketEntry{
-            TextGrid: widget.TextGrid{Scroll: fyne.ScrollNone},
-        },
+        grid: NewPacketEntry(),
         label : widget.Label{
             Text: label,
         },
     }
     packetDisplay.grid.ExtendBaseWidget(packetDisplay.grid)
 
-    packetDisplay.scrollContainer = container.NewScroll(container.NewBorder(&packetDisplay.label, nil, nil, nil, packetDisplay.grid))
+    packetDisplay.container = container.NewBorder(&packetDisplay.label, nil, nil, nil, packetDisplay.grid)
 
     packetDisplay.ExtendBaseWidget(packetDisplay)
 
@@ -41,7 +39,7 @@ func NewPacketDisplay(label string) *PacketDisplay {
 }
 
 func (pd *PacketDisplay) CreateRenderer() fyne.WidgetRenderer {
-    return widget.NewSimpleRenderer(pd.scrollContainer)
+    return widget.NewSimpleRenderer(pd.container)
 }
 
 func (pd *PacketDisplay) SetText(text string) {
@@ -59,7 +57,6 @@ func (pd *PacketDisplay) SetText(text string) {
     } else {
         pd.grid.SetText(text)
     }
-    pd.scrollContainer.ScrollToTop()
 }
 
 func FormatRequestContent(p *packet.HttpPacket) string {

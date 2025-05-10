@@ -100,10 +100,7 @@ func ShowAndRun (a fyne.App, packetChan chan packet.HttpPacket) {
     ), nil, nil, nil, uiList)
 
     masterLayout := container.NewVSplit(packetListContainer, 
-        container.NewHSplit(
-            container.NewScroll(requestContent),
-            container.NewScroll(responseContent),
-        ),
+        container.NewHSplit(requestContent, responseContent),
     )
     w.SetMainMenu(
         makeMenu(

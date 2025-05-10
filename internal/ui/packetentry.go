@@ -11,8 +11,10 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
-
+// For right click menu
 var _ fyne.SecondaryTappable = (*PacketEntry)(nil)
+
+// For text selection
 var _ desktop.Mouseable = (*PacketEntry)(nil)
 var _ desktop.Hoverable = (*PacketEntry)(nil)
 
@@ -21,6 +23,18 @@ type PacketEntry struct {
     selectStartRow, selectStartCol, selectEndRow, selectEndCol int
     selecting bool
     rightclickMenu *widget.PopUpMenu
+}
+
+func NewPacketEntry () *PacketEntry {
+    pe := &PacketEntry{
+        TextGrid: widget.TextGrid{
+            Scroll: fyne.ScrollBoth,
+        },
+    }
+
+    pe.ExtendBaseWidget(pe)
+
+    return pe
 }
 
 func (p *PacketEntry) MouseDown(event *desktop.MouseEvent) {
@@ -34,6 +48,8 @@ func (p *PacketEntry) MouseDown(event *desktop.MouseEvent) {
         p.selectStartCol = col
         p.selecting = true
         p.Refresh()
+    } else {
+        p.selecting = false
     }
 }
 
@@ -44,10 +60,15 @@ func (p *PacketEntry) MouseUp(event *desktop.MouseEvent) {
 func (p *PacketEntry) MouseIn(event *desktop.MouseEvent) {}
 
 func (p *PacketEntry) MouseMoved(event *desktop.MouseEvent) {
-    if p.selecting {
+    if event.Button == desktop.MouseButtonPrimary {
         TEXTGRID_COLOR_HIGHLIGHTED := &widget.CustomTextGridStyle{BGColor: theme.Color(theme.ColorNameSelection)}
         TEXTGRID_COLOR_NORMAL := &widget.CustomTextGridStyle{BGColor: theme.Color(theme.ColorNameBackground)}
         row, col := p.CursorLocationForPosition(event.Position)
+
+        if row == p.selectEndCol && col == p.selectEndCol {
+            return
+        }
+
         startRow, startCol, endRow, endCol := p.getActualStartAndEnd()
         p.SetStyleRange(startRow, startCol, endRow, endCol, TEXTGRID_COLOR_NORMAL)
 
@@ -58,6 +79,8 @@ func (p *PacketEntry) MouseMoved(event *desktop.MouseEvent) {
 
         p.SetStyleRange(startRow, startCol, endRow, endCol, TEXTGRID_COLOR_HIGHLIGHTED)
         p.Refresh()
+    } else {
+        p.selecting = false
     }
 }
 
