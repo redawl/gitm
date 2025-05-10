@@ -14,7 +14,7 @@ import (
 	"github.com/redawl/gitm/internal/ui/settings"
 )
 
-func makeMenu (clearHandler func(), saveHandler func(), loadHandler func(), settingsHandler func(), getSelectedText func() string, w fyne.Window) *fyne.MainMenu {
+func makeMenu (clearHandler func(), saveHandler func(), loadHandler func(), settingsHandler func()) *fyne.MainMenu {
 
     mainMenu := *fyne.NewMainMenu(
         fyne.NewMenu("File", 
@@ -196,16 +196,6 @@ func ShowAndRun (a fyne.App, packetChan chan packet.HttpPacket) {
             func() {
                 settings.MakeSettingsUi(a)
             },
-            func() string {
-                if responseContent.HasSelectedText() {
-                    return responseContent.SelectedText()
-                } else if requestContent.HasSelectedText() {
-                    return requestContent.SelectedText()
-                }
-
-                return ""
-            },
-            w,
         ),
     )
 
