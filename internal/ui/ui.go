@@ -15,21 +15,6 @@ import (
 )
 
 func makeMenu (clearHandler func(), saveHandler func(), loadHandler func(), settingsHandler func(), getSelectedText func() string, w fyne.Window) *fyne.MainMenu {
-    decodeEntries := make([]*fyne.MenuItem, 0)
-
-    for encodingKey := range GetEncodings() {
-        decodeEntries = append(decodeEntries, fyne.NewMenuItem(encodingKey, func() {
-            decoded, err := ExecuteEncoding(encodingKey, getSelectedText())
-
-            if err != nil {
-                errDialog := dialog.NewError(err, w)
-                errDialog.Show()
-            } else {
-                decodedDialog := dialog.NewInformation("Decode result", string(decoded), w)
-                decodedDialog.Show()
-            }
-        })) 
-    }
 
     mainMenu := *fyne.NewMainMenu(
         fyne.NewMenu("File", 
@@ -38,7 +23,6 @@ func makeMenu (clearHandler func(), saveHandler func(), loadHandler func(), sett
             fyne.NewMenuItem("Save", saveHandler), 
             fyne.NewMenuItem("Settings", settingsHandler),
         ), 
-        fyne.NewMenu("Decode", decodeEntries...),
     )
     return &mainMenu
 }

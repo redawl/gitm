@@ -15,7 +15,6 @@ import (
 	"github.com/redawl/gitm/internal/packet"
 )
 
-
 type PacketDisplay struct {
     widget.BaseWidget
     grid *PacketEntry
@@ -41,31 +40,6 @@ func NewPacketDisplay(label string) *PacketDisplay {
     return packetDisplay
 }
 
-func (pd *PacketDisplay) SelectedText() string {
-    // Short circuit if -1
-    if pd.grid.selectStartRow == -1 {
-        return "" 
-    }
-    builder := strings.Builder{}
-
-    startRow, startCol, endRow, endCol := pd.grid.getActualStartAndEnd()
-
-    builder.WriteString(pd.grid.RowText(startRow)[startCol:])
-    builder.WriteByte('\n')
-
-    for i := startRow + 1; i < endRow; i++ {
-        builder.WriteString(pd.grid.RowText(i))
-        builder.WriteByte('\n')
-    }
-    builder.WriteString(pd.grid.RowText(endRow)[:endCol])
-
-    return builder.String()
-}
-
-func (pd *PacketDisplay) HasSelectedText() bool {
-    return pd.SelectedText() != ""
-}
-
 func (pd *PacketDisplay) CreateRenderer() fyne.WidgetRenderer {
     return widget.NewSimpleRenderer(pd.scrollContainer)
 }
@@ -87,10 +61,6 @@ func (pd *PacketDisplay) SetText(text string) {
     }
     pd.scrollContainer.ScrollToTop()
 }
-
-func (p *PacketDisplay) TypedRune (r rune) {}
-
-func (p *PacketDisplay) TypedKey (key *fyne.KeyEvent) {}
 
 func FormatRequestContent(p *packet.HttpPacket) string {
     return fmt.Sprintf(
