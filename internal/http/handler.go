@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/redawl/gitm/internal/config"
 	"github.com/redawl/gitm/internal/packet"
 	"github.com/redawl/gitm/internal/util"
 )
@@ -17,7 +18,7 @@ import (
 // httpPacketHandler is called twice; once with just the request information,
 // and then a second time once the response information is available.
 // Handler also handles the special host "gitm", which
-func Handler(httpPacketHandler func(packet.HttpPacket), proxyUri string) http.HandlerFunc {
+func Handler(httpPacketHandler func(packet.HttpPacket), conf *config.Config) http.HandlerFunc {
     return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
         hostName := request.Host
         slog.Debug("Handling request", "method", request.Method, "path", "http://" + hostName + request.URL.String(), "request", request)
@@ -29,7 +30,7 @@ func Handler(httpPacketHandler func(packet.HttpPacket), proxyUri string) http.Ha
         }
 
         // Special handling for /proxy.pac and /ca.crt
-        if request.TLS == nil && request.Host == "gitm" {
+        if request.TLS == nil && (request.Host == "gitm" || request.Host == conf.HttpListenUri) {
             if request.URL.Path == "/ca.crt" {
                 configDir, err := util.GetConfigDir()
 
@@ -49,7 +50,7 @@ func Handler(httpPacketHandler func(packet.HttpPacket), proxyUri string) http.Ha
 
                 _, _ = w.Write(contents)
             } else if request.URL.Path == "/proxy.pac" {
-                _, _ = fmt.Fprintf(w, "function FindProxyForURL(url, host){return \"SOCKS %s\";}", proxyUri)
+                _, _ = fmt.Fprintf(w, "function FindProxyForURL(url, host){return \"SOCKS %s\";}", conf.SocksListenUri)
             } else {
                 http.Error(w, "Not found", http.StatusNotFound)
             }

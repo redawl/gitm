@@ -39,8 +39,7 @@ func AddHostname (hostname string) error {
         Issuer: *getName(),
         Subject: pkix.Name{
             CommonName: hostname,
-        },
-        DNSNames: []string{hostname},
+        }, DNSNames: []string{hostname},
         NotBefore: time.Now(),
         NotAfter: time.Now().AddDate(1, 0, 0),
         SubjectKeyId: subjectKeyId[:],

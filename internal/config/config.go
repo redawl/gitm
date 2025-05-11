@@ -7,7 +7,6 @@ import (
 type Config struct {
     HttpListenUri string
     TlsListenUri string
-    CacertListenUri string
     SocksListenUri string
     Debug bool
 }

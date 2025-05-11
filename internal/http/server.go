@@ -12,7 +12,7 @@ import (
 )
 
 func ListenAndServe(conf config.Config, httpPacketHandler func(packet.HttpPacket)) {
-    slog.Error("Error serving http proxy server", "error", http.ListenAndServe(conf.HttpListenUri, Handler(httpPacketHandler, conf.SocksListenUri)))
+    slog.Error("Error serving http proxy server", "error", http.ListenAndServe(conf.HttpListenUri, Handler(httpPacketHandler, &conf)))
 }
 
 func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPacket)) {
@@ -58,7 +58,7 @@ func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPac
 
     server := &http.Server{
         Addr: conf.TlsListenUri,
-        Handler: Handler(httpPacketHandler, conf.SocksListenUri),
+        Handler: Handler(httpPacketHandler, &conf),
         TLSConfig: cfg,
     }
 
