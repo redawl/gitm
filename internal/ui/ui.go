@@ -15,7 +15,6 @@ import (
 )
 
 func makeMenu (clearHandler func(), saveHandler func(), loadHandler func(), settingsHandler func()) *fyne.MainMenu {
-
     mainMenu := *fyne.NewMainMenu(
         fyne.NewMenu("File", 
             fyne.NewMenuItem("Load", loadHandler), 
@@ -101,8 +100,8 @@ func ShowAndRun (a fyne.App, packetChan chan packet.HttpPacket) {
 
     masterLayout := container.NewVSplit(packetListContainer, 
         container.NewHSplit(
-            container.NewScroll(requestContent),
-            container.NewScroll(responseContent),
+            requestContent,
+            responseContent,
         ),
     )
     w.SetMainMenu(

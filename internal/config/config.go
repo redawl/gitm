@@ -15,7 +15,6 @@ type Config struct {
 const (
     HTTP_LISTEN_URI = "httpListenUri"
     TLS_LISTEN_URI  = "tlsListenUri"
-    CACERT_LISTEN_URI = "cacertListenUri"
     SOCKS_LISTEN_URI  = "socksListenUri"
     ENABLE_DEBUG_LOGGING = "enableDebugLogging"
 )
@@ -34,7 +33,7 @@ func stringWithFallbackSave(prefs fyne.Preferences, key string, defaultValue str
 func boolWithFallbackSave(prefs fyne.Preferences, key string, defaultValue bool) bool {
     value := prefs.Bool(key)
 
-    if value == false {
+    if !value {
         prefs.SetBool(key, defaultValue)
         return defaultValue
     }
@@ -42,11 +41,12 @@ func boolWithFallbackSave(prefs fyne.Preferences, key string, defaultValue bool)
     return value
 }
 
+// ParseFlags parses the currently saved user preferences, and if any are missing saves the default values
+// for those preferences to disk
 func ParseFlags (preferences fyne.Preferences) Config {
     conf := Config{
         HttpListenUri: stringWithFallbackSave(preferences, HTTP_LISTEN_URI, "127.0.0.1:8080"), 
         TlsListenUri: stringWithFallbackSave(preferences, TLS_LISTEN_URI, "127.0.0.1:5443"),
-        CacertListenUri: stringWithFallbackSave(preferences, CACERT_LISTEN_URI, "127.0.0.1:9090"),
         SocksListenUri: stringWithFallbackSave(preferences, SOCKS_LISTEN_URI, "127.0.0.1:1080"),
         Debug: boolWithFallbackSave(preferences, ENABLE_DEBUG_LOGGING, false),
     }

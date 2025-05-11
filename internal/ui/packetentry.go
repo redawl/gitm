@@ -11,8 +11,10 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
-
+// For rightclick menu
 var _ fyne.SecondaryTappable = (*PacketEntry)(nil)
+
+// For selecting text
 var _ desktop.Mouseable = (*PacketEntry)(nil)
 var _ desktop.Hoverable = (*PacketEntry)(nil)
 
@@ -21,6 +23,16 @@ type PacketEntry struct {
     selectStartRow, selectStartCol, selectEndRow, selectEndCol int
     selecting bool
     rightclickMenu *widget.PopUpMenu
+}
+
+func NewPacketEntry () *PacketEntry {
+    p := &PacketEntry{
+        TextGrid: widget.TextGrid{Scroll: fyne.ScrollBoth},
+    }
+
+    p.ExtendBaseWidget(p)
+
+    return p
 }
 
 func (p *PacketEntry) MouseDown(event *desktop.MouseEvent) {
@@ -41,13 +53,22 @@ func (p *PacketEntry) MouseUp(event *desktop.MouseEvent) {
     p.selecting = false
 }
 
-func (p *PacketEntry) MouseIn(event *desktop.MouseEvent) {}
+func (p *PacketEntry) MouseIn(event *desktop.MouseEvent) {
+    if event.Button != desktop.MouseButtonPrimary {
+        p.selecting = false
+    }
+}
 
 func (p *PacketEntry) MouseMoved(event *desktop.MouseEvent) {
-    if p.selecting {
+    if p.selecting && event.Button == desktop.MouseButtonPrimary {
         TEXTGRID_COLOR_HIGHLIGHTED := &widget.CustomTextGridStyle{BGColor: theme.Color(theme.ColorNameSelection)}
         TEXTGRID_COLOR_NORMAL := &widget.CustomTextGridStyle{BGColor: theme.Color(theme.ColorNameBackground)}
         row, col := p.CursorLocationForPosition(event.Position)
+
+        if p.selectEndRow == row && p.selectEndCol == col {
+            return
+        }
+
         startRow, startCol, endRow, endCol := p.getActualStartAndEnd()
         p.SetStyleRange(startRow, startCol, endRow, endCol, TEXTGRID_COLOR_NORMAL)
 
@@ -61,7 +82,9 @@ func (p *PacketEntry) MouseMoved(event *desktop.MouseEvent) {
     }
 }
 
-func (p *PacketEntry) MouseOut() {}
+func (p *PacketEntry) MouseOut() {
+    p.selecting = false
+}
 
 func (p *PacketEntry) getActualStartAndEnd() (startRow int, startCol int, endRow int, endCol int) {
     // First normalize end col to make sure they fall within the length of the row

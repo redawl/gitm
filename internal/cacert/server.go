@@ -10,9 +10,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"log/slog"
 	"math/big"
-	"net/http"
 	"os"
 	"time"
 
@@ -20,45 +18,9 @@ import (
 	"github.com/redawl/gitm/internal/util"
 )
 
-// ListenAndServe serves an http server which gives the user access to the /ca.crt and /proxy.pac
-// endpoints at listenUri endpoint. 
-// If a fatal error is returned by the http server, an error is returned. All other errors are reported using slog.Error.
-func ListenAndServe(listenUri string, proxyUri string) {
-    // Init cacert if it doesn't already exist
-    getCaCert()
-    err := http.ListenAndServe(listenUri, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        slog.Debug("Request to Cacert server", "path", r.URL.Path)
-        if r.URL.Path == "/ca.crt" {
-            configDir, err := util.GetConfigDir()
-
-            if err != nil {
-                slog.Error("Error getting config dir", "error", err)
-                return
-            }
-
-            certLocation := configDir + "/ca.crt"
-            contents, err := os.ReadFile(certLocation)
-
-            if err != nil {
-                slog.Error("Error getting ca cert", "error", err)
-                w.WriteHeader(http.StatusInternalServerError)
-                return
-            }
-
-            _, _ = w.Write(contents)
-        } else if r.URL.Path == "/proxy.pac" {
-            _, _ = fmt.Fprintf(w, "function FindProxyForURL(url, host){return \"SOCKS %s\";}", proxyUri)
-        } else {
-            http.Error(w, "Not found", http.StatusNotFound)
-        }
-    }))
-
-    slog.Error("Error starting server", "error", err)
-}
-
 // AddHostname creates a certificate for hostname, and adds it to the sqlite db stored in the config dir.
 func AddHostname (hostname string) error {
-    ca, caPrivKey, err := getCaCert()
+    ca, caPrivKey, err := GetCaCert()
 
     if err != nil {
         return err
@@ -140,7 +102,7 @@ func AddHostname (hostname string) error {
     return nil
 }
 
-func getCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
+func GetCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
     configDir, err := util.GetConfigDir()
     if err != nil {
         return nil, nil, err

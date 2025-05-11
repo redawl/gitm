@@ -2,14 +2,22 @@ package http
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/redawl/gitm/internal/packet"
+	"github.com/redawl/gitm/internal/util"
 )
 
-func Handler(httpPacketHandler func(packet.HttpPacket)) http.HandlerFunc {
+// Handler proxies requests from the socks5 proxy, to the requested server,
+// and then forwards the response back to the socks5 proxy.
+// httpPacketHandler is called twice; once with just the request information,
+// and then a second time once the response information is available.
+// Handler also handles the special host "gitm", which
+func Handler(httpPacketHandler func(packet.HttpPacket), proxyUri string) http.HandlerFunc {
     return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
         hostName := request.Host
         slog.Debug("Handling request", "method", request.Method, "path", "http://" + hostName + request.URL.String(), "request", request)
@@ -17,6 +25,34 @@ func Handler(httpPacketHandler func(packet.HttpPacket)) http.HandlerFunc {
 
         if err != nil {
             slog.Error("Error reading request responseBody", "error", err)
+            return
+        }
+
+        // Special handling for /proxy.pac and /ca.crt
+        if request.TLS == nil && request.Host == "gitm" {
+            if request.URL.Path == "/ca.crt" {
+                configDir, err := util.GetConfigDir()
+
+                if err != nil {
+                    slog.Error("Error getting config dir", "error", err)
+                    return
+                }
+
+                certLocation := configDir + "/ca.crt"
+                contents, err := os.ReadFile(certLocation)
+
+                if err != nil {
+                    slog.Error("Error getting ca cert", "error", err)
+                    w.WriteHeader(http.StatusInternalServerError)
+                    return
+                }
+
+                _, _ = w.Write(contents)
+            } else if request.URL.Path == "/proxy.pac" {
+                _, _ = fmt.Fprintf(w, "function FindProxyForURL(url, host){return \"SOCKS %s\";}", proxyUri)
+            } else {
+                http.Error(w, "Not found", http.StatusNotFound)
+            }
             return
         }
 

@@ -45,29 +45,37 @@ func ParseClientConnRequest (conn net.Conn) (*ClientConnRequest, byte) {
     if cmd != CMD_CONNECT {
         return nil, STATUS_COMMAND_NOT_SUPPORTED
     }
-
-    if dstIpType == ADDRESS_TYPE_IPV4 {
+    switch dstIpType {
+    case ADDRESS_TYPE_IPV4:
         buff, err = util.Read(conn, 4)
         if err != nil {
             return nil, STATUS_GENERAL_FAILURE
         }
         dstIp = fmt.Sprintf("%d.%d.%d.%d", buff[0], buff[1], buff[2], buff[3])
-    } else if dstIpType == ADDRESS_TYPE_DOMAINNAME {
+    case ADDRESS_TYPE_DOMAINNAME:
         domainLength, err := util.Read(conn, 1)
         if err != nil {
             return nil, STATUS_GENERAL_FAILURE
         }
 
         domain, err := util.Read(conn, int(domainLength[0]))
+
         if err != nil {
             return nil, STATUS_GENERAL_FAILURE
         }
-        lookups, err := net.LookupIP(string(domain))
-        if err != nil {
-            return nil, STATUS_HOST_UNREACHABLE
+            
+        // Special handling here for our internal hostname, for /proxy.pac and /ca.crt
+        if string(domain) == "gitm" {
+            dstIp = conn.LocalAddr().String()
+        } else {
+            lookups, err := net.LookupIP(string(domain))
+
+            if err != nil {
+                return nil, STATUS_HOST_UNREACHABLE
+            }
+            dstIp = lookups[0].String()
         }
-        dstIp = lookups[0].String()
-    } else {
+    default:
         return nil, STATUS_ADDRESS_TYPE_NOT_SUPPORTED
     }
 
