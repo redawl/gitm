@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -13,8 +14,9 @@ import (
 	"github.com/redawl/gitm/internal/ui"
 )
 
-func setupbackend(conf config.Config, httpHandler func(packet.HttpPacket)) {
-
+// setupbackend sets up the socks5 proxy, as well as the http and https proxy listeners.
+// Returns a cleanup function for gracefully shutting down the backend
+func setupbackend(conf config.Config, httpHandler func(packet.HttpPacket)) (func(), error) {
     logLevel := slog.LevelInfo
 
     if conf.Debug {
@@ -27,17 +29,31 @@ func setupbackend(conf config.Config, httpHandler func(packet.HttpPacket)) {
 
     slog.SetDefault(logger)
     // Init cacert if it hasn't been already
-    cacert.GetCaCert()
+    _, _, _ = cacert.GetCaCert()
 
-    slog.Info("Starting http server")
-    go http.ListenAndServe(conf, httpHandler)
+	httpListener, err := http.ListenAndServe(conf, httpHandler)
+
+	if err != nil {
+		return nil, fmt.Errorf("http server: %w", err)
+	}
     
-    slog.Info("Starting https server")
-    go http.ListenAndServeTls(conf, httpHandler)
+	httpsListener, err := http.ListenAndServeTls(conf, httpHandler)
+
+	if err != nil {
+		return nil, fmt.Errorf("http server: %w", err)
+	}
     
-    if err := socks5.StartTransparentSocksProxy(conf); err != nil {
-        slog.Info("Started socks5 proxy")
-    }
+    socksListener, err := socks5.StartTransparentSocksProxy(conf)
+
+	if err != nil {
+		return nil, fmt.Errorf("socks5 proxy: %w", err)
+	}
+
+	return func() {
+		_ = httpListener.Close()
+		_ = httpsListener.Close()
+		_ = socksListener.Close()
+	}, nil
 }
 
 func main() {
@@ -46,9 +62,15 @@ func main() {
     conf := config.ParseFlags(app.Preferences())
 
     packetChan := make(chan packet.HttpPacket)
-    setupbackend(conf, func(p packet.HttpPacket){
+	slog.Info("Setting up backend...")
+	_, err := setupbackend(conf, func(p packet.HttpPacket){
         packetChan <- p
     })
+
+	if err != nil {
+		slog.Error("Error setting up backend", "error", err)
+		return
+	}
     
     ui.ShowAndRun(app, packetChan)
 }

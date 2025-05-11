@@ -3,6 +3,7 @@ package http
 import (
 	"crypto/tls"
 	"log/slog"
+	"net"
 	"net/http"
 
 	"github.com/redawl/gitm/internal/cacert"
@@ -11,18 +12,32 @@ import (
 	"github.com/redawl/gitm/internal/packet"
 )
 
-func ListenAndServe(conf config.Config, httpPacketHandler func(packet.HttpPacket)) {
-    slog.Error("Error serving http proxy server", "error", http.ListenAndServe(conf.HttpListenUri, Handler(httpPacketHandler, &conf)))
+func ListenAndServe(conf config.Config, httpPacketHandler func(packet.HttpPacket)) (*http.Server, error) {
+	server := &http.Server{Addr: conf.HttpListenUri, Handler: Handler(httpPacketHandler, &conf)}
+
+	ln, err := net.Listen("tcp", conf.HttpListenUri)
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		err := server.Serve(ln)
+
+		if err != http.ErrServerClosed {
+			slog.Error("Error starting server", "error", err)
+		}
+	}()
+
+	return server, nil
 }
 
-func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPacket)) {
+func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPacket)) (*http.Server, error) {
     // Disables certificate checking globally
     http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} 
 
     cfg := &tls.Config{
         // Make sure we can forward ALL tls traffic
         MinVersion: tls.VersionTLS10,
-        // If client doesn't care about verifying, neither do we
+		// If client doesn't care about verifying, neither do we
         InsecureSkipVerify: true, 
     }
 
@@ -33,8 +48,8 @@ func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPac
             return nil, err
         }
 
-        if domainInfo == nil {
-            err = cacert.AddHostname(chi.ServerName)
+        if domainInfo == nil { 
+			err = cacert.AddHostname(chi.ServerName)
 
             if err != nil {
                 return nil, err
@@ -62,6 +77,18 @@ func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPac
         TLSConfig: cfg,
     }
 
-    slog.Error("Error serving https proxy server", "error", server.ListenAndServeTLS("", ""))
+	ln, err := net.Listen("tcp", conf.TlsListenUri)
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		err := server.ServeTLS(ln, "", "")
+
+		if err != http.ErrServerClosed {
+			slog.Error("Error starting server", "error", err)
+		}
+	}()
+
+	return server, nil
 }
 

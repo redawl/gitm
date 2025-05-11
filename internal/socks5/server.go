@@ -1,6 +1,7 @@
 package socks5
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -9,18 +10,24 @@ import (
 	"github.com/redawl/gitm/internal/config"
 )
 
-func StartTransparentSocksProxy(conf config.Config) (error) {
+func StartTransparentSocksProxy(conf config.Config) (net.Listener, error) {
     listener, err := net.Listen("tcp", conf.SocksListenUri)
 
     if err != nil {
-        return err
+        return nil, err
     }
 
     go func () {
         for {
             client, err := listener.Accept()
+
+			if errors.Is(err, net.ErrClosed) {
+				continue
+			}
+			
             if err != nil {
                 slog.Error("Error accepting connection", "error", err)
+				continue
             }
             
             if err := handleConnection(client, conf); err != nil {
@@ -29,7 +36,7 @@ func StartTransparentSocksProxy(conf config.Config) (error) {
         }
     }()
 
-    return nil
+    return listener, err
 }
 
 func handleConnection(client net.Conn, conf config.Config) (error) {
