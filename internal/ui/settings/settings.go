@@ -41,7 +41,7 @@ func (ll *entryLayout) Layout (objs []fyne.CanvasObject, size fyne.Size) {
     entry.Resize(size)
 }
 
-func MakeSettingsUi(a fyne.App) {
+func MakeSettingsUi(a fyne.App, restart func()) {
     w := a.NewWindow("Settings")
     prefs := a.Preferences()
     header := container.NewPadded(&canvas.Text{
@@ -80,7 +80,11 @@ func MakeSettingsUi(a fyne.App) {
         prefs.SetString(config.TLS_LISTEN_URI, httpsUrl.Text)
         prefs.SetBool(config.ENABLE_DEBUG_LOGGING, debugEnabled.Checked)
 
-        successPopup := dialog.NewInformation("Success!", "New settings saved, but won't be applied until you restart GITM", w)
+        successPopup := dialog.NewConfirm("Success!", "New settings saved, would you like to restart the servers?", func(b bool) {
+			if b {
+				restart()
+			}
+		}, w)
         successPopup.Show()
     }), widget.NewButton("Reset",func() {
         socks5Url.SetText(prefs.String(config.SOCKS_LISTEN_URI))    

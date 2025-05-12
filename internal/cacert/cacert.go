@@ -20,7 +20,7 @@ import (
 
 // AddHostname creates a certificate for hostname, and adds it to the sqlite db stored in the config dir.
 func AddHostname (hostname string) error {
-    ca, caPrivKey, err := GetCaCert()
+    ca, caPrivKey, err := getCaCert()
 
     if err != nil {
         return err
@@ -101,7 +101,7 @@ func AddHostname (hostname string) error {
     return nil
 }
 
-func GetCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
+func getCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
     configDir, err := util.GetConfigDir()
     if err != nil {
         return nil, nil, err
@@ -226,5 +226,15 @@ func getName() (*pkix.Name) {
         Province: []string{"GITM Inc"},
         Locality: []string{"GITM Inc"},
     }
+}
+
+func InitCaCert () error {
+	_, _, err := getCaCert()
+	
+	if err != nil {
+		return fmt.Errorf("Init ca cert: %v", err)
+	}
+
+	return nil
 }
 
