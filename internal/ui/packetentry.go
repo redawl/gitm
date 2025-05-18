@@ -6,11 +6,13 @@ import (
 	"strings"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
+
 // For rightclick menu
 var _ fyne.SecondaryTappable = (*PacketEntry)(nil)
 
@@ -19,27 +21,35 @@ var _ desktop.Mouseable = (*PacketEntry)(nil)
 var _ desktop.Hoverable = (*PacketEntry)(nil)
 
 type PacketEntry struct {
-    widget.TextGrid
+	widget.BaseWidget
+    TextGrid widget.TextGrid
     selectStartRow, selectStartCol, selectEndRow, selectEndCol int
     selecting bool
+	scroll *container.Scroll
     rightclickMenu *widget.PopUpMenu
 }
 
 func NewPacketEntry () *PacketEntry {
     p := &PacketEntry{
-        TextGrid: widget.TextGrid{Scroll: fyne.ScrollBoth},
+		TextGrid: widget.TextGrid{Scroll: fyne.ScrollNone},
     }
+
+	p.scroll = container.NewScroll(&p.TextGrid)
 
     p.ExtendBaseWidget(p)
 
     return p
 }
 
+func (p *PacketEntry) CreateRenderer () fyne.WidgetRenderer {
+	return widget.NewSimpleRenderer(p.scroll)
+}
+
 func (p *PacketEntry) MouseDown(event *desktop.MouseEvent) {
     if event.Button == desktop.MouseButtonPrimary {
         TEXTGRID_COLOR_NORMAL := &widget.CustomTextGridStyle{BGColor: theme.Color(theme.ColorNameBackground)}
 
-        p.SetStyleRange(0, 0, len(p.Rows), len(p.Row(len(p.Rows)-1).Cells), TEXTGRID_COLOR_NORMAL)
+        p.TextGrid.SetStyleRange(0, 0, len(p.TextGrid.Rows), len(p.TextGrid.Row(len(p.TextGrid.Rows)-1).Cells), TEXTGRID_COLOR_NORMAL)
         row, col := p.CursorLocationForPosition(event.Position)
 
         p.selectStartRow = row
@@ -59,6 +69,26 @@ func (p *PacketEntry) MouseIn(event *desktop.MouseEvent) {
     }
 }
 
+// Workaround for another fyne bug...
+// Implementation for TextGrid CursorLocationForPosition is incorrect, 
+// and even if it was correct, the internal scroll that is used in the computation always has 
+// an offset of 0, 0 for some reason, making the below calculation impossible.
+// For now, we extract the cellsize of the textgrid, and do the correct calculation.
+func (p *PacketEntry) CursorLocationForPosition(pos fyne.Position) (row, col int) {
+	cellSize := p.TextGrid.PositionForCursorLocation(1, 1)
+	y := pos.Y
+	x := pos.X
+
+	if p.scroll != nil && p.scroll.Visible() {
+		y += p.scroll.Offset.Y
+		x += p.scroll.Offset.X
+	}
+
+	row = int(y / cellSize.Y)
+	col = int(x / cellSize.X)
+	return
+}
+
 func (p *PacketEntry) MouseMoved(event *desktop.MouseEvent) {
     if p.selecting && event.Button == desktop.MouseButtonPrimary {
         TEXTGRID_COLOR_HIGHLIGHTED := &widget.CustomTextGridStyle{BGColor: theme.Color(theme.ColorNameSelection)}
@@ -70,14 +100,14 @@ func (p *PacketEntry) MouseMoved(event *desktop.MouseEvent) {
         }
 
         startRow, startCol, endRow, endCol := p.getActualStartAndEnd()
-        p.SetStyleRange(startRow, startCol, endRow, endCol, TEXTGRID_COLOR_NORMAL)
+        p.TextGrid.SetStyleRange(startRow, startCol, endRow, endCol, TEXTGRID_COLOR_NORMAL)
 
         p.selectEndRow = row
         p.selectEndCol = col
 
         startRow, startCol, endRow, endCol = p.getActualStartAndEnd()
 
-        p.SetStyleRange(startRow, startCol, endRow, endCol, TEXTGRID_COLOR_HIGHLIGHTED)
+        p.TextGrid.SetStyleRange(startRow, startCol, endRow, endCol, TEXTGRID_COLOR_HIGHLIGHTED)
         p.Refresh()
     }
 }
@@ -88,7 +118,7 @@ func (p *PacketEntry) MouseOut() {
 
 func (p *PacketEntry) getActualStartAndEnd() (startRow int, startCol int, endRow int, endCol int) {
     // First normalize end col to make sure they fall within the length of the row
-    selectEndCol := min(len(p.Row(p.selectEndRow).Cells) - 1, p.selectEndCol)
+    selectEndCol := min(len(p.TextGrid.Row(p.selectEndRow).Cells) - 1, p.selectEndCol)
 
     if p.selectEndRow == p.selectStartRow {
         if selectEndCol > p.selectStartCol {
@@ -113,16 +143,16 @@ func (p *PacketEntry) SelectedText() string {
 
     startRow, startCol, endRow, endCol := p.getActualStartAndEnd()
     slog.Info("Selecting text", "startRow", startRow, "startCol", startCol, "endRow", endRow, "endCol", endCol)
-    builder.WriteString(p.RowText(startRow)[startCol:])
+    builder.WriteString(p.TextGrid.RowText(startRow)[startCol:])
     builder.WriteByte('\n')
 
     if startRow != endRow {
         for i := startRow + 1; i < endRow; i++ {
-            builder.WriteString(p.RowText(i))
+            builder.WriteString(p.TextGrid.RowText(i))
             builder.WriteByte('\n')
         }
 
-        builder.WriteString(p.RowText(endRow)[:endCol+1])
+        builder.WriteString(p.TextGrid.RowText(endRow)[:endCol+1])
     }
 
     return builder.String()

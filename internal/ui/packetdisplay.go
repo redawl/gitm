@@ -40,7 +40,7 @@ func (pd *PacketDisplay) CreateRenderer() fyne.WidgetRenderer {
 
 func (pd *PacketDisplay) SetText(text string) {
     // Workaround for fyne Bug
-    oldCount := len(pd.grid.Rows)
+    oldCount := len(pd.grid.TextGrid.Rows)
     newCount := len(strings.Split(text, "\n"))
     
     if oldCount > newCount {
@@ -49,9 +49,9 @@ func (pd *PacketDisplay) SetText(text string) {
         for range oldCount - newCount {
             builder.WriteByte('\n')
         }
-        pd.grid.SetText(builder.String())
+        pd.grid.TextGrid.SetText(builder.String())
     } else {
-        pd.grid.SetText(text)
+        pd.grid.TextGrid.SetText(text)
     }
 }
 
