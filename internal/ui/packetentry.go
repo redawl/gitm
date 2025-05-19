@@ -41,6 +41,10 @@ func NewPacketEntry () *PacketEntry {
     return p
 }
 
+func (p *PacketEntry) ScrollToTop () {
+	p.scroll.ScrollToTop()
+}
+
 func (p *PacketEntry) CreateRenderer () fyne.WidgetRenderer {
 	return widget.NewSimpleRenderer(p.scroll)
 }

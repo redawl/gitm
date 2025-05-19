@@ -53,6 +53,8 @@ func (pd *PacketDisplay) SetText(text string) {
     } else {
         pd.grid.TextGrid.SetText(text)
     }
+
+	pd.grid.ScrollToTop()
 }
 
 func FormatRequestContent(p *packet.HttpPacket) string {
