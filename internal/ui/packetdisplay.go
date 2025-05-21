@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/flate"
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -137,6 +138,17 @@ func decodeBody(body []byte, contentEncodings []string) string {
             }
         }
     }
+
+	if json.Valid(ret) {
+		buff := new(bytes.Buffer)
+		err := json.Indent(buff, ret, "", "\t")
+
+		if err != nil {
+			slog.Error("Failed indenting json", "error", err) 
+		} else {
+			ret = buff.Bytes()
+		}
+	}
 
     return string(ret)
 }
