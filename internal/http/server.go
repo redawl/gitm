@@ -31,51 +31,51 @@ func ListenAndServe(conf config.Config, httpPacketHandler func(packet.HttpPacket
 }
 
 func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPacket)) (*http.Server, error) {
-    // Disables certificate checking globally
-    http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} 
+	// Disables certificate checking globally
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
-    cfg := &tls.Config{
-        // Make sure we can forward ALL tls traffic
-        MinVersion: tls.VersionTLS10,
+	cfg := &tls.Config{
+		// Make sure we can forward ALL tls traffic
+		MinVersion: tls.VersionTLS10,
 		// If client doesn't care about verifying, neither do we
-        InsecureSkipVerify: true, 
-    }
+		InsecureSkipVerify: true,
+	}
 
-    cfg.GetCertificate = func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
-        domainInfo, err := db.GetDomain(chi.ServerName)
+	cfg.GetCertificate = func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
+		domainInfo, err := db.GetDomain(chi.ServerName)
 
-        if err != nil {
-            return nil, err
-        }
+		if err != nil {
+			return nil, err
+		}
 
-        if domainInfo == nil { 
+		if domainInfo == nil {
 			err = cacert.AddHostname(chi.ServerName)
 
-            if err != nil {
-                return nil, err
-            }
+			if err != nil {
+				return nil, err
+			}
 
-            domainInfo, err = db.GetDomain(chi.ServerName)
+			domainInfo, err = db.GetDomain(chi.ServerName)
 
-            if err != nil {
-                return nil, err
-            }
-        }
+			if err != nil {
+				return nil, err
+			}
+		}
 
-        certificate, err := tls.X509KeyPair(domainInfo.Cert, domainInfo.PrivKey)
+		certificate, err := tls.X509KeyPair(domainInfo.Cert, domainInfo.PrivKey)
 
-        if err != nil {
-            return nil, err
-        }
+		if err != nil {
+			return nil, err
+		}
 
-        return &certificate, nil
-    }
+		return &certificate, nil
+	}
 
-    server := &http.Server{
-        Addr: conf.TlsListenUri,
-        Handler: Handler(httpPacketHandler, &conf),
-        TLSConfig: cfg,
-    }
+	server := &http.Server{
+		Addr:      conf.TlsListenUri,
+		Handler:   Handler(httpPacketHandler, &conf),
+		TLSConfig: cfg,
+	}
 
 	ln, err := net.Listen("tcp", conf.TlsListenUri)
 	if err != nil {
@@ -91,4 +91,3 @@ func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPac
 
 	return server, nil
 }
-

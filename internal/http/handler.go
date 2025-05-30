@@ -19,132 +19,131 @@ import (
 // and then a second time once the response information is available.
 // Handler also handles the special host "gitm", which
 func Handler(httpPacketHandler func(packet.HttpPacket), conf *config.Config) http.HandlerFunc {
-    return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
-        hostName := request.Host
-        slog.Debug("Handling request", "method", request.Method, "path", "http://" + hostName + request.URL.String(), "request", request)
-        requestBody, err := io.ReadAll(request.Body)
+	return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		hostName := request.Host
+		slog.Debug("Handling request", "method", request.Method, "path", "http://"+hostName+request.URL.String(), "request", request)
+		requestBody, err := io.ReadAll(request.Body)
 
-        if err != nil {
-            slog.Error("Error reading request responseBody", "error", err)
-            return
-        }
+		if err != nil {
+			slog.Error("Error reading request responseBody", "error", err)
+			return
+		}
 
-        // Special handling for /proxy.pac and /ca.crt
-        if request.TLS == nil && (request.Host == "gitm" || request.Host == conf.HttpListenUri) {
-            if request.URL.Path == "/ca.crt" {
-                configDir, err := util.GetConfigDir()
+		// Special handling for /proxy.pac and /ca.crt
+		if request.TLS == nil && (request.Host == "gitm" || request.Host == conf.HttpListenUri) {
+			if request.URL.Path == "/ca.crt" {
+				configDir, err := util.GetConfigDir()
 
-                if err != nil {
-                    slog.Error("Error getting config dir", "error", err)
-                    return
-                }
+				if err != nil {
+					slog.Error("Error getting config dir", "error", err)
+					return
+				}
 
-                certLocation := configDir + "/ca.crt"
-                contents, err := os.ReadFile(certLocation)
+				certLocation := configDir + "/ca.crt"
+				contents, err := os.ReadFile(certLocation)
 
-                if err != nil {
-                    slog.Error("Error getting ca cert", "error", err)
-                    w.WriteHeader(http.StatusInternalServerError)
-                    return
-                }
+				if err != nil {
+					slog.Error("Error getting ca cert", "error", err)
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 
-                _, _ = w.Write(contents)
-            } else if request.URL.Path == "/proxy.pac" {
-                _, _ = fmt.Fprintf(w, "function FindProxyForURL(url, host){return \"SOCKS %s\";}", conf.SocksListenUri)
-            } else {
-                http.Error(w, "Not found", http.StatusNotFound)
-            }
-            return
-        }
+				_, _ = w.Write(contents)
+			} else if request.URL.Path == "/proxy.pac" {
+				_, _ = fmt.Fprintf(w, "function FindProxyForURL(url, host){return \"SOCKS %s\";}", conf.SocksListenUri)
+			} else {
+				http.Error(w, "Not found", http.StatusNotFound)
+			}
+			return
+		}
 
-        req := &http.Request{
-            Method: request.Method,
-            URL: request.URL,
-            Body:  io.NopCloser(bytes.NewReader(requestBody)),
-            Proto: request.Proto,
-            ProtoMajor: request.ProtoMajor,
-            ProtoMinor: request.ProtoMinor,
-            Header: request.Header,
-        }
+		req := &http.Request{
+			Method:     request.Method,
+			URL:        request.URL,
+			Body:       io.NopCloser(bytes.NewReader(requestBody)),
+			Proto:      request.Proto,
+			ProtoMajor: request.ProtoMajor,
+			ProtoMinor: request.ProtoMinor,
+			Header:     request.Header,
+		}
 
-        if request.TLS != nil {
-            req.URL.Scheme = "https"
-        } else {
-            req.URL.Scheme = "http"
-        }
+		if request.TLS != nil {
+			req.URL.Scheme = "https"
+		} else {
+			req.URL.Scheme = "http"
+		}
 
-        req.URL.Host = request.Host
+		req.URL.Host = request.Host
 
-        httpPacket := packet.CreatePacket(
-            request.URL.Hostname(), 
-            request.Method,
-            "", 
-            request.URL.RequestURI(), 
-            "",
-            request.Proto,
-            nil, 
-            nil, 
-            request.Header,
-            requestBody,
-        )
+		httpPacket := packet.CreatePacket(
+			request.URL.Hostname(),
+			request.Method,
+			"",
+			request.URL.RequestURI(),
+			"",
+			request.Proto,
+			nil,
+			nil,
+			request.Header,
+			requestBody,
+		)
 
-        if httpPacketHandler != nil {
-            httpPacketHandler(httpPacket)
-        }
-        resp, err := http.DefaultTransport.RoundTrip(req)
+		if httpPacketHandler != nil {
+			httpPacketHandler(httpPacket)
+		}
+		resp, err := http.DefaultTransport.RoundTrip(req)
 
-        if err != nil {
-            slog.Error("Error forwarding http request", "error", err, "request", req)
+		if err != nil {
+			slog.Error("Error forwarding http request", "error", err, "request", req)
 
-            // Attempt hijack to terminate the connection.
-            hijack, ok := w.(http.Hijacker)
+			// Attempt hijack to terminate the connection.
+			hijack, ok := w.(http.Hijacker)
 
-            if !ok {
-                slog.Error("Webserver doesn't support hijacking, sending internal server error")
-                http.Error(w, "Internal server error", http.StatusInternalServerError)
-            }
+			if !ok {
+				slog.Error("Webserver doesn't support hijacking, sending internal server error")
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+			}
 
-            conn, _, _ := hijack.Hijack()
+			conn, _, _ := hijack.Hijack()
 
-            conn.Close()
-            return
-        }
+			conn.Close()
+			return
+		}
 
-        for header, value := range resp.Header {
-            for _, v := range value {
-                w.Header().Add(header, v)
-            }
-        }
+		for header, value := range resp.Header {
+			for _, v := range value {
+				w.Header().Add(header, v)
+			}
+		}
 
-        w.WriteHeader(resp.StatusCode)
-        
-        slog.Debug("Response from proxied server", "response", resp)
+		w.WriteHeader(resp.StatusCode)
 
-        responseBody, err := io.ReadAll(resp.Body)
+		slog.Debug("Response from proxied server", "response", resp)
 
-        if err != nil {
-            slog.Error("Error forwarding http request", "error", err)
-            return
-        }
+		responseBody, err := io.ReadAll(resp.Body)
 
-        if httpPacketHandler != nil {
-            completedPacket := packet.CreatePacket(
-                request.URL.Hostname(), 
-                request.Method,
-                resp.Status, 
-                request.URL.RequestURI(), 
-                resp.Proto,
-                request.Proto,
-                resp.Header, 
-                responseBody, 
-                request.Header,
-                requestBody,
-            )
-            httpPacket.UpdatePacket(&completedPacket)
-            httpPacketHandler(httpPacket)
-        }
+		if err != nil {
+			slog.Error("Error forwarding http request", "error", err)
+			return
+		}
 
-        w.Write(responseBody)
-    })
+		if httpPacketHandler != nil {
+			completedPacket := packet.CreatePacket(
+				request.URL.Hostname(),
+				request.Method,
+				resp.Status,
+				request.URL.RequestURI(),
+				resp.Proto,
+				request.Proto,
+				resp.Header,
+				responseBody,
+				request.Header,
+				requestBody,
+			)
+			httpPacket.UpdatePacket(&completedPacket)
+			httpPacketHandler(httpPacket)
+		}
+
+		w.Write(responseBody)
+	})
 }
-

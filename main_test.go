@@ -9,27 +9,27 @@ import (
 	"github.com/redawl/gitm/internal/packet"
 )
 
-func setup (t *testing.T) (*config.Config, []*packet.HttpPacket, func()) {
+func setup(t *testing.T) (*config.Config, []*packet.HttpPacket, func()) {
 	conf := config.Config{
-		HttpListenUri: "127.0.0.1:8081",
-		TlsListenUri: "127.0.0.1:8444",
+		HttpListenUri:  "127.0.0.1:8081",
+		TlsListenUri:   "127.0.0.1:8444",
 		SocksListenUri: "127.0.0.1:1081",
 	}
 
 	packets := make([]*packet.HttpPacket, 0)
 
-	cleanup, err := setupbackend(conf, func(hp packet.HttpPacket){
+	cleanup, err := setupbackend(conf, func(hp packet.HttpPacket) {
 		packets = append(packets, &hp)
 	})
 
 	if err != nil {
-		t.Errorf("Expected err = nil, got err = %v", err)	
+		t.Errorf("Expected err = nil, got err = %v", err)
 	}
 
 	return &conf, packets, cleanup
 }
 
-func TestProxyPacIsAccessible (t *testing.T) {
+func TestProxyPacIsAccessible(t *testing.T) {
 	conf, _, cleanup := setup(t)
 
 	defer cleanup()
@@ -47,7 +47,7 @@ func TestProxyPacIsAccessible (t *testing.T) {
 	}
 }
 
-func TestCaCertIsAccessble (t *testing.T) {
+func TestCaCertIsAccessble(t *testing.T) {
 	conf, _, cleanup := setup(t)
 	defer cleanup()
 

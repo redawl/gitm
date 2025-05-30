@@ -12,144 +12,148 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/redawl/gitm/internal/packet"
 )
 
 type PacketDisplay struct {
-    widget.BaseWidget
-    grid *PacketEntry
-    label widget.Label
+	widget.BaseWidget
+	entry *PacketEntry
+	label *widget.Label
 }
 
 func NewPacketDisplay(label string) *PacketDisplay {
-    packetDisplay := &PacketDisplay{
-        grid: NewPacketEntry(),
-        label : widget.Label{
-            Text: label,
-        },
-    }
+	packetDisplay := &PacketDisplay{
+		entry: NewPacketEntry(),
+		label: &widget.Label{
+			Text:     label,
+			SizeName: theme.SizeNameSubHeadingText,
+		},
+	}
 
-    packetDisplay.ExtendBaseWidget(packetDisplay)
+	packetDisplay.ExtendBaseWidget(packetDisplay)
 
-    return packetDisplay
+	return packetDisplay
 }
 
 func (pd *PacketDisplay) CreateRenderer() fyne.WidgetRenderer {
-    return widget.NewSimpleRenderer(container.NewBorder(&pd.label, nil, nil, nil, pd.grid))
+	return widget.NewSimpleRenderer(container.NewBorder(pd.label, nil, nil, nil, pd.entry))
 }
 
 func (pd *PacketDisplay) SetText(text string) {
-    // Workaround for fyne Bug
-    oldCount := len(pd.grid.TextGrid.Rows)
-    newCount := len(strings.Split(text, "\n"))
-    
-    if oldCount > newCount {
-        builder := strings.Builder{}
-        builder.WriteString(text)
-        for range oldCount - newCount {
-            builder.WriteByte('\n')
-        }
-        pd.grid.TextGrid.SetText(builder.String())
-    } else {
-        pd.grid.TextGrid.SetText(text)
-    }
+	// Workaround for fyne Bug
+	oldCount := len(pd.entry.TextGrid.Rows)
+	newCount := len(strings.Split(text, "\n"))
 
-	pd.grid.ScrollToTop()
+	if oldCount > newCount {
+		builder := strings.Builder{}
+		builder.WriteString(text)
+		for range oldCount - newCount {
+			builder.WriteByte('\n')
+		}
+		pd.entry.TextGrid.SetText(builder.String())
+	} else {
+		pd.entry.TextGrid.SetText(text)
+	}
+
+	pd.entry.ScrollToTop()
 }
 
 func FormatRequestContent(p *packet.HttpPacket) string {
-    return fmt.Sprintf(
-        "%s %s %s\n%s\n%s", 
-        p.Method, 
-        p.Path,
-        p.ReqProto, 
-        formatHeaders(p.ReqHeaders),
-        decodeBody(p.ReqBody, p.ReqHeaders["Content-Encoding"]),
-    )
+	return fmt.Sprintf(
+		"%s %s %s\n%s\n%s",
+		p.Method,
+		p.Path,
+		p.ReqProto,
+		formatHeaders(p.ReqHeaders),
+		decodeBody(p.ReqBody, p.ReqHeaders["Content-Encoding"]),
+	)
 }
 
 func FormatResponseContent(p *packet.HttpPacket) string {
-    return fmt.Sprintf(
-        "%s %s\n%s\n%s", 
-        p.RespProto, 
-        p.Status, 
-        formatHeaders(p.RespHeaders),
-        decodeBody(p.RespBody, p.RespHeaders["Content-Encoding"]),
-    )
+	return fmt.Sprintf(
+		"%s %s\n%s\n%s",
+		p.RespProto,
+		p.Status,
+		formatHeaders(p.RespHeaders),
+		decodeBody(p.RespBody, p.RespHeaders["Content-Encoding"]),
+	)
 }
 
-func formatHeaders (headers map[string][]string) string {
-    builder := strings.Builder{}
+func formatHeaders(headers map[string][]string) string {
+	builder := strings.Builder{}
 
-    for header, values := range headers {
-        builder.WriteString(header + ": ") 
-        for i, value := range values {
-            if i == len(values) - 1 {
-                builder.WriteString(value)
-            } else {
-                builder.WriteString(value + ", ")
-            }
-        }
-        builder.WriteString("\n")
-    }
+	for header, values := range headers {
+		builder.WriteString(header + ": ")
+		for i, value := range values {
+			if i == len(values)-1 {
+				builder.WriteString(value)
+			} else {
+				builder.WriteString(value + ", ")
+			}
+		}
+		builder.WriteString("\n")
+	}
 
-    return builder.String()
+	return builder.String()
 }
 
 func decodeBody(body []byte, contentEncodings []string) string {
-    ret := body
-    if len(contentEncodings) > 0 {
-        decoded := bytes.NewReader(body)
-        for _, contentEncoding := range contentEncodings {
-            switch contentEncoding {
-                case "gzip": {
-                    decoded, err := gzip.NewReader(decoded)
+	ret := body
+	if len(contentEncodings) > 0 {
+		decoded := bytes.NewReader(body)
+		for _, contentEncoding := range contentEncodings {
+			switch contentEncoding {
+			case "gzip":
+				{
+					decoded, err := gzip.NewReader(decoded)
 
-                    if err != nil {
-                        slog.Error("Failed decoding gzip", "error", err)
-                        break
-                    }
+					if err != nil {
+						slog.Error("Failed decoding gzip", "error", err)
+						break
+					}
 
-                    ret, err = io.ReadAll(decoded)
+					ret, err = io.ReadAll(decoded)
 
-                    if err != nil {
-                        slog.Error("Failed reading stream", "error", err)
-                        break
-                    }
-                }
-                case "deflate": {
-                    decoded := flate.NewReader(decoded)
+					if err != nil {
+						slog.Error("Failed reading stream", "error", err)
+						break
+					}
+				}
+			case "deflate":
+				{
+					decoded := flate.NewReader(decoded)
 
-                    var err error
-                    ret, err = io.ReadAll(decoded)
+					var err error
+					ret, err = io.ReadAll(decoded)
 
-                    if err != nil {
-                        slog.Error("Failed reading stream", "error", err) 
-                        break
-                    }
-                }
-                case "UTF-8":
-                case "none":
-                default: {
-                    slog.Error("Unhandled compression", "compression", contentEncoding)
-                    break
-                }
-            }
-        }
-    }
+					if err != nil {
+						slog.Error("Failed reading stream", "error", err)
+						break
+					}
+				}
+			case "UTF-8":
+			case "none":
+			default:
+				{
+					slog.Error("Unhandled compression", "compression", contentEncoding)
+					break
+				}
+			}
+		}
+	}
 
 	if json.Valid(ret) {
 		buff := new(bytes.Buffer)
 		err := json.Indent(buff, ret, "", "\t")
 
 		if err != nil {
-			slog.Error("Failed indenting json", "error", err) 
+			slog.Error("Failed indenting json", "error", err)
 		} else {
 			ret = buff.Bytes()
 		}
 	}
 
-    return string(ret)
+	return string(ret)
 }
-

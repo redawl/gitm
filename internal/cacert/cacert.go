@@ -19,222 +19,221 @@ import (
 )
 
 // AddHostname creates a certificate for hostname, and adds it to the sqlite db stored in the config dir.
-func AddHostname (hostname string) error {
-    ca, caPrivKey, err := getCaCert()
+func AddHostname(hostname string) error {
+	ca, caPrivKey, err := getCaCert()
 
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    serialNumber, err := createSerialNumer()
-    
-    if err != nil {
-        return err
-    }
+	serialNumber, err := createSerialNumer()
 
-    subjectKeyId := sha1.Sum(serialNumber.Bytes())
+	if err != nil {
+		return err
+	}
 
-    cert := &x509.Certificate{
-        SerialNumber: serialNumber,
-        Issuer: *getName(),
-        Subject: pkix.Name{
-            CommonName: hostname,
-        }, DNSNames: []string{hostname},
-        NotBefore: time.Now(),
-        NotAfter: time.Now().AddDate(1, 0, 0),
-        SubjectKeyId: subjectKeyId[:],
-        ExtKeyUsage: []x509.ExtKeyUsage{
-            x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth,
-        },
-        KeyUsage: x509.KeyUsageDigitalSignature,
-    }
+	subjectKeyId := sha1.Sum(serialNumber.Bytes())
 
-    certPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	cert := &x509.Certificate{
+		SerialNumber: serialNumber,
+		Issuer:       *getName(),
+		Subject: pkix.Name{
+			CommonName: hostname,
+		}, DNSNames: []string{hostname},
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().AddDate(1, 0, 0),
+		SubjectKeyId: subjectKeyId[:],
+		ExtKeyUsage: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth,
+		},
+		KeyUsage: x509.KeyUsageDigitalSignature,
+	}
 
-    if err != nil {
-        return err
-    }
+	certPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
 
-    certBytes, err := x509.CreateCertificate(rand.Reader, cert, ca, &certPrivKey.PublicKey, caPrivKey)
+	if err != nil {
+		return err
+	}
 
-    if err != nil {
-        return err
-    }
+	certBytes, err := x509.CreateCertificate(rand.Reader, cert, ca, &certPrivKey.PublicKey, caPrivKey)
 
-    certPem := new(bytes.Buffer)
-    caPem   := new(bytes.Buffer)
-    certPrivKeyPem := new(bytes.Buffer)
+	if err != nil {
+		return err
+	}
 
-    err = pem.Encode(certPem, &pem.Block{
-        Type:  "CERTIFICATE",
-        Bytes: certBytes,
-    })
+	certPem := new(bytes.Buffer)
+	caPem := new(bytes.Buffer)
+	certPrivKeyPem := new(bytes.Buffer)
 
-    if err != nil {
-        return err
-    }
+	err = pem.Encode(certPem, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certBytes,
+	})
 
-    err = pem.Encode(caPem, &pem.Block{
-        Type:  "CERTIFICATE",
-        Bytes: ca.Raw,
-    })
+	if err != nil {
+		return err
+	}
 
-    if err != nil {
-        return err
-    }
+	err = pem.Encode(caPem, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: ca.Raw,
+	})
 
-    err = pem.Encode(certPrivKeyPem, &pem.Block{
-        Type:  "RSA PRIVATE KEY",
-        Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
-    })
+	if err != nil {
+		return err
+	}
 
-    if err != nil {
-        return err
-    }
+	err = pem.Encode(certPrivKeyPem, &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
+	})
 
-    err = db.AddDomain(hostname, append(certPem.Bytes(), caPem.Bytes()...), certPrivKeyPem.Bytes())
+	if err != nil {
+		return err
+	}
 
-    if err != nil {
-        return err
-    }
+	err = db.AddDomain(hostname, append(certPem.Bytes(), caPem.Bytes()...), certPrivKeyPem.Bytes())
 
-    return nil
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func getCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
-    configDir, err := util.GetConfigDir()
-    if err != nil {
-        return nil, nil, err
-    }
+	configDir, err := util.GetConfigDir()
+	if err != nil {
+		return nil, nil, err
+	}
 
-    certLocation := configDir + "/ca.crt"
+	certLocation := configDir + "/ca.crt"
 
-    if _, err := os.Stat(certLocation); errors.Is(err, os.ErrNotExist) {
-        serialNumber, err := createSerialNumer()
+	if _, err := os.Stat(certLocation); errors.Is(err, os.ErrNotExist) {
+		serialNumber, err := createSerialNumer()
 
-        if err != nil {
-            return nil, nil, err
-        }
+		if err != nil {
+			return nil, nil, err
+		}
 
-        ca := &x509.Certificate{
-            SerialNumber: serialNumber,
-            Subject: *getName(),
-            NotBefore: time.Now(),
-            NotAfter: time.Now().AddDate(1, 0, 0),
-            IsCA: true,
-            ExtKeyUsage: []x509.ExtKeyUsage{
-                x509.ExtKeyUsageServerAuth,
-            },
-            KeyUsage: x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
-            BasicConstraintsValid: true,
-        }
+		ca := &x509.Certificate{
+			SerialNumber: serialNumber,
+			Subject:      *getName(),
+			NotBefore:    time.Now(),
+			NotAfter:     time.Now().AddDate(1, 0, 0),
+			IsCA:         true,
+			ExtKeyUsage: []x509.ExtKeyUsage{
+				x509.ExtKeyUsageServerAuth,
+			},
+			KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+			BasicConstraintsValid: true,
+		}
 
-        caPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
-        if err != nil {
-            return nil, nil, err
-        }
+		caPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
+		if err != nil {
+			return nil, nil, err
+		}
 
-        caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, &caPrivKey.PublicKey, caPrivKey)
+		caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, &caPrivKey.PublicKey, caPrivKey)
 
-        if err != nil {
-            return nil, nil, err
-        }
+		if err != nil {
+			return nil, nil, err
+		}
 
-        caPem   := new(bytes.Buffer)
-        caPrivKeyPem   := new(bytes.Buffer)
-        err = pem.Encode(caPem, &pem.Block{
-            Type: "CERTIFICATE",
-            Bytes: caBytes,
-        })
+		caPem := new(bytes.Buffer)
+		caPrivKeyPem := new(bytes.Buffer)
+		err = pem.Encode(caPem, &pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: caBytes,
+		})
 
-        if err != nil {
-            return nil, nil, err
-        }
+		if err != nil {
+			return nil, nil, err
+		}
 
-        err = pem.Encode(caPrivKeyPem, &pem.Block{
-            Type:  "RSA PRIVATE KEY",
-            Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
-        })
+		err = pem.Encode(caPrivKeyPem, &pem.Block{
+			Type:  "RSA PRIVATE KEY",
+			Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
+		})
 
-        if err != nil {
-            return nil, nil, err
-        }
+		if err != nil {
+			return nil, nil, err
+		}
 
-        err = os.WriteFile(configDir + "/ca.crt", caBytes, 0400)
-        if err != nil {
-            return nil, nil, err
-        }
-        err = os.WriteFile(configDir + "/ca.pem", caPem.Bytes(), 0400)
-        if err != nil {
-            return nil, nil, err
-        }
-        err = os.WriteFile(configDir + "/privkey.pem", caPrivKeyPem.Bytes(), 0400)
-        if err != nil {
-            return nil, nil, err
-        }
-    }
+		err = os.WriteFile(configDir+"/ca.crt", caBytes, 0400)
+		if err != nil {
+			return nil, nil, err
+		}
+		err = os.WriteFile(configDir+"/ca.pem", caPem.Bytes(), 0400)
+		if err != nil {
+			return nil, nil, err
+		}
+		err = os.WriteFile(configDir+"/privkey.pem", caPrivKeyPem.Bytes(), 0400)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
 
-    caPem, err := os.ReadFile(configDir + "/ca.pem") 
-    
-    if err != nil {
-        return nil, nil, err
-    }
+	caPem, err := os.ReadFile(configDir + "/ca.pem")
 
-    caBlock, rest := pem.Decode(caPem)
+	if err != nil {
+		return nil, nil, err
+	}
 
-    if caBlock == nil || len(rest) > 0 {
-        return nil, nil, fmt.Errorf("parsing ca.pem, leftover bytes")
-    }
+	caBlock, rest := pem.Decode(caPem)
 
-    privKeyPem, err := os.ReadFile(configDir + "/privkey.pem")
+	if caBlock == nil || len(rest) > 0 {
+		return nil, nil, fmt.Errorf("parsing ca.pem, leftover bytes")
+	}
 
-    if err != nil {
-        return nil, nil, err
-    }
+	privKeyPem, err := os.ReadFile(configDir + "/privkey.pem")
 
-    privKeyBlock, rest := pem.Decode(privKeyPem)
+	if err != nil {
+		return nil, nil, err
+	}
 
-    if privKeyBlock == nil || len(rest) > 0 {
-        return nil, nil, fmt.Errorf("parsing privkey.pem, leftover bytes")
-    }
+	privKeyBlock, rest := pem.Decode(privKeyPem)
 
-    caCert, err := x509.ParseCertificate(caBlock.Bytes)
+	if privKeyBlock == nil || len(rest) > 0 {
+		return nil, nil, fmt.Errorf("parsing privkey.pem, leftover bytes")
+	}
 
-    if err != nil {
-        return nil, nil, err
-    }
+	caCert, err := x509.ParseCertificate(caBlock.Bytes)
 
-    privKey, err := x509.ParsePKCS1PrivateKey(privKeyBlock.Bytes)
+	if err != nil {
+		return nil, nil, err
+	}
 
-    if err != nil {
-        return nil, nil, err
-    }
+	privKey, err := x509.ParsePKCS1PrivateKey(privKeyBlock.Bytes)
 
-    return caCert, privKey, nil
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return caCert, privKey, nil
 }
 
 func createSerialNumer() (*big.Int, error) {
-    return rand.Int(rand.Reader, big.NewInt(999999999999999999))
+	return rand.Int(rand.Reader, big.NewInt(999999999999999999))
 }
 
-func getName() (*pkix.Name) {
-    return &pkix.Name{
-        CommonName: "GITM Inc",
-        OrganizationalUnit: []string{"GITM Inc"},
-        Organization: []string{"GITM Inc"},
-        Country: []string{"GITM Inc"},
-        Province: []string{"GITM Inc"},
-        Locality: []string{"GITM Inc"},
-    }
+func getName() *pkix.Name {
+	return &pkix.Name{
+		CommonName:         "GITM Inc",
+		OrganizationalUnit: []string{"GITM Inc"},
+		Organization:       []string{"GITM Inc"},
+		Country:            []string{"GITM Inc"},
+		Province:           []string{"GITM Inc"},
+		Locality:           []string{"GITM Inc"},
+	}
 }
 
-func InitCaCert () error {
+func InitCaCert() error {
 	_, _, err := getCaCert()
-	
+
 	if err != nil {
 		return fmt.Errorf("Init ca cert: %v", err)
 	}
 
 	return nil
 }
-
