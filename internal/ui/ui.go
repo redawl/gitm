@@ -107,7 +107,6 @@ func ShowAndRun(packetChan chan packet.HttpPacket, restart func()) {
 		makeMenu(
 			func() {
 				packetFilter.ClearPackets()
-				uiList.Refresh()
 			},
 			func() {
 				jsonString, err := json.Marshal(packetFilter.Packets)

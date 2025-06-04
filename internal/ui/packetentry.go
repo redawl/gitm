@@ -188,7 +188,7 @@ func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 					decoded, err := ExecuteEncoding(encodingKey, p.SelectedText())
 
 					if err != nil {
-						dialog.NewError(err, w).Show()
+						dialog.NewError(fmt.Errorf("Decoding error: %w", err), w).Show()
 					} else {
 						dialog.NewInformation("Decode result", string(decoded), w).Show()
 					}

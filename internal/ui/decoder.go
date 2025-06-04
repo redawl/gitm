@@ -20,7 +20,7 @@ func ExecuteEncoding(encoding string, data string) (string, error) {
 	encodingFunc := encodingsMap[encoding]
 
 	if encodingFunc == nil {
-		return "", fmt.Errorf("Encoding %s is not implemented", encoding)
+		return "", fmt.Errorf("%s is not implemented", encoding)
 	}
 
 	return encodingFunc(data)
@@ -47,7 +47,7 @@ func url(data string) (string, error) {
 			}
 
 			if count != 1 {
-				return "", fmt.Errorf("Error decoding bytes: Expected decoding 1 byte, decoded %d bytes", count)
+				return "", fmt.Errorf("expected to decode 1 byte, decoded %d bytes", count)
 			}
 			out.WriteByte(c[0])
 			i += 3
@@ -67,7 +67,7 @@ func b64(data string) (string, error) {
 		decoded, err := io.ReadAll(reader)
 
 		if err != nil {
-			return "", fmt.Errorf("Error decoding base64: %w", err)
+			return "", err
 		}
 
 		return string(decoded), nil
@@ -83,7 +83,7 @@ func _hex(data string) (string, error) {
 		decoded, err := io.ReadAll(reader)
 
 		if err != nil {
-			return "", fmt.Errorf("Error decoding hex: %w", err)
+			return "", err
 		} else {
 			return string(decoded), nil
 		}

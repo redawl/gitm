@@ -40,6 +40,7 @@ func NewPacketFilter() *PacketFilter {
 
 	input.OnChanged = func(s string) {
 		prefs.SetString("PacketFilter", s)
+		input.triggerListeners()
 	}
 
 	input.AddListener(func() {

@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"math"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -20,14 +19,16 @@ type PacketRow struct {
 type packetRowLayout struct{}
 
 func (pr *packetRowLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
-	w, h := float32(0), float64(0)
+	w, h := float32(0), float32(0)
 
 	for _, o := range objects {
 		w += o.MinSize().Width
-		h = math.Max(float64(o.MinSize().Height), h)
+		if o.MinSize().Height > h {
+			h = o.MinSize().Height
+		}
 	}
 
-	return fyne.NewSize(w, float32(h))
+	return fyne.NewSize(w, h)
 }
 
 func (pr *packetRowLayout) Layout(objects []fyne.CanvasObject, containerSize fyne.Size) {
