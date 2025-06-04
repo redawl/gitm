@@ -15,7 +15,7 @@ import (
 )
 
 func makeMenu(clearHandler func(), saveHandler func(), loadHandler func(), settingsHandler func()) *fyne.MainMenu {
-	mainMenu := *fyne.NewMainMenu(
+	mainMenu := fyne.NewMainMenu(
 		fyne.NewMenu("File",
 			fyne.NewMenuItem("Load", loadHandler),
 			fyne.NewMenuItem("Clear", clearHandler),
@@ -23,80 +23,79 @@ func makeMenu(clearHandler func(), saveHandler func(), loadHandler func(), setti
 			fyne.NewMenuItem("Settings", settingsHandler),
 		),
 	)
-	return &mainMenu
+	return mainMenu
 }
 
 // ShowAndRun Creates the Fyne UI for GITM, and then runs the UI event loop.
-func ShowAndRun(a fyne.App, packetChan chan packet.HttpPacket, restart func()) {
-	shouldRecord := false
-	isRecording := widget.NewButton("Recording: off", func() {})
+func ShowAndRun(packetChan chan packet.HttpPacket, restart func()) {
+	a := fyne.CurrentApp()
 
-	isRecording.OnTapped = func() {
-		shouldRecord = !shouldRecord
-		if shouldRecord {
-			isRecording.SetText("Recording: on")
-		} else {
-			isRecording.SetText("Recording: off")
-		}
-
-		isRecording.Refresh()
-	}
+	recordButton := NewRecordButton()
 
 	w := a.NewWindow("Gopher in the middle")
 	w.SetMaster()
 	w.Resize(fyne.NewSize(1920, 1080))
 
-	packetFullList := make([]*packet.HttpPacket, 0)
-	packetList := make([]*packet.HttpPacket, 0)
 	requestContent := NewPacketDisplay("Request")
 	responseContent := NewPacketDisplay("Response")
 
-	filterContent := widget.NewEntry()
-	filterContent.Text = a.Preferences().String("PacketFilter")
+	packetFilter := NewPacketFilter()
 
 	uiList := widget.NewList(func() int {
-		return len(packetList)
+		return len(packetFilter.FilteredPackets())
 	}, func() fyne.CanvasObject {
 		return NewPacketRow()
 	}, func(li widget.ListItemID, co fyne.CanvasObject) {
 		row := co.(*PacketRow)
-		if li < len(packetList) && packetList[li] != nil {
-			p := packetList[li]
+		filteredPackets := packetFilter.FilteredPackets()
+		if li < len(filteredPackets) && filteredPackets[li] != nil {
+			p := filteredPackets[li]
 			row.UpdateRow(*p)
 		}
 	})
+	packetFilter.AddListener(uiList.Refresh)
 
 	uiList.OnSelected = func(id widget.ListItemID) {
-		requestContent.SetText(FormatRequestContent(packetList[id]))
-		responseContent.SetText(FormatResponseContent(packetList[id]))
-	}
-
-	filterContent.OnChanged = func(s string) {
-		a.Preferences().SetString("PacketFilter", s)
-		packetList = FilterPackets(s, packetFullList)
-		uiList.Refresh()
+		filteredPackets := packetFilter.FilteredPackets()
+		requestContent.SetText(FormatRequestContent(filteredPackets[id]))
+		responseContent.SetText(FormatResponseContent(filteredPackets[id]))
 	}
 
 	go func() {
 		for {
 			p := <-packetChan
-			if shouldRecord {
-				existingPacket := packet.FindPacket(&p, packetFullList)
+			if recordButton.IsRecording {
+				existingPacket := packetFilter.FindPacket(&p)
 
 				if existingPacket != nil {
 					existingPacket.UpdatePacket(&p)
 				} else {
-					packetFullList = append(packetFullList, &p)
-					packetList = FilterPackets(filterContent.Text, packetFullList)
+					packetFilter.AppendPacket(&p)
 				}
+
 				fyne.Do(uiList.Refresh)
 			}
 		}
 	}()
 
-	packetListContainer := container.NewBorder(container.NewVBox(
-		container.NewHBox(isRecording), container.NewBorder(nil, nil, widget.NewLabel("Filter packets"), nil, filterContent),
-	), nil, nil, nil, uiList)
+	packetListContainer := container.NewBorder(
+		container.NewVBox(
+			container.NewHBox(recordButton),
+			container.NewBorder(
+				nil,
+				nil,
+				&widget.Label{
+					Text: "Filter packets",
+				},
+				nil,
+				packetFilter,
+			),
+		),
+		nil,
+		nil,
+		nil,
+		uiList,
+	)
 
 	masterLayout := container.NewVSplit(packetListContainer,
 		container.NewHSplit(
@@ -107,12 +106,11 @@ func ShowAndRun(a fyne.App, packetChan chan packet.HttpPacket, restart func()) {
 	w.SetMainMenu(
 		makeMenu(
 			func() {
-				packetFullList = make([]*packet.HttpPacket, 0)
-				packetList = make([]*packet.HttpPacket, 0)
+				packetFilter.ClearPackets()
 				uiList.Refresh()
 			},
 			func() {
-				jsonString, err := json.Marshal(packetFullList)
+				jsonString, err := json.Marshal(packetFilter.Packets)
 
 				if err != nil {
 					slog.Error("Error marshalling packetList", "error", err)
@@ -130,9 +128,8 @@ func ShowAndRun(a fyne.App, packetChan chan packet.HttpPacket, restart func()) {
 					if writer == nil {
 						return
 					}
-					_, err = writer.Write(jsonString)
 
-					if err != nil {
+					if _, err := writer.Write(jsonString); err != nil {
 						slog.Error("Error saving to file", "filename", writer.URI().Path(), "error", err)
 						dialog.ShowError(err, w)
 						return
@@ -157,7 +154,6 @@ func ShowAndRun(a fyne.App, packetChan chan packet.HttpPacket, restart func()) {
 							return
 						}
 
-						packetFullList = make([]*packet.HttpPacket, 0)
 						fileContents, err := io.ReadAll(reader)
 
 						if err != nil {
@@ -165,22 +161,21 @@ func ShowAndRun(a fyne.App, packetChan chan packet.HttpPacket, restart func()) {
 							dialog.ShowError(err, w)
 							return
 						}
-						err = json.Unmarshal(fileContents, &packetFullList)
 
-						if err != nil {
+						packets := make([]*packet.HttpPacket, 0)
+						if err := json.Unmarshal(fileContents, &packets); err != nil {
 							slog.Error("Error unmarshalling file contents", "filename", reader.URI().Path(), "error", err)
 							dialog.ShowError(err, w)
 							return
 						}
 
-						packetList = FilterPackets(filterContent.Text, packetFullList)
-						uiList.Refresh()
+						packetFilter.SetPackets(packets)
 					}, w)
 
 					openFileDialog.Show()
 				}
 
-				if len(packetFullList) > 0 {
+				if len(packetFilter.Packets) > 0 {
 					confirmDialog := dialog.NewConfirm("Overwrite packets", "Are you sure you want to overwrite the currently displayed packets?", func(confirmed bool) {
 						if confirmed {
 							showConfirmDialog()

@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"strings"
 
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/widget"
 	"github.com/redawl/gitm/internal/packet"
 )
 
@@ -16,6 +18,82 @@ const (
 	FILTER_STATUS    = "status"
 	FILTER_RESP_BODY = "respbody"
 )
+
+// PacketFilter is a text input that allows the user to filter the
+// packets captured by the proxy.
+type PacketFilter struct {
+	widget.Entry
+	Packets         []*packet.HttpPacket
+	filteredPackets []*packet.HttpPacket
+	listeners       []func()
+}
+
+// NewPacketFilter creates a new PacketFilter
+func NewPacketFilter() *PacketFilter {
+	prefs := fyne.CurrentApp().Preferences()
+	input := &PacketFilter{
+		Entry: widget.Entry{
+			Text: prefs.String("PacketFilter"),
+		},
+		Packets: make([]*packet.HttpPacket, 0),
+	}
+
+	input.OnChanged = func(s string) {
+		prefs.SetString("PacketFilter", s)
+	}
+
+	input.AddListener(func() {
+		input.filteredPackets = FilterPackets(input.Text, input.Packets)
+	})
+
+	input.ExtendBaseWidget(input)
+
+	return input
+}
+
+// AppendPacket appends packet to the list trackets by p
+// Calls all listeners added by AddListener
+func (p *PacketFilter) AppendPacket(packet *packet.HttpPacket) {
+	p.Packets = append(p.Packets, packet)
+	p.triggerListeners()
+}
+
+// SetPackets overwrites the tracked packets with packets
+// Calls all listeners added by AddListener
+func (p *PacketFilter) SetPackets(newPackets []*packet.HttpPacket) {
+	p.Packets = newPackets
+	p.triggerListeners()
+}
+
+// FindPacket searches the tracked packets for a matching packet
+func (p *PacketFilter) FindPacket(httpPacket *packet.HttpPacket) *packet.HttpPacket {
+	return packet.FindPacket(httpPacket, p.Packets)
+}
+
+// ClearPackets resets the list of tracked packets
+// Calls all listeners added by AddListener
+func (p *PacketFilter) ClearPackets() {
+	p.Packets = make([]*packet.HttpPacket, 0)
+	p.triggerListeners()
+}
+
+// FilteredPackets returns the list of packets that match the current filter
+// input by the user
+func (p *PacketFilter) FilteredPackets() []*packet.HttpPacket {
+	return p.filteredPackets
+}
+
+// AddListener adds a listener function that will be called by p whenever the
+// tracked packet list changes
+func (p *PacketFilter) AddListener(l func()) {
+	p.listeners = append(p.listeners, l)
+}
+
+func (p *PacketFilter) triggerListeners() {
+	for _, l := range p.listeners {
+		l()
+	}
+}
 
 type filterPair struct {
 	filterType    string

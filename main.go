@@ -28,10 +28,8 @@ func setupbackend(conf config.Config, httpHandler func(packet.HttpPacket)) (func
 	}))
 
 	slog.SetDefault(logger)
-	// Init cacert if it hasn't been already
-	err := cacert.InitCaCert()
 
-	if err != nil {
+	if err := cacert.InitCaCert(); err != nil {
 		return nil, err
 	}
 
@@ -44,7 +42,7 @@ func setupbackend(conf config.Config, httpHandler func(packet.HttpPacket)) (func
 	httpsListener, err := http.ListenAndServeTls(conf, httpHandler)
 
 	if err != nil {
-		return nil, fmt.Errorf("http server: %w", err)
+		return nil, fmt.Errorf("https server: %w", err)
 	}
 
 	socksListener, err := socks5.StartTransparentSocksProxy(conf)
@@ -66,6 +64,7 @@ func main() {
 	conf := config.ParseFlags(app.Preferences())
 
 	packetChan := make(chan packet.HttpPacket)
+
 	slog.Info("Setting up backend...")
 	restart, err := setupbackend(conf, func(p packet.HttpPacket) {
 		packetChan <- p
@@ -76,7 +75,8 @@ func main() {
 		return
 	}
 
-	ui.ShowAndRun(app, packetChan, func() {
+	ui.ShowAndRun(packetChan, func() {
+		slog.Info("Restarting backend...")
 		restart()
 		restart, err = setupbackend(config.ParseFlags(app.Preferences()), func(p packet.HttpPacket) {
 			packetChan <- p
