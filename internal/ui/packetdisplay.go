@@ -42,20 +42,7 @@ func (pd *PacketDisplay) CreateRenderer() fyne.WidgetRenderer {
 }
 
 func (pd *PacketDisplay) SetText(text string) {
-	// Workaround for fyne Bug
-	oldCount := len(pd.entry.TextGrid.Rows)
-	newCount := len(strings.Split(text, "\n"))
-
-	if oldCount > newCount {
-		builder := strings.Builder{}
-		builder.WriteString(text)
-		for range oldCount - newCount {
-			builder.WriteByte('\n')
-		}
-		pd.entry.TextGrid.SetText(builder.String())
-	} else {
-		pd.entry.TextGrid.SetText(text)
-	}
+	pd.entry.SetText(text)
 
 	pd.entry.ScrollToTop()
 }
