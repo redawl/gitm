@@ -44,7 +44,8 @@ func (l *entryLayout) Layout(objs []fyne.CanvasObject, size fyne.Size) {
 	entry.Resize(size)
 }
 
-func MakeSettingsUi(a fyne.App, restart func()) {
+func MakeSettingsUi(restart func()) fyne.Window {
+	a := fyne.CurrentApp()
 	w := a.NewWindow("Settings")
 	prefs := a.Preferences()
 	header := container.NewPadded(&widget.Label{
@@ -98,5 +99,5 @@ func MakeSettingsUi(a fyne.App, restart func()) {
 
 	w.SetContent(container.NewVBox(header, form, formcontrols))
 
-	w.Show()
+	return w
 }

@@ -53,6 +53,7 @@ func MakeUI(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 			row.UpdateRow(*p)
 		}
 	})
+
 	packetFilter.AddListener(uiList.Refresh)
 
 	uiList.OnSelected = func(id widget.ListItemID) {
@@ -84,9 +85,7 @@ func MakeUI(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 			container.NewBorder(
 				nil,
 				nil,
-				&widget.Label{
-					Text: "Filter packets",
-				},
+				widget.NewLabel("Filter packets"),
 				nil,
 				packetFilter,
 			),
@@ -103,11 +102,10 @@ func MakeUI(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 			responseContent,
 		),
 	)
+
 	w.SetMainMenu(
 		makeMenu(
-			func() {
-				packetFilter.ClearPackets()
-			},
+			packetFilter.ClearPackets,
 			func() {
 				jsonString, err := json.Marshal(packetFilter.Packets)
 
@@ -117,7 +115,7 @@ func MakeUI(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 					return
 				}
 
-				saveFileDialog := dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
+				dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
 					if err != nil {
 						slog.Error("Error saving to file", "filename", writer.URI().Path(), "error", err)
 						dialog.ShowError(err, w)
@@ -127,6 +125,7 @@ func MakeUI(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 					if writer == nil {
 						return
 					}
+					defer writer.Close() // nolint:errcheck
 
 					if _, err := writer.Write(jsonString); err != nil {
 						slog.Error("Error saving to file", "filename", writer.URI().Path(), "error", err)
@@ -134,15 +133,12 @@ func MakeUI(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 						return
 					}
 
-					successDialog := dialog.NewInformation("Success!", fmt.Sprintf("Saved packets to %s successfully.", writer.URI().Path()), w)
-					successDialog.Show()
-				}, w)
-
-				saveFileDialog.Show()
+					dialog.NewInformation("Success!", fmt.Sprintf("Saved packets to %s successfully.", writer.URI().Path()), w).Show()
+				}, w).Show()
 			},
 			func() {
 				showConfirmDialog := func() {
-					openFileDialog := dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
+					dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 						if err != nil {
 							slog.Error("Error saving to file", "filename", reader.URI().Path(), "error", err)
 							dialog.ShowError(err, w)
@@ -169,25 +165,25 @@ func MakeUI(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 						}
 
 						packetFilter.SetPackets(packets)
-					}, w)
-
-					openFileDialog.Show()
+					}, w).Show()
 				}
 
 				if len(packetFilter.Packets) > 0 {
-					confirmDialog := dialog.NewConfirm("Overwrite packets", "Are you sure you want to overwrite the currently displayed packets?", func(confirmed bool) {
-						if confirmed {
-							showConfirmDialog()
-						}
-					}, w)
-
-					confirmDialog.Show()
+					dialog.NewConfirm(
+						"Overwrite packets",
+						"Are you sure you want to overwrite the currently displayed packets?",
+						func(confirmed bool) {
+							if confirmed {
+								showConfirmDialog()
+							}
+						},
+						w).Show()
 				} else {
 					showConfirmDialog()
 				}
 			},
 			func() {
-				settings.MakeSettingsUi(a, restart)
+				settings.MakeSettingsUi(restart).Show()
 			},
 		),
 	)
