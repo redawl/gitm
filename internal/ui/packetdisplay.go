@@ -133,7 +133,7 @@ func decodeBody(body []byte, contentEncodings []string) string {
 
 	if json.Valid(ret) {
 		buff := new(bytes.Buffer)
-		err := json.Indent(buff, ret, "", "\t")
+		err := json.Indent(buff, ret, "", "    ")
 
 		if err != nil {
 			slog.Error("Failed indenting json", "error", err)

@@ -122,7 +122,7 @@ func (p *PacketEntry) SelectedText() string {
 	startRow, startCol, endRow, endCol := p.getActualStartAndEnd()
 
 	if startRow == endRow {
-		return p.RowText(startRow)[startCol:endCol]
+		return p.RowText(startRow)[startCol : endCol+1]
 	}
 
 	builder := strings.Builder{}
