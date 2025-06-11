@@ -75,11 +75,14 @@ func main() {
 		return
 	}
 
-	ui.ShowAndRun(packetChan, func() {
+	mainWindow := ui.MakeUI(packetChan, func() {
 		slog.Info("Restarting backend...")
 		restart()
 		restart, err = setupbackend(config.ParseFlags(app.Preferences()), func(p packet.HttpPacket) {
 			packetChan <- p
 		})
 	})
+
+	slog.Info("Showing ui...")
+	mainWindow.ShowAndRun()
 }

@@ -1,3 +1,4 @@
 tmp
 fyne-cross
 perf.data*
+**/testdata/failed/**
