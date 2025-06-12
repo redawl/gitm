@@ -90,7 +90,6 @@ func handleConnection(client net.Conn, conf config.Config) error {
 			))
 
 			transparentProxy(client, server)
-
 		} else if request.DstPort == 443 {
 			server, err := net.Dial("tcp", conf.TlsListenUri)
 			if err != nil {

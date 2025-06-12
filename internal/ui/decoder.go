@@ -10,7 +10,11 @@ import (
 	"strings"
 )
 
-var encodingsMap map[string]func(string) (string, error) = make(map[string]func(string) (string, error))
+var encodingsMap = map[string]func(string) (string, error){
+	"Url decode":    url,
+	"Base64 decode": b64,
+	"Hex decode":    _hex,
+}
 
 func GetEncodings() iter.Seq[string] {
 	return maps.Keys(encodingsMap)
@@ -24,12 +28,6 @@ func ExecuteEncoding(encoding string, data string) (string, error) {
 	}
 
 	return encodingFunc(data)
-}
-
-func init() {
-	encodingsMap["Url decode"] = url
-	encodingsMap["Base64 decode"] = b64
-	encodingsMap["Hex decode"] = _hex
 }
 
 func url(data string) (string, error) {

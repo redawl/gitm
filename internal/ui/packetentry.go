@@ -23,7 +23,6 @@ type PacketEntry struct {
 	widget.TextGrid
 	selectStartRow, selectStartCol, selectEndRow, selectEndCol int
 	selecting                                                  bool
-	rightclickMenu                                             *widget.PopUpMenu
 }
 
 func NewPacketEntry() *PacketEntry {
@@ -149,40 +148,34 @@ func (p *PacketEntry) HasSelectedText() bool {
 // TappedSecondary handle when the user right clicks
 // Creates the right click menu with entries for the supported decodings
 func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
-	if p.rightclickMenu == nil {
-		c := fyne.CurrentApp().Driver().CanvasForObject(p)
+	c := fyne.CurrentApp().Driver().CanvasForObject(p)
 
-		// TODO: Is there a better way to do this?
-		if len(fyne.CurrentApp().Driver().AllWindows()) == 0 {
-			slog.Error("Failed to create right-click menu, there are no windows ???")
-			return
-		}
-
-		w := fyne.CurrentApp().Driver().AllWindows()[0]
-		decodeEntries := make([]*fyne.MenuItem, 0)
-
-		for encodingKey := range GetEncodings() {
-			decodeEntries = append(decodeEntries, fyne.NewMenuItem(encodingKey, func() {
-				if p.HasSelectedText() {
-					decoded, err := ExecuteEncoding(encodingKey, p.SelectedText())
-
-					if err != nil {
-						dialog.NewError(fmt.Errorf("Decoding error: %w", err), w).Show()
-					} else {
-						dialog.NewInformation("Decode result", string(decoded), w).Show()
-					}
-				} else {
-					dialog.NewError(fmt.Errorf("Select text before attempting to decode :)"), w).Show()
-				}
-			}))
-		}
-
-		menu := fyne.NewMenu("Decode", decodeEntries...)
-
-		popup := widget.NewPopUpMenu(menu, c)
-		popup.ShowAtPosition(evt.AbsolutePosition)
-		p.rightclickMenu = popup
-	} else {
-		p.rightclickMenu.ShowAtPosition(evt.AbsolutePosition)
+	// TODO: Is there a better way to do this?
+	if len(fyne.CurrentApp().Driver().AllWindows()) == 0 {
+		slog.Error("Failed to create right-click menu, there are no windows ???")
+		return
 	}
+
+	w := fyne.CurrentApp().Driver().AllWindows()[0]
+	decodeEntries := make([]*fyne.MenuItem, 0)
+
+	for encodingKey := range GetEncodings() {
+		decodeEntries = append(decodeEntries, fyne.NewMenuItem(encodingKey, func() {
+			if !p.HasSelectedText() {
+				dialog.NewError(fmt.Errorf("Select text before attempting to decode :)"), w).Show()
+				return
+			}
+
+			if decoded, err := ExecuteEncoding(encodingKey, p.SelectedText()); err != nil {
+				dialog.NewError(fmt.Errorf("Decoding error: %w", err), w).Show()
+			} else {
+				dialog.NewInformation("Decode result", string(decoded), w).Show()
+			}
+		}))
+	}
+
+	menu := fyne.NewMenu("Decode", decodeEntries...)
+
+	popup := widget.NewPopUpMenu(menu, c)
+	popup.ShowAtPosition(evt.AbsolutePosition)
 }
