@@ -3,12 +3,10 @@ package socks5
 import (
 	"fmt"
 	"net"
-
-	"github.com/redawl/gitm/internal/util"
 )
 
 func ParseClientGreeting(conn net.Conn) (*ClientGreeting, error) {
-	buff, err := util.Read(conn, 2)
+	buff, err := readCount(conn, 2)
 
 	if err != nil {
 		return nil, err
@@ -16,7 +14,7 @@ func ParseClientGreeting(conn net.Conn) (*ClientGreeting, error) {
 
 	ver := buff[0]
 	nauth := buff[1]
-	auth, err := util.Read(conn, int(nauth))
+	auth, err := readCount(conn, int(nauth))
 
 	if err != nil {
 		return nil, err
@@ -30,7 +28,7 @@ func ParseClientGreeting(conn net.Conn) (*ClientGreeting, error) {
 }
 
 func ParseClientConnRequest(conn net.Conn) (*ClientConnRequest, byte) {
-	buff, err := util.Read(conn, 4)
+	buff, err := readCount(conn, 4)
 
 	if err != nil {
 		return nil, STATUS_GENERAL_FAILURE
@@ -47,18 +45,18 @@ func ParseClientConnRequest(conn net.Conn) (*ClientConnRequest, byte) {
 	}
 	switch dstIpType {
 	case ADDRESS_TYPE_IPV4:
-		buff, err = util.Read(conn, 4)
+		buff, err = readCount(conn, 4)
 		if err != nil {
 			return nil, STATUS_GENERAL_FAILURE
 		}
 		dstIp = fmt.Sprintf("%d.%d.%d.%d", buff[0], buff[1], buff[2], buff[3])
 	case ADDRESS_TYPE_DOMAINNAME:
-		domainLength, err := util.Read(conn, 1)
+		domainLength, err := readCount(conn, 1)
 		if err != nil {
 			return nil, STATUS_GENERAL_FAILURE
 		}
 
-		domain, err := util.Read(conn, int(domainLength[0]))
+		domain, err := readCount(conn, int(domainLength[0]))
 
 		if err != nil {
 			return nil, STATUS_GENERAL_FAILURE
@@ -79,7 +77,7 @@ func ParseClientConnRequest(conn net.Conn) (*ClientConnRequest, byte) {
 		return nil, STATUS_ADDRESS_TYPE_NOT_SUPPORTED
 	}
 
-	buff, err = util.Read(conn, 2)
+	buff, err = readCount(conn, 2)
 
 	if err != nil {
 		return nil, STATUS_GENERAL_FAILURE
@@ -95,4 +93,19 @@ func ParseClientConnRequest(conn net.Conn) (*ClientConnRequest, byte) {
 		DstIp:     dstIp,
 		DstPort:   dstPort,
 	}, STATUS_SUCCEEDED
+}
+
+// readCount reads at most length bytes from conn.
+// If less than length bytes are read from conn, the bytes are returned along with an err
+func readCount(conn net.Conn, length int) ([]byte, error) {
+	buff := make([]byte, length)
+
+	count, err := conn.Read(buff)
+	if err != nil {
+		return nil, err
+	} else if count != length {
+		return buff[:count], fmt.Errorf("expected length %d, go %d", length, count)
+	}
+
+	return buff, nil
 }

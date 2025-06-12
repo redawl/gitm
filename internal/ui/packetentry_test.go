@@ -48,6 +48,10 @@ func TestPacketEntry_SelectedTextScrolled(t *testing.T) {
 	packetEntry.SetText("Line1\nLine2\nLine3")
 	packetEntry.ScrollToBottom()
 
+	if packetEntry.HasSelectedText() {
+		t.Errorf("Expected HasSelectedText() == false, got true")
+	}
+
 	// Simulate mouse moves
 	packetEntry.MouseDown(&desktop.MouseEvent{
 		Button: desktop.MouseButtonPrimary,

@@ -119,6 +119,7 @@ func (p *PacketEntry) SelectedText() string {
 	}
 
 	startRow, startCol, endRow, endCol := p.getActualStartAndEnd()
+	fmt.Printf("startRow = %d, startCol = %d, endRow = %d, endCol = %d\n", startRow, startCol, endRow, endCol)
 
 	if startRow == endRow {
 		return p.RowText(startRow)[startCol : endCol+1]
@@ -142,7 +143,18 @@ func (p *PacketEntry) SelectedText() string {
 
 // HasSelectedText reports whether there is an user-selected text
 func (p *PacketEntry) HasSelectedText() bool {
-	return p.SelectedText() != ""
+	valuesToCheck := []int{
+		p.selectStartRow,
+		p.selectStartCol,
+		p.selectEndRow,
+		p.selectEndCol,
+	}
+	for _, value := range valuesToCheck {
+		if value > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // TappedSecondary handle when the user right clicks
@@ -162,12 +174,12 @@ func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 	for encodingKey := range GetEncodings() {
 		decodeEntries = append(decodeEntries, fyne.NewMenuItem(encodingKey, func() {
 			if !p.HasSelectedText() {
-				dialog.NewError(fmt.Errorf("Select text before attempting to decode :)"), w).Show()
+				dialog.NewError(fmt.Errorf("select text before attempting to decode :)"), w).Show()
 				return
 			}
 
 			if decoded, err := ExecuteEncoding(encodingKey, p.SelectedText()); err != nil {
-				dialog.NewError(fmt.Errorf("Decoding error: %w", err), w).Show()
+				dialog.NewError(fmt.Errorf("decoding error: %w", err), w).Show()
 			} else {
 				dialog.NewInformation("Decode result", string(decoded), w).Show()
 			}

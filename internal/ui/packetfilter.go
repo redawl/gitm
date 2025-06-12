@@ -44,7 +44,7 @@ func NewPacketFilter() *PacketFilter {
 	}
 
 	input.AddListener(func() {
-		input.filteredPackets = FilterPackets(input.Text, input.Packets)
+		input.filteredPackets = filterPackets(input.Text, input.Packets)
 	})
 
 	input.ExtendBaseWidget(input)
@@ -188,7 +188,7 @@ func getTokens(filterString string) []filterPair {
 	return filterPairs
 }
 
-func FilterPackets(filterString string, packets []*packet.HttpPacket) []*packet.HttpPacket {
+func filterPackets(filterString string, packets []*packet.HttpPacket) []*packet.HttpPacket {
 	filterPairs := getTokens(filterString)
 	passedPackets := make([]*packet.HttpPacket, 0, len(packets))
 
@@ -210,9 +210,7 @@ func FilterPackets(filterString string, packets []*packet.HttpPacket) []*packet.
 			case FILTER_RESP_BODY:
 				filterStr = string(p.RespBody)
 			default:
-				{
-					slog.Warn("Unknown filter specified", "filterType", filterPair.filterType, "filterContent", filterPair.filterContent)
-				}
+				slog.Warn("Unknown filter specified", "filterType", filterPair.filterType, "filterContent", filterPair.filterContent)
 			}
 
 			if len(filterStr) > 0 && filterPair.negate == (strings.Contains(filterStr, filterPair.filterContent)) {

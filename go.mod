@@ -1,6 +1,6 @@
 module github.com/redawl/gitm
 
-go 1.23.5
+go 1.23
 
 require (
 	fyne.io/fyne/v2 v2.6.1-rc1.0.20250609112233-ca6538196ac7
