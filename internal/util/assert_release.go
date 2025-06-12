@@ -2,4 +2,4 @@
 
 package util
 
-func Assert(f func() bool) {}
+func Assert(b bool) {}

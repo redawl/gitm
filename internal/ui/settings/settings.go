@@ -8,6 +8,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/redawl/gitm/internal/config"
+	"github.com/redawl/gitm/internal/util"
 )
 
 var _ *entryLayout = (*entryLayout)(nil)
@@ -17,29 +18,21 @@ type entryLayout struct{}
 const ENTRY_SIZE = 400
 
 func (l *entryLayout) MinSize(objs []fyne.CanvasObject) fyne.Size {
-	if len(objs) != 1 {
-		panic("entrylayout can only take 1 object!")
-	}
+	util.Assert(len(objs) == 1)
 
 	entry, ok := objs[0].(*widget.Entry)
 
-	if !ok {
-		panic("entrylayout can only take entries")
-	}
+	util.Assert(ok)
 
 	return fyne.NewSize(ENTRY_SIZE, entry.MinSize().Height)
 }
 
 func (l *entryLayout) Layout(objs []fyne.CanvasObject, size fyne.Size) {
-	if len(objs) != 1 {
-		panic("Entrylayout can only take 1 object!")
-	}
+	util.Assert(len(objs) == 1)
 
 	entry, ok := objs[0].(*widget.Entry)
 
-	if !ok {
-		panic("Entrylayout can only take entries")
-	}
+	util.Assert(ok)
 
 	entry.Resize(size)
 }

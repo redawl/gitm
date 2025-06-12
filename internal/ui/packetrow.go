@@ -7,6 +7,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 	"github.com/redawl/gitm/internal/packet"
+	"github.com/redawl/gitm/internal/util"
 )
 
 type PacketRow struct {
@@ -32,9 +33,7 @@ func (pr *packetRowLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
 }
 
 func (pr *packetRowLayout) Layout(objects []fyne.CanvasObject, containerSize fyne.Size) {
-	if len(objects) != 3 {
-		panic("objects should be length 3!")
-	}
+	util.Assert(len(objects) == 3)
 
 	commonHeight := containerSize.Height - pr.MinSize(objects).Height
 
