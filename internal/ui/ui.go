@@ -22,6 +22,7 @@ func makeMenu(clearHandler func(), saveHandler func(), loadHandler func(), setti
 			fyne.NewMenuItem("Save", saveHandler),
 			fyne.NewMenuItem("Settings", settingsHandler),
 		),
+		MakeHelp(),
 	)
 	return mainMenu
 }
@@ -53,6 +54,7 @@ func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 			row.UpdateRow(*p)
 		}
 	})
+	uiList.HideSeparators = true
 
 	packetFilter.AddListener(uiList.Refresh)
 
@@ -108,7 +110,6 @@ func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 			packetFilter.ClearPackets,
 			func() {
 				jsonString, err := json.Marshal(packetFilter.Packets)
-
 				if err != nil {
 					slog.Error("Error marshalling packetList", "error", err)
 					dialog.ShowError(err, w)
@@ -150,7 +151,6 @@ func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 						}
 
 						fileContents, err := io.ReadAll(reader)
-
 						if err != nil {
 							slog.Error("Error reading from file", "filename", reader.URI().Path(), "error", err)
 							dialog.ShowError(err, w)

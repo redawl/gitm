@@ -5,10 +5,11 @@ import (
 )
 
 type Config struct {
-	HttpListenUri  string
-	TlsListenUri   string
-	SocksListenUri string
-	Debug          bool
+	HttpListenUri   string
+	TlsListenUri    string
+	SocksListenUri  string
+	Debug           bool
+	CustomDecodings []string
 }
 
 const (
@@ -16,6 +17,7 @@ const (
 	TLS_LISTEN_URI       = "tlsListenUri"
 	SOCKS_LISTEN_URI     = "socksListenUri"
 	ENABLE_DEBUG_LOGGING = "enableDebugLogging"
+	CUSTOM_DECODINGS     = "customDecodings"
 )
 
 func stringWithFallbackSave(prefs fyne.Preferences, key string, defaultValue string) string {
@@ -44,10 +46,11 @@ func boolWithFallbackSave(prefs fyne.Preferences, key string, defaultValue bool)
 // for those preferences to disk
 func ParseFlags(preferences fyne.Preferences) Config {
 	conf := Config{
-		HttpListenUri:  stringWithFallbackSave(preferences, HTTP_LISTEN_URI, "127.0.0.1:8080"),
-		TlsListenUri:   stringWithFallbackSave(preferences, TLS_LISTEN_URI, "127.0.0.1:5443"),
-		SocksListenUri: stringWithFallbackSave(preferences, SOCKS_LISTEN_URI, "127.0.0.1:1080"),
-		Debug:          boolWithFallbackSave(preferences, ENABLE_DEBUG_LOGGING, false),
+		HttpListenUri:   stringWithFallbackSave(preferences, HTTP_LISTEN_URI, "127.0.0.1:8080"),
+		TlsListenUri:    stringWithFallbackSave(preferences, TLS_LISTEN_URI, "127.0.0.1:5443"),
+		SocksListenUri:  stringWithFallbackSave(preferences, SOCKS_LISTEN_URI, "127.0.0.1:1080"),
+		Debug:           boolWithFallbackSave(preferences, ENABLE_DEBUG_LOGGING, false),
+		CustomDecodings: preferences.StringList(CUSTOM_DECODINGS),
 	}
 
 	return conf

@@ -2,6 +2,7 @@ package http
 
 import (
 	"crypto/tls"
+	"errors"
 	"log/slog"
 	"net"
 	"net/http"
@@ -15,27 +16,27 @@ import (
 func ListenAndServe(conf config.Config, httpPacketHandler func(packet.HttpPacket)) (*http.Server, error) {
 	server := &http.Server{Addr: conf.HttpListenUri, Handler: Handler(httpPacketHandler, &conf)}
 
-	ln, err := net.Listen("tcp", conf.HttpListenUri)
-	if err != nil {
+	if ln, err := net.Listen("tcp", conf.HttpListenUri); err != nil {
 		return nil, err
+	} else {
+		go func() {
+			if err := server.Serve(ln); errors.Is(err, http.ErrServerClosed) {
+				slog.Error("Error starting server", "error", err)
+			}
+		}()
 	}
-	go func() {
-		err := server.Serve(ln)
-
-		if err != http.ErrServerClosed {
-			slog.Error("Error starting server", "error", err)
-		}
-	}()
 
 	return server, nil
 }
 
 func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPacket)) (*http.Server, error) {
 	// Disables certificate checking globally
+	// TODO: Should we be sharing this config below?
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	cfg := &tls.Config{
 		// Make sure we can forward ALL tls traffic
+		// (or as much as possible with go)
 		MinVersion: tls.VersionTLS10,
 		// If client doesn't care about verifying, neither do we
 		InsecureSkipVerify: true,
@@ -77,17 +78,15 @@ func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPac
 		TLSConfig: cfg,
 	}
 
-	ln, err := net.Listen("tcp", conf.TlsListenUri)
-	if err != nil {
+	if ln, err := net.Listen("tcp", conf.TlsListenUri); err != nil {
 		return nil, err
+	} else {
+		go func() {
+			if err := server.ServeTLS(ln, "", ""); !errors.Is(err, http.ErrServerClosed) {
+				slog.Error("Error starting server", "error", err)
+			}
+		}()
 	}
-	go func() {
-		err := server.ServeTLS(ln, "", "")
-
-		if err != http.ErrServerClosed {
-			slog.Error("Error starting server", "error", err)
-		}
-	}()
 
 	return server, nil
 }

@@ -1,17 +1,18 @@
 package settings
 
 import (
+	"strings"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/redawl/gitm/internal/config"
 	"github.com/redawl/gitm/internal/util"
 )
 
-var _ *entryLayout = (*entryLayout)(nil)
+var _ fyne.Layout = (*entryLayout)(nil)
 
 type entryLayout struct{}
 
@@ -20,23 +21,32 @@ const ENTRY_SIZE = 400
 func (l *entryLayout) MinSize(objs []fyne.CanvasObject) fyne.Size {
 	util.Assert(len(objs) == 1)
 
-	entry, ok := objs[0].(*widget.Entry)
-
-	util.Assert(ok)
-
-	return fyne.NewSize(ENTRY_SIZE, entry.MinSize().Height)
+	return fyne.NewSize(ENTRY_SIZE, objs[0].MinSize().Height)
 }
 
 func (l *entryLayout) Layout(objs []fyne.CanvasObject, size fyne.Size) {
 	util.Assert(len(objs) == 1)
 
-	entry, ok := objs[0].(*widget.Entry)
-
-	util.Assert(ok)
-
-	entry.Resize(size)
+	objs[0].Resize(size)
 }
 
+var _ fyne.Layout = (*tableLayout)(nil)
+
+type tableLayout struct{}
+
+func (t *tableLayout) MinSize(objs []fyne.CanvasObject) fyne.Size {
+	util.Assert(len(objs) == 1)
+
+	return fyne.NewSize(ENTRY_SIZE, objs[0].MinSize().Height*3)
+}
+
+func (t *tableLayout) Layout(objs []fyne.CanvasObject, size fyne.Size) {
+	util.Assert(len(objs) == 1)
+
+	objs[0].Resize(size)
+}
+
+// MakeSettingsUi creates a window for settings that the user can modify
 func MakeSettingsUi(restart func()) fyne.Window {
 	a := fyne.CurrentApp()
 	w := a.NewWindow("Settings")
@@ -62,20 +72,94 @@ func MakeSettingsUi(restart func()) fyne.Window {
 		Checked: prefs.Bool(config.ENABLE_DEBUG_LOGGING),
 	}
 
-	form := container.New(layout.NewFormLayout(),
-		widget.NewLabel("Socks5 proxy URL"), container.New(&entryLayout{}, socks5Url),
-		widget.NewLabel("HTTP proxy URL"), container.New(&entryLayout{}, httpUrl),
-		widget.NewLabel("HTTPS proxy URL"), container.New(&entryLayout{}, httpsUrl),
-		widget.NewLabel("Enable debug logging"), debugEnabled,
+	customDecodings := prefs.StringList(config.CUSTOM_DECODINGS)
+
+	decodingLabels := make([]string, len(customDecodings))
+	decodingCommands := make([]string, len(customDecodings))
+
+	for index, decoding := range customDecodings {
+		decodingIndex := strings.Index(decoding, ":")
+		label, command := decoding[:decodingIndex], decoding[decodingIndex+1:]
+		decodingLabels[index] = label
+		decodingCommands[index] = command
+	}
+
+	table := widget.NewTable(
+		func() (int, int) { return len(decodingLabels), 2 },
+		func() fyne.CanvasObject {
+			entry := widget.NewEntry()
+			return entry
+		},
+		func(tci widget.TableCellID, co fyne.CanvasObject) {
+			entry := co.(*widget.Entry)
+			if tci.Col == 0 {
+				entry.OnChanged = func(s string) {
+					decodingLabels[tci.Row] = s
+				}
+				entry.SetText(decodingLabels[tci.Row])
+			} else {
+				entry.OnChanged = func(s string) {
+					decodingCommands[tci.Row] = s
+				}
+				entry.SetText(decodingCommands[tci.Row])
+			}
+		},
 	)
 
-	form.Resize(fyne.NewSize(form.Size().Width+ENTRY_SIZE, form.Size().Height))
+	table.HideSeparators = true
+	table.ShowHeaderRow = true
+	table.SetColumnWidth(0, ENTRY_SIZE*0.4)
+	table.SetColumnWidth(1, ENTRY_SIZE*0.5)
+	table.CreateHeader = func() fyne.CanvasObject {
+		return widget.NewLabel("")
+	}
 
-	formcontrols := container.NewHBox(widget.NewButton("Save", func() {
+	table.UpdateHeader = func(id widget.TableCellID, template fyne.CanvasObject) {
+		if id.Row == -1 {
+			if id.Col == 0 {
+				template.(*widget.Label).SetText("Label")
+			} else {
+				template.(*widget.Label).SetText("Command")
+			}
+		}
+	}
+
+	table.Refresh()
+
+	form := widget.NewForm()
+	form.Append("Socks5 proxy URL", container.New(&entryLayout{}, socks5Url))
+	form.Append("HTTP proxy URL", container.New(&entryLayout{}, httpUrl))
+	form.Append("HTTPS proxy URL", container.New(&entryLayout{}, httpsUrl))
+	form.Append("Custom decodings",
+		container.NewBorder(
+			nil,
+			container.NewHBox(
+				widget.NewButton("Add decoding", func() {
+					decodingLabels = append(decodingLabels, "")
+					decodingCommands = append(decodingCommands, "")
+					table.Refresh()
+				}),
+			), nil, nil,
+			container.New(&tableLayout{}, table),
+		),
+	)
+
+	form.Append("Enable debug logging", debugEnabled)
+
+	form.SubmitText = "Save"
+	form.OnSubmit = func() {
 		prefs.SetString(config.SOCKS_LISTEN_URI, socks5Url.Text)
 		prefs.SetString(config.HTTP_LISTEN_URI, httpUrl.Text)
 		prefs.SetString(config.TLS_LISTEN_URI, httpsUrl.Text)
 		prefs.SetBool(config.ENABLE_DEBUG_LOGGING, debugEnabled.Checked)
+
+		newCustomDecodings := make([]string, len(decodingLabels))
+
+		for index := range decodingLabels {
+			newCustomDecodings[index] = decodingLabels[index] + ":" + decodingCommands[index]
+		}
+
+		prefs.SetStringList(config.CUSTOM_DECODINGS, newCustomDecodings)
 
 		successPopup := dialog.NewConfirm("Success!", "New settings saved, would you like to restart the servers?", func(b bool) {
 			if b {
@@ -83,14 +167,18 @@ func MakeSettingsUi(restart func()) fyne.Window {
 			}
 		}, w)
 		successPopup.Show()
-	}), widget.NewButton("Reset", func() {
+	}
+
+	form.CancelText = "Reset"
+	form.OnCancel = func() {
 		socks5Url.SetText(prefs.String(config.SOCKS_LISTEN_URI))
 		httpUrl.SetText(prefs.String(config.HTTP_LISTEN_URI))
 		httpsUrl.SetText(prefs.String(config.TLS_LISTEN_URI))
 		debugEnabled.SetChecked(prefs.Bool(config.ENABLE_DEBUG_LOGGING))
-	}))
+	}
+	form.Refresh()
 
-	w.SetContent(container.NewVBox(header, form, formcontrols))
+	w.SetContent(container.NewVBox(header, form))
 
 	return w
 }

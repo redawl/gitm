@@ -18,7 +18,7 @@ func setup(t *testing.T) (*config.Config, []*packet.HttpPacket, func()) {
 
 	packets := make([]*packet.HttpPacket, 0)
 
-	cleanup, err := setupbackend(conf, func(hp packet.HttpPacket) {
+	cleanup, err := setupBackend(conf, func(hp packet.HttpPacket) {
 		packets = append(packets, &hp)
 	})
 

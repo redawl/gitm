@@ -1,6 +1,8 @@
 package ui
 
-import "fyne.io/fyne/v2/widget"
+import (
+	"fyne.io/fyne/v2/widget"
+)
 
 // RecordButton is a button that allows the user to choose whether they want to record
 // packets that are MITMed by the proxy.
@@ -26,9 +28,9 @@ func NewRecordButton() *RecordButton {
 	button.OnTapped = func() {
 		button.IsRecording = !button.IsRecording
 		if button.IsRecording {
-			button.SetText(IS_RECORDING)
+			button.Text = IS_RECORDING
 		} else {
-			button.SetText(IS_NOT_RECORDING)
+			button.Text = IS_NOT_RECORDING
 		}
 	}
 

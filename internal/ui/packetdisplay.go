@@ -72,12 +72,12 @@ func formatHeaders(headers map[string][]string) string {
 	builder := strings.Builder{}
 
 	for header, values := range headers {
-		builder.WriteString(header + ": ")
+		builder.WriteString(header)
+		builder.WriteString(": ")
 		for i, value := range values {
-			if i == len(values)-1 {
-				builder.WriteString(value)
-			} else {
-				builder.WriteString(value + ", ")
+			builder.WriteString(value)
+			if i != len(values)-1 {
+				builder.WriteString(", ")
 			}
 		}
 		builder.WriteString("\n")

@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"log/slog"
+	"os/exec"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -10,6 +11,7 @@ import (
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/redawl/gitm/internal/config"
 )
 
 // For rightclick menu
@@ -119,7 +121,6 @@ func (p *PacketEntry) SelectedText() string {
 	}
 
 	startRow, startCol, endRow, endCol := p.getActualStartAndEnd()
-	fmt.Printf("startRow = %d, startCol = %d, endRow = %d, endCol = %d\n", startRow, startCol, endRow, endCol)
 
 	if startRow == endRow {
 		return p.RowText(startRow)[startCol : endCol+1]
@@ -171,6 +172,7 @@ func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 	w := fyne.CurrentApp().Driver().AllWindows()[0]
 	decodeEntries := make([]*fyne.MenuItem, 0)
 
+	// Builtin encodings
 	for encodingKey := range GetEncodings() {
 		decodeEntries = append(decodeEntries, fyne.NewMenuItem(encodingKey, func() {
 			if !p.HasSelectedText() {
@@ -179,6 +181,35 @@ func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 			}
 
 			if decoded, err := ExecuteEncoding(encodingKey, p.SelectedText()); err != nil {
+				dialog.NewError(fmt.Errorf("decoding error: %w", err), w).Show()
+			} else {
+				dialog.NewInformation("Decode result", string(decoded), w).Show()
+			}
+		}))
+	}
+
+	decodeEntries = append(decodeEntries, fyne.NewMenuItemSeparator())
+
+	// Custom encodings
+	customDecodeEntries := fyne.CurrentApp().Preferences().StringList(config.CUSTOM_DECODINGS)
+
+	for _, decodeEntry := range customDecodeEntries {
+		index := strings.Index(decodeEntry, ":")
+		if index < 0 {
+			slog.Error("Invalid custom decoding", "decoding", decodeEntry)
+			continue
+		}
+		label, command := decodeEntry[0:index], decodeEntry[index+1:]
+
+		decodeEntries = append(decodeEntries, fyne.NewMenuItem(label, func() {
+			if !p.HasSelectedText() {
+				dialog.NewError(fmt.Errorf("select text before attempting to decode :)"), w).Show()
+				return
+			}
+
+			cmd := exec.Command("sh", fmt.Sprintf(command, p.SelectedText()))
+
+			if decoded, err := cmd.Output(); err != nil {
 				dialog.NewError(fmt.Errorf("decoding error: %w", err), w).Show()
 			} else {
 				dialog.NewInformation("Decode result", string(decoded), w).Show()

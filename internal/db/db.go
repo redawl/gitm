@@ -55,8 +55,7 @@ func GetDomains() ([]DomainInfo, error) {
 	domainInfos := make([]DomainInfo, 0)
 	for rows.Next() {
 		domainInfo := DomainInfo{}
-		err := rows.Scan(&domainInfo.Domain, &domainInfo.Cert, &domainInfo.PrivKey)
-		if err != nil {
+		if err := rows.Scan(&domainInfo.Domain, &domainInfo.Cert, &domainInfo.PrivKey); err != nil {
 			return nil, err
 		}
 
