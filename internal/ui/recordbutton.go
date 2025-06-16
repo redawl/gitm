@@ -1,36 +1,45 @@
 package ui
 
 import (
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 )
 
 // RecordButton is a button that allows the user to choose whether they want to record
 // packets that are MITMed by the proxy.
 type RecordButton struct {
-	widget.Button
+	widget.BaseWidget
+	Button *widget.Button
+	Label  *widget.Label
 	// IsRecording specified whether to record packets
 	IsRecording bool
 }
 
 const (
-	IS_RECORDING     = "Recording: on"
-	IS_NOT_RECORDING = "Recording: off"
+	IS_RECORDING     = "Listening..."
+	IS_NOT_RECORDING = "Stopped."
 )
+
+func (b *RecordButton) CreateRenderer() fyne.WidgetRenderer {
+	return widget.NewSimpleRenderer(container.NewHBox(b.Button, b.Label))
+}
 
 // NewRecordButton creates a new RecordButton
 func NewRecordButton() *RecordButton {
 	button := &RecordButton{
-		Button: widget.Button{
-			Text: IS_NOT_RECORDING,
+		Button: &widget.Button{
+			Text: "Record",
 		},
+		Label: widget.NewLabel(IS_NOT_RECORDING),
 	}
 
-	button.OnTapped = func() {
+	button.Button.OnTapped = func() {
 		button.IsRecording = !button.IsRecording
 		if button.IsRecording {
-			button.Text = IS_RECORDING
+			button.Label.SetText(IS_RECORDING)
 		} else {
-			button.Text = IS_NOT_RECORDING
+			button.Label.SetText(IS_NOT_RECORDING)
 		}
 	}
 
