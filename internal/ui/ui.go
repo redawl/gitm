@@ -36,8 +36,14 @@ func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 	w := a.NewWindow("Gopher in the middle")
 	w.SetMaster()
 
-	requestContent := NewPacketDisplay("Request")
-	responseContent := NewPacketDisplay("Response")
+	// TODO: Remove hardcoded default size.
+	// We'll need to figure out how we want the application to look when
+	// first opened. It would be nice to simulate a "Windowed fullscreen/borderless" look,
+	// but fyne does not have direct support.
+	w.Resize(fyne.NewSize(1920, 1080))
+
+	requestContent := NewPacketDisplay("Request", w)
+	responseContent := NewPacketDisplay("Response", w)
 
 	packetFilter := NewPacketFilter()
 

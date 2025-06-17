@@ -23,9 +23,9 @@ type PacketDisplay struct {
 	label *widget.Label
 }
 
-func NewPacketDisplay(label string) *PacketDisplay {
+func NewPacketDisplay(label string, w fyne.Window) *PacketDisplay {
 	packetDisplay := &PacketDisplay{
-		entry: NewPacketEntry(),
+		entry: NewPacketEntry(w),
 		label: &widget.Label{
 			Text:     label,
 			SizeName: theme.SizeNameSubHeadingText,
@@ -95,14 +95,12 @@ func decodeBody(body []byte, contentEncodings []string) string {
 			case "gzip":
 				{
 					decoded, err := gzip.NewReader(decoded)
-
 					if err != nil {
 						slog.Error("Failed decoding gzip", "error", err)
 						break
 					}
 
 					ret, err = io.ReadAll(decoded)
-
 					if err != nil {
 						slog.Error("Failed reading stream", "error", err)
 						break
@@ -114,7 +112,6 @@ func decodeBody(body []byte, contentEncodings []string) string {
 
 					var err error
 					ret, err = io.ReadAll(decoded)
-
 					if err != nil {
 						slog.Error("Failed reading stream", "error", err)
 						break

@@ -26,13 +26,15 @@ var (
 
 type PacketEntry struct {
 	widget.TextGrid
+	parent                                                     fyne.Window
 	selectStartRow, selectStartCol, selectEndRow, selectEndCol int
 	selecting                                                  bool
 }
 
-func NewPacketEntry() *PacketEntry {
+func NewPacketEntry(w fyne.Window) *PacketEntry {
 	p := &PacketEntry{
 		TextGrid: widget.TextGrid{Scroll: fyne.ScrollBoth},
+		parent:   w,
 	}
 
 	p.ExtendBaseWidget(p)
@@ -166,27 +168,20 @@ func (p *PacketEntry) HasSelectedText() bool {
 func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 	c := fyne.CurrentApp().Driver().CanvasForObject(p)
 
-	// TODO: Is there a better way to do this?
-	if len(fyne.CurrentApp().Driver().AllWindows()) == 0 {
-		slog.Error("Failed to create right-click menu, there are no windows ???")
-		return
-	}
-
-	w := fyne.CurrentApp().Driver().AllWindows()[0]
 	decodeEntries := make([]*fyne.MenuItem, 0)
 
 	// Builtin encodings
 	for encodingKey := range GetEncodings() {
 		decodeEntries = append(decodeEntries, fyne.NewMenuItem(encodingKey, func() {
 			if !p.HasSelectedText() {
-				dialog.NewError(fmt.Errorf("select text before attempting to decode :)"), w).Show()
+				dialog.NewError(fmt.Errorf("select text before attempting to decode :)"), p.parent).Show()
 				return
 			}
 
 			if decoded, err := ExecuteEncoding(encodingKey, p.SelectedText()); err != nil {
-				dialog.NewError(fmt.Errorf("decoding error: %w", err), w).Show()
+				dialog.NewError(fmt.Errorf("decoding error: %w", err), p.parent).Show()
 			} else {
-				dialog.NewInformation("Decode result", string(decoded), w).Show()
+				dialog.NewInformation("Decode result", string(decoded), p.parent).Show()
 			}
 		}))
 	}
@@ -206,7 +201,7 @@ func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 
 		decodeEntries = append(decodeEntries, fyne.NewMenuItem(label, func() {
 			if !p.HasSelectedText() {
-				dialog.NewError(fmt.Errorf("select text before attempting to decode :)"), w).Show()
+				dialog.NewError(fmt.Errorf("select text before attempting to decode :)"), p.parent).Show()
 				return
 			}
 
@@ -221,9 +216,9 @@ func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 			cmd := exec.Command(commandArgs[0], commandArgs[1:]...)
 
 			if decoded, err := cmd.Output(); err != nil {
-				dialog.NewError(fmt.Errorf("decoding error: %w", err), w).Show()
+				dialog.NewError(fmt.Errorf("decoding error: %w", err), p.parent).Show()
 			} else {
-				dialog.NewInformation("Decode result", string(decoded), w).Show()
+				dialog.NewInformation("Decode result", string(decoded), p.parent).Show()
 			}
 		}))
 	}

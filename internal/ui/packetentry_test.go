@@ -9,8 +9,8 @@ import (
 )
 
 func TestPacketEntry_SelectedText(t *testing.T) {
-	_ = test.NewApp()
-	packetEntry := NewPacketEntry()
+	w := test.NewApp().NewWindow("Test")
+	packetEntry := NewPacketEntry(w)
 	packetEntry.SetText("Line1\nLine2\nLine3")
 
 	// Simulate mouse moves
@@ -42,8 +42,8 @@ func TestPacketEntry_SelectedText(t *testing.T) {
 }
 
 func TestPacketEntry_SelectedTextScrolled(t *testing.T) {
-	_ = test.NewApp()
-	packetEntry := NewPacketEntry()
+	w := test.NewApp().NewWindow("Test")
+	packetEntry := NewPacketEntry(w)
 	packetEntry.Resize(fyne.NewSize(2, 2))
 	packetEntry.SetText("Line1\nLine2\nLine3")
 	packetEntry.ScrollToBottom()
