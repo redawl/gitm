@@ -27,4 +27,3 @@ go install github.com/redawl/gitm@latest
 
 Or, you can download precompiled binaries from the releases page:
 https://github.com/redawl/gitm/releases
-

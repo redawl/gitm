@@ -35,7 +35,6 @@ func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 
 	w := a.NewWindow("Gopher in the middle")
 	w.SetMaster()
-	w.Resize(fyne.NewSize(1920, 1080))
 
 	requestContent := NewPacketDisplay("Request")
 	responseContent := NewPacketDisplay("Response")

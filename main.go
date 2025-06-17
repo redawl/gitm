@@ -34,19 +34,16 @@ func setupBackend(conf config.Config, httpHandler func(packet.HttpPacket)) (func
 	}
 
 	httpListener, err := http.ListenAndServe(conf, httpHandler)
-
 	if err != nil {
 		return nil, fmt.Errorf("http server: %w", err)
 	}
 
 	httpsListener, err := http.ListenAndServeTls(conf, httpHandler)
-
 	if err != nil {
 		return nil, fmt.Errorf("https server: %w", err)
 	}
 
 	socksListener, err := socks5.StartTransparentSocksProxy(conf)
-
 	if err != nil {
 		return nil, fmt.Errorf("socks5 proxy: %w", err)
 	}
@@ -68,7 +65,6 @@ func main() {
 	restart, err := setupBackend(conf, func(p packet.HttpPacket) {
 		packetChan <- p
 	})
-
 	if err != nil {
 		slog.Error("Error setting up backend", "error", err)
 		return

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -18,8 +19,10 @@ import (
 var _ fyne.SecondaryTappable = (*PacketEntry)(nil)
 
 // For selecting text
-var _ desktop.Mouseable = (*PacketEntry)(nil)
-var _ desktop.Hoverable = (*PacketEntry)(nil)
+var (
+	_ desktop.Mouseable = (*PacketEntry)(nil)
+	_ desktop.Hoverable = (*PacketEntry)(nil)
+)
 
 type PacketEntry struct {
 	widget.TextGrid
@@ -207,7 +210,15 @@ func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 				return
 			}
 
-			cmd := exec.Command("sh", fmt.Sprintf(command, p.SelectedText()))
+			commandArgs := make([]string, 0, 2)
+			if runtime.GOOS != "windows" {
+				commandArgs = append(commandArgs, "sh", "-c")
+			} else {
+				commandArgs = append(commandArgs, "cmd", "/c")
+			}
+			commandArgs = append(commandArgs, fmt.Sprintf(command, p.SelectedText()))
+
+			cmd := exec.Command(commandArgs[0], commandArgs[1:]...)
 
 			if decoded, err := cmd.Output(); err != nil {
 				dialog.NewError(fmt.Errorf("decoding error: %w", err), w).Show()

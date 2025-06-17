@@ -92,7 +92,7 @@ func (p *PacketFilter) AddListener(l func()) {
 
 func (p *PacketFilter) triggerListeners() {
 	for _, l := range p.listeners {
-		l()
+		fyne.Do(l)
 	}
 }
 
