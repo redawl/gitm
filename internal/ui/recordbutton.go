@@ -38,8 +38,12 @@ func NewRecordButton() *RecordButton {
 		button.IsRecording = !button.IsRecording
 		if button.IsRecording {
 			button.Label.SetText(IS_RECORDING)
+			button.Label.Importance = widget.DangerImportance
+			button.Label.Refresh()
 		} else {
 			button.Label.SetText(IS_NOT_RECORDING)
+			button.Label.Importance = widget.MediumImportance
+			button.Label.Refresh()
 		}
 	}
 
