@@ -1,13 +1,14 @@
 package packet
 
 import (
-	"github.com/google/uuid"
+	"crypto/rand"
+	"log/slog"
 )
 
 // HttpPacket represents a captured packet from either the https or http proxy.
 // An HttpPacket contains all the information from the http request, as well as the information from the http response (once it has been captured).
 type HttpPacket struct {
-	id       uuid.UUID
+	Id       [16]byte `json:"id"`
 	Hostname string
 	Method   string
 	Status   string
@@ -34,8 +35,7 @@ func CreatePacket(
 	reqHeaders map[string][]string,
 	reqBody []byte,
 ) HttpPacket {
-	return HttpPacket{
-		id:          uuid.New(),
+	packet := HttpPacket{
 		Hostname:    hostname,
 		Method:      method,
 		Status:      status,
@@ -47,11 +47,17 @@ func CreatePacket(
 		ReqHeaders:  reqHeaders,
 		ReqBody:     reqBody,
 	}
+
+	if _, err := rand.Read(packet.Id[:]); err != nil {
+		slog.Error("Error generating id", "error", err)
+	}
+
+	return packet
 }
 
 func FindPacket(toFind *HttpPacket, packets []*HttpPacket) *HttpPacket {
 	for _, p := range packets {
-		if toFind.id == p.id {
+		if toFind.Id == p.Id {
 			return p
 		}
 	}
