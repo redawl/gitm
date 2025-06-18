@@ -1,25 +1,21 @@
 package ui
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"log/slog"
-
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/redawl/gitm/internal/packet"
 	"github.com/redawl/gitm/internal/ui/settings"
 )
 
 func makeMenu(clearHandler func(), saveHandler func(), loadHandler func(), settingsHandler func()) *fyne.MainMenu {
+	saveItem := fyne.NewMenuItem("Save", saveHandler)
+	saveItem.Shortcut = SaveShortcut
 	mainMenu := fyne.NewMainMenu(
 		fyne.NewMenu("File",
 			fyne.NewMenuItem("Load", loadHandler),
 			fyne.NewMenuItem("Clear", clearHandler),
-			fyne.NewMenuItem("Save", saveHandler),
+			saveItem,
 			fyne.NewMenuItem("Settings", settingsHandler),
 		),
 		MakeHelp(),
@@ -45,7 +41,9 @@ func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 	requestContent := NewPacketDisplay("Request", w)
 	responseContent := NewPacketDisplay("Response", w)
 
-	packetFilter := NewPacketFilter()
+	packetFilter := NewPacketFilter(w)
+
+	registerShortcuts(packetFilter, w)
 
 	uiList := widget.NewList(func() int {
 		return len(packetFilter.FilteredPackets())
@@ -113,80 +111,8 @@ func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 	w.SetMainMenu(
 		makeMenu(
 			packetFilter.ClearPackets,
-			func() {
-				jsonString, err := json.Marshal(packetFilter.Packets)
-				if err != nil {
-					slog.Error("Error marshalling packetList", "error", err)
-					dialog.ShowError(err, w)
-					return
-				}
-
-				dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
-					if err != nil {
-						slog.Error("Error saving to file", "filename", writer.URI().Path(), "error", err)
-						dialog.ShowError(err, w)
-						return
-					}
-
-					if writer == nil {
-						return
-					}
-					defer writer.Close() // nolint:errcheck
-
-					if _, err := writer.Write(jsonString); err != nil {
-						slog.Error("Error saving to file", "filename", writer.URI().Path(), "error", err)
-						dialog.ShowError(err, w)
-						return
-					}
-
-					dialog.NewInformation("Success!", fmt.Sprintf("Saved packets to %s successfully.", writer.URI().Path()), w).Show()
-				}, w).Show()
-			},
-			func() {
-				showConfirmDialog := func() {
-					dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
-						if err != nil {
-							slog.Error("Error saving to file", "filename", reader.URI().Path(), "error", err)
-							dialog.ShowError(err, w)
-							return
-						}
-
-						if reader == nil {
-							return
-						}
-
-						fileContents, err := io.ReadAll(reader)
-						if err != nil {
-							slog.Error("Error reading from file", "filename", reader.URI().Path(), "error", err)
-							dialog.ShowError(err, w)
-							return
-						}
-
-						packets := make([]*packet.HttpPacket, 0)
-						if err := json.Unmarshal(fileContents, &packets); err != nil {
-							slog.Error("Error unmarshalling file contents", "filename", reader.URI().Path(), "error", err)
-							dialog.ShowError(err, w)
-							return
-						}
-
-						packetFilter.SetPackets(packets)
-					}, w).Show()
-				}
-
-				if len(packetFilter.Packets) > 0 {
-					dialog.NewConfirm(
-						"Overwrite packets",
-						"Are you sure you want to overwrite the currently displayed packets?",
-						func(confirmed bool) {
-							if confirmed {
-								showConfirmDialog()
-							}
-						},
-						w).Show()
-				} else {
-					showConfirmDialog()
-				}
-			},
+			packetFilter.SavePackets,
+			packetFilter.LoadPackets,
 			func() {
 				settings.MakeSettingsUi(restart).Show()
 			},

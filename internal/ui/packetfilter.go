@@ -1,10 +1,14 @@
 package ui
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
 	"log/slog"
 	"strings"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/redawl/gitm/internal/packet"
 )
@@ -23,19 +27,21 @@ const (
 // packets captured by the proxy.
 type PacketFilter struct {
 	widget.Entry
+	parent          fyne.Window
 	Packets         []*packet.HttpPacket
 	filteredPackets []*packet.HttpPacket
 	listeners       []func()
 }
 
 // NewPacketFilter creates a new PacketFilter
-func NewPacketFilter() *PacketFilter {
+func NewPacketFilter(w fyne.Window) *PacketFilter {
 	prefs := fyne.CurrentApp().Preferences()
 	input := &PacketFilter{
 		Entry: widget.Entry{
 			Text: prefs.String("PacketFilter"),
 		},
 		Packets: make([]*packet.HttpPacket, 0),
+		parent:  w,
 	}
 
 	input.OnChanged = func(s string) {
@@ -76,6 +82,86 @@ func (p *PacketFilter) FindPacket(httpPacket *packet.HttpPacket) *packet.HttpPac
 func (p *PacketFilter) ClearPackets() {
 	p.Packets = make([]*packet.HttpPacket, 0)
 	p.triggerListeners()
+}
+
+// SavePackets asks the user for a file to save to,
+// and then json marshalls the packet list, saving the result to the file.
+func (p *PacketFilter) SavePackets() {
+	jsonString, err := json.Marshal(p.Packets)
+	if err != nil {
+		slog.Error("Error marshalling packetList", "error", err)
+		dialog.ShowError(err, p.parent)
+		return
+	}
+
+	dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
+		if err != nil {
+			slog.Error("Error saving to file", "filename", writer.URI().Path(), "error", err)
+			dialog.ShowError(err, p.parent)
+			return
+		}
+
+		if writer == nil {
+			return
+		}
+		defer writer.Close() // nolint:errcheck
+
+		if _, err := writer.Write(jsonString); err != nil {
+			slog.Error("Error saving to file", "filename", writer.URI().Path(), "error", err)
+			dialog.ShowError(err, p.parent)
+			return
+		}
+
+		dialog.NewInformation("Success!", fmt.Sprintf("Saved packets to %s successfully.", writer.URI().Path()), p.parent).Show()
+	}, p.parent).Show()
+}
+
+// SavePackets asks the user for a file to load from,
+// and then json unmarshalls the packet list from the file contents.
+func (p *PacketFilter) LoadPackets() {
+	showConfirmDialog := func() {
+		dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
+			if err != nil {
+				slog.Error("Error reading from file", "filename", reader.URI().Path(), "error", err)
+				dialog.ShowError(err, p.parent)
+				return
+			}
+
+			if reader == nil {
+				return
+			}
+
+			fileContents, err := io.ReadAll(reader)
+			if err != nil {
+				slog.Error("Error reading from file", "filename", reader.URI().Path(), "error", err)
+				dialog.ShowError(err, p.parent)
+				return
+			}
+
+			packets := make([]*packet.HttpPacket, 0)
+			if err := json.Unmarshal(fileContents, &packets); err != nil {
+				slog.Error("Error unmarshalling file contents", "filename", reader.URI().Path(), "error", err)
+				dialog.ShowError(err, p.parent)
+				return
+			}
+
+			p.SetPackets(packets)
+		}, p.parent).Show()
+	}
+
+	if len(p.Packets) > 0 {
+		dialog.NewConfirm(
+			"Overwrite packets",
+			"Are you sure you want to overwrite the currently displayed packets?",
+			func(confirmed bool) {
+				if confirmed {
+					showConfirmDialog()
+				}
+			},
+			p.parent).Show()
+	} else {
+		showConfirmDialog()
+	}
 }
 
 // FilteredPackets returns the list of packets that match the current filter
