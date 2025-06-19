@@ -23,7 +23,6 @@ func Handler(httpPacketHandler func(packet.HttpPacket), conf *config.Config) htt
 		hostName := request.Host
 		slog.Debug("Handling request", "method", request.Method, "path", "http://"+hostName+request.URL.String(), "request", request)
 		requestBody, err := io.ReadAll(request.Body)
-
 		if err != nil {
 			slog.Error("Error reading request responseBody", "error", err)
 			return
@@ -33,7 +32,6 @@ func Handler(httpPacketHandler func(packet.HttpPacket), conf *config.Config) htt
 		if request.TLS == nil && (request.Host == "gitm" || request.Host == conf.HttpListenUri) {
 			if request.URL.Path == "/ca.crt" {
 				configDir, err := util.GetConfigDir()
-
 				if err != nil {
 					slog.Error("Error getting config dir", "error", err)
 					return
@@ -41,7 +39,6 @@ func Handler(httpPacketHandler func(packet.HttpPacket), conf *config.Config) htt
 
 				certLocation := configDir + "/ca.crt"
 				contents, err := os.ReadFile(certLocation)
-
 				if err != nil {
 					slog.Error("Error getting ca cert", "error", err)
 					w.WriteHeader(http.StatusInternalServerError)
@@ -92,7 +89,6 @@ func Handler(httpPacketHandler func(packet.HttpPacket), conf *config.Config) htt
 			httpPacketHandler(httpPacket)
 		}
 		resp, err := http.DefaultTransport.RoundTrip(req)
-
 		if err != nil {
 			slog.Error("Error forwarding http request", "error", err, "request", req)
 
@@ -102,11 +98,12 @@ func Handler(httpPacketHandler func(packet.HttpPacket), conf *config.Config) htt
 			if !ok {
 				slog.Error("Webserver doesn't support hijacking, sending internal server error")
 				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
 			}
 
 			conn, _, _ := hijack.Hijack()
 
-			conn.Close()
+			_ = conn.Close()
 			return
 		}
 
@@ -121,7 +118,6 @@ func Handler(httpPacketHandler func(packet.HttpPacket), conf *config.Config) htt
 		slog.Debug("Response from proxied server", "response", resp)
 
 		responseBody, err := io.ReadAll(resp.Body)
-
 		if err != nil {
 			slog.Error("Error forwarding http request", "error", err)
 			return

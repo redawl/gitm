@@ -32,18 +32,35 @@ func (l *entryLayout) Layout(objs []fyne.CanvasObject, size fyne.Size) {
 
 var _ fyne.Layout = (*tableLayout)(nil)
 
-type tableLayout struct{}
+type tableLayout struct {
+	height float32
+}
+
+func NewTableLayout(table *widget.Table) *fyne.Container {
+	tl := &tableLayout{}
+	separatorSize := theme.Size(theme.SizeNameSeparatorThickness)
+	entryHeight := widget.NewEntry().MinSize().Height
+	labelHeight := widget.NewLabel("").MinSize().Height
+	padding := theme.Size(theme.SizeNamePadding)
+
+	tl.height = (4 * (padding - separatorSize)) + (labelHeight) + (4 * entryHeight)
+	return container.New(tl, table)
+}
 
 func (t *tableLayout) MinSize(objs []fyne.CanvasObject) fyne.Size {
 	util.Assert(len(objs) == 1)
 
-	return fyne.NewSize(ENTRY_SIZE, objs[0].MinSize().Height*3)
+	return fyne.NewSize(ENTRY_SIZE, t.height)
 }
 
 func (t *tableLayout) Layout(objs []fyne.CanvasObject, size fyne.Size) {
 	util.Assert(len(objs) == 1)
+	table := objs[0].(*widget.Table)
 
-	objs[0].Resize(size)
+	spacerSize := theme.Size(theme.SizeNameSeparatorThickness)
+	table.SetColumnWidth(0, (ENTRY_SIZE-spacerSize)*0.4)
+	table.SetColumnWidth(1, (ENTRY_SIZE-spacerSize)*0.5)
+	table.Resize(size)
 }
 
 // MakeSettingsUi creates a window for settings that the user can modify
@@ -108,10 +125,12 @@ func MakeSettingsUi(restart func()) fyne.Window {
 
 	table.HideSeparators = true
 	table.ShowHeaderRow = true
-	table.SetColumnWidth(0, ENTRY_SIZE*0.4)
-	table.SetColumnWidth(1, ENTRY_SIZE*0.5)
 	table.CreateHeader = func() fyne.CanvasObject {
-		return widget.NewLabel("")
+		label := widget.NewLabel("")
+
+		label.TextStyle.Bold = true
+		label.Alignment = fyne.TextAlignCenter
+		return label
 	}
 
 	table.UpdateHeader = func(id widget.TableCellID, template fyne.CanvasObject) {
@@ -140,7 +159,7 @@ func MakeSettingsUi(restart func()) fyne.Window {
 					table.Refresh()
 				}),
 			), nil, nil,
-			container.New(&tableLayout{}, table),
+			NewTableLayout(table),
 		),
 	)
 
