@@ -15,13 +15,19 @@ import (
 	"github.com/redawl/gitm/internal/config"
 )
 
-// For rightclick menu
+// Rightclick menu
 var _ fyne.SecondaryTappable = (*PacketEntry)(nil)
 
-// For selecting text
+// Selecting text
 var (
 	_ desktop.Mouseable = (*PacketEntry)(nil)
 	_ desktop.Hoverable = (*PacketEntry)(nil)
+)
+
+// Handle shortcuts
+var (
+	_ fyne.Shortcutable = (*PacketEntry)(nil)
+	_ fyne.Focusable    = (*PacketEntry)(nil)
 )
 
 type PacketEntry struct {
@@ -69,6 +75,7 @@ func (p *PacketEntry) MouseUp(event *desktop.MouseEvent) {
 }
 
 func (p *PacketEntry) MouseIn(event *desktop.MouseEvent) {
+	p.parent.Canvas().Focus(p)
 	if event.Button != desktop.MouseButtonPrimary {
 		p.selecting = false
 	}
@@ -100,6 +107,22 @@ func (p *PacketEntry) MouseMoved(event *desktop.MouseEvent) {
 func (p *PacketEntry) MouseOut() {
 	p.selecting = false
 }
+
+func (p *PacketEntry) TypedShortcut(s fyne.Shortcut) {
+	switch s.(type) {
+	case *fyne.ShortcutCopy:
+		p.copyToClipBoard()
+	case *fyne.ShortcutSelectAll:
+		p.selectAll()
+	default:
+		slog.Debug("Not handling shortcut", "shortcut", s.ShortcutName())
+	}
+}
+
+func (p *PacketEntry) FocusGained()              {}
+func (p *PacketEntry) FocusLost()                {}
+func (p *PacketEntry) TypedRune(_ rune)          {}
+func (p *PacketEntry) TypedKey(_ *fyne.KeyEvent) {}
 
 func (p *PacketEntry) getActualStartAndEnd() (startRow int, startCol int, endRow int, endCol int) {
 	// First normalize end col to make sure they fall within the length of the row
@@ -163,6 +186,30 @@ func (p *PacketEntry) HasSelectedText() bool {
 	return false
 }
 
+// copyToClipBoard copies the p.SelectedText() to the system clipboard
+func (p *PacketEntry) copyToClipBoard() {
+	c := fyne.CurrentApp().Clipboard()
+	if p.HasSelectedText() {
+		selectedText := p.SelectedText()
+		c.SetContent(selectedText)
+	} else {
+		slog.Info("No text selected")
+	}
+}
+
+func (p *PacketEntry) selectAll() {
+	TEXTGRID_COLOR_HIGHLIGHTED := &widget.CustomTextGridStyle{BGColor: theme.Color(theme.ColorNameSelection)}
+	p.selectStartRow = 0
+	p.selectEndRow = 0
+	p.selectEndRow = len(p.Rows) - 1
+	p.selectEndCol = len(p.Rows[p.selectEndRow].Cells) - 1
+
+	startRow, startCol, endRow, endCol := p.getActualStartAndEnd()
+
+	p.SetStyleRange(startRow, startCol, endRow, endCol, TEXTGRID_COLOR_HIGHLIGHTED)
+	p.Refresh()
+}
+
 // TappedSecondary handle when the user right clicks
 // Creates the right click menu with entries for the supported decodings
 func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
@@ -222,6 +269,16 @@ func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 			}
 		}))
 	}
+
+	decodeEntries = append(decodeEntries, fyne.NewMenuItemSeparator())
+
+	copyItem := fyne.NewMenuItem("Copy", p.copyToClipBoard)
+	copyItem.Shortcut = &fyne.ShortcutCopy{}
+
+	selectAllItem := fyne.NewMenuItem("Select All", p.selectAll)
+	selectAllItem.Shortcut = &fyne.ShortcutSelectAll{}
+
+	decodeEntries = append(decodeEntries, copyItem, selectAllItem)
 
 	menu := fyne.NewMenu("Decode", decodeEntries...)
 
