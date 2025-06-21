@@ -66,6 +66,14 @@ func (t *tableLayout) Layout(objs []fyne.CanvasObject, size fyne.Size) {
 // MakeSettingsUi creates a window for settings that the user can modify
 func MakeSettingsUi(restart func()) fyne.Window {
 	a := fyne.CurrentApp()
+
+	for _, window := range a.Driver().AllWindows() {
+		if window.Title() == "Settings" {
+			window.RequestFocus()
+			return window
+		}
+	}
+
 	w := a.NewWindow("Settings")
 	prefs := a.Preferences()
 	header := container.NewPadded(&widget.Label{

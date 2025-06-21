@@ -76,9 +76,6 @@ func (p *PacketEntry) MouseUp(event *desktop.MouseEvent) {
 
 func (p *PacketEntry) MouseIn(event *desktop.MouseEvent) {
 	p.parent.Canvas().Focus(p)
-	if event.Button != desktop.MouseButtonPrimary {
-		p.selecting = false
-	}
 }
 
 func (p *PacketEntry) MouseMoved(event *desktop.MouseEvent) {
@@ -119,8 +116,10 @@ func (p *PacketEntry) TypedShortcut(s fyne.Shortcut) {
 	}
 }
 
-func (p *PacketEntry) FocusGained()              {}
-func (p *PacketEntry) FocusLost()                {}
+func (p *PacketEntry) FocusGained() {}
+func (p *PacketEntry) FocusLost() {
+	p.selecting = false
+}
 func (p *PacketEntry) TypedRune(_ rune)          {}
 func (p *PacketEntry) TypedKey(_ *fyne.KeyEvent) {}
 
@@ -200,13 +199,11 @@ func (p *PacketEntry) copyToClipBoard() {
 func (p *PacketEntry) selectAll() {
 	TEXTGRID_COLOR_HIGHLIGHTED := &widget.CustomTextGridStyle{BGColor: theme.Color(theme.ColorNameSelection)}
 	p.selectStartRow = 0
-	p.selectEndRow = 0
+	p.selectStartCol = 0
 	p.selectEndRow = len(p.Rows) - 1
 	p.selectEndCol = len(p.Rows[p.selectEndRow].Cells) - 1
 
-	startRow, startCol, endRow, endCol := p.getActualStartAndEnd()
-
-	p.SetStyleRange(startRow, startCol, endRow, endCol, TEXTGRID_COLOR_HIGHLIGHTED)
+	p.SetStyleRange(p.selectStartRow, p.selectStartCol, p.selectEndRow, p.selectEndCol, TEXTGRID_COLOR_HIGHLIGHTED)
 	p.Refresh()
 }
 

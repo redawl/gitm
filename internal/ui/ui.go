@@ -63,7 +63,7 @@ func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 
 	packetFilter.AddListener(uiList.Refresh)
 
-	listPlaceHolder := NewPlaceHolder("Record new packets or open a capture file", theme.FolderOpenIcon())
+	listPlaceHolder := NewPlaceHolder("Record new packets, \nor open a capture file", theme.FolderOpenIcon())
 
 	packetFilter.AddListener(func() {
 		if len(packetFilter.FilteredPackets()) > 0 {

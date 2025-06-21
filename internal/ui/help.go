@@ -18,6 +18,12 @@ var about string
 func MakeHelp() *fyne.Menu {
 	app := fyne.CurrentApp()
 	about := fyne.NewMenuItem("About", func() {
+		for _, window := range app.Driver().AllWindows() {
+			if window.Title() == "About" {
+				window.RequestFocus()
+				return
+			}
+		}
 		w := app.NewWindow("About")
 
 		w.SetContent(widget.NewRichTextFromMarkdown(about))
@@ -31,6 +37,12 @@ func MakeHelp() *fyne.Menu {
 
 func MakeDocs() *fyne.MenuItem {
 	return fyne.NewMenuItem("Documentation", func() {
+		for _, window := range fyne.CurrentApp().Driver().AllWindows() {
+			if window.Title() == "Documentation" {
+				window.RequestFocus()
+				return
+			}
+		}
 		w := fyne.CurrentApp().NewWindow("Documentation")
 
 		content := widget.NewRichText()
