@@ -19,6 +19,7 @@ func NewPlaceHolder(label string, icon fyne.Resource) *PlaceHolder {
 		label: &widget.Label{
 			Text:       label,
 			Importance: widget.LowImportance,
+			SizeName:   theme.SizeNameSubHeadingText,
 		},
 		icon: &widget.Icon{
 			Resource: theme.NewDisabledResource(icon),

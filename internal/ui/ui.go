@@ -70,6 +70,8 @@ func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 			listPlaceHolder.Hide()
 		} else {
 			listPlaceHolder.Show()
+			requestContent.SetText("")
+			responseContent.SetText("")
 		}
 	})
 
