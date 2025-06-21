@@ -3,9 +3,11 @@ package ui
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/redawl/gitm/internal/packet"
 	"github.com/redawl/gitm/internal/ui/settings"
+	"github.com/redawl/gitm/internal/util"
 )
 
 func makeMenu(clearHandler func(), saveHandler func(), loadHandler func(), settingsHandler func()) *fyne.MainMenu {
@@ -61,10 +63,22 @@ func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 
 	packetFilter.AddListener(uiList.Refresh)
 
+	listPlaceHolder := NewPlaceHolder("Record new packets or open a capture file", theme.FolderOpenIcon())
+
+	packetFilter.AddListener(func() {
+		if len(packetFilter.FilteredPackets()) > 0 {
+			listPlaceHolder.Hide()
+		} else {
+			listPlaceHolder.Show()
+		}
+	})
+
 	uiList.OnSelected = func(id widget.ListItemID) {
 		filteredPackets := packetFilter.FilteredPackets()
-		requestContent.SetText(FormatRequestContent(filteredPackets[id]))
-		responseContent.SetText(FormatResponseContent(filteredPackets[id]))
+		util.Assert(id < len(filteredPackets))
+
+		requestContent.SetText(filteredPackets[id].FormatRequestContent())
+		responseContent.SetText(filteredPackets[id].FormatResponseContent())
 	}
 
 	go func() {
@@ -98,7 +112,10 @@ func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 		nil,
 		nil,
 		nil,
-		uiList,
+		container.NewStack(
+			container.NewCenter(listPlaceHolder),
+			uiList,
+		),
 	)
 
 	masterLayout := container.NewVSplit(packetListContainer,
