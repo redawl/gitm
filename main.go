@@ -6,6 +6,8 @@ import (
 	"os"
 
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/storage/repository"
+	"github.com/redawl/gitm/docs"
 	"github.com/redawl/gitm/internal/cacert"
 	"github.com/redawl/gitm/internal/config"
 	"github.com/redawl/gitm/internal/http"
@@ -77,6 +79,8 @@ func main() {
 			packetChan <- p
 		})
 	})
+
+	repository.Register("docs", &docs.DocsRepository{})
 
 	slog.Info("Showing ui...")
 	mainWindow.ShowAndRun()
