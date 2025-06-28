@@ -74,7 +74,7 @@ func MakeSettingsUi(restart func()) fyne.Window {
 		}
 	}
 
-	w := a.NewWindow("Settings")
+	w := util.NewWindowIfNotExists("Settings")
 	prefs := a.Preferences()
 	header := container.NewPadded(&widget.Label{
 		Text:     "GITM Settings",
@@ -92,6 +92,18 @@ func MakeSettingsUi(restart func()) fyne.Window {
 	httpsUrl := &widget.Entry{
 		Text: prefs.String(config.TLS_LISTEN_URI),
 	}
+
+	configDir := &widget.Entry{
+		Text: prefs.String(config.CONFIGDIR),
+	}
+
+	configDir.ActionItem = widget.NewButton("Choose", func() {
+		dialog.NewFolderOpen(func(lu fyne.ListableURI, err error) {
+			if lu != nil {
+				configDir.SetText(lu.Path())
+			}
+		}, w).Show()
+	})
 
 	debugEnabled := &widget.Check{
 		Checked: prefs.Bool(config.ENABLE_DEBUG_LOGGING),
@@ -154,9 +166,12 @@ func MakeSettingsUi(restart func()) fyne.Window {
 	table.Refresh()
 
 	form := widget.NewForm()
+	// TODO: Remove entryLayout? How does this look now?
+	// Keeping it causes issues on some devices
 	form.Append("Socks5 proxy URL", container.New(&entryLayout{}, socks5Url))
 	form.Append("HTTP proxy URL", container.New(&entryLayout{}, httpUrl))
 	form.Append("HTTPS proxy URL", container.New(&entryLayout{}, httpsUrl))
+	form.Append("GITM config dir", container.New(&entryLayout{}, configDir))
 	form.Append("Custom decodings",
 		container.NewBorder(
 			nil,
@@ -178,6 +193,7 @@ func MakeSettingsUi(restart func()) fyne.Window {
 		prefs.SetString(config.SOCKS_LISTEN_URI, socks5Url.Text)
 		prefs.SetString(config.HTTP_LISTEN_URI, httpUrl.Text)
 		prefs.SetString(config.TLS_LISTEN_URI, httpsUrl.Text)
+		prefs.SetString(config.CONFIGDIR, configDir.Text)
 		prefs.SetBool(config.ENABLE_DEBUG_LOGGING, debugEnabled.Checked)
 
 		newCustomDecodings := make([]string, len(decodingLabels))
@@ -192,6 +208,7 @@ func MakeSettingsUi(restart func()) fyne.Window {
 			if b {
 				restart()
 			}
+			w.Close()
 		}, w)
 		successPopup.Show()
 	}

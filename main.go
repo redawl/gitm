@@ -14,6 +14,7 @@ import (
 	"github.com/redawl/gitm/internal/packet"
 	"github.com/redawl/gitm/internal/socks5"
 	"github.com/redawl/gitm/internal/ui"
+	"github.com/redawl/gitm/internal/ui/settings"
 )
 
 // setupBackend sets up the socks5 proxy, as well as the http and https proxy listeners.
@@ -69,6 +70,8 @@ func main() {
 	})
 	if err != nil {
 		slog.Error("Error setting up backend", "error", err)
+		settings.MakeSettingsUi(nil).ShowAndRun()
+
 		return
 	}
 

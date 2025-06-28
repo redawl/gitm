@@ -29,16 +29,14 @@ func makeMenu(clearHandler func(), saveHandler func(), loadHandler func(), setti
 func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 	a := fyne.CurrentApp()
 
-	recordButton := NewRecordButton()
-
-	w := a.NewWindow("Gopher in the middle")
+	w := util.NewWindowIfNotExists("Gopher in the middle")
 	w.SetMaster()
+	w.Resize(fyne.NewSize(
+		float32(a.Preferences().FloatWithFallback("MainWindowWidth", 1000)),
+		float32(a.Preferences().FloatWithFallback("MainWindowHeight", 800)),
+	))
 
-	// TODO: Remove hardcoded default size.
-	// We'll need to figure out how we want the application to look when
-	// first opened. It would be nice to simulate a "Windowed fullscreen/borderless" look,
-	// but fyne does not have direct support.
-	w.Resize(fyne.NewSize(1920, 1080))
+	recordButton := NewRecordButton()
 
 	requestContent := NewPacketDisplay("Request", w)
 	responseContent := NewPacketDisplay("Response", w)
@@ -139,6 +137,11 @@ func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 	)
 
 	w.SetContent(masterLayout)
+
+	w.SetOnClosed(func() {
+		a.Preferences().SetFloat("MainWindowWidth", float64(w.Canvas().Size().Width))
+		a.Preferences().SetFloat("MainWindowHeight", float64(w.Canvas().Size().Height))
+	})
 
 	return w
 }

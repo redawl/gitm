@@ -10,6 +10,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
+	"github.com/redawl/gitm/internal/util"
 )
 
 //go:embed docs/about.md
@@ -35,41 +36,42 @@ func MakeHelp() *fyne.Menu {
 	return menu
 }
 
+// CreateDocsEntry creates a menu subentry
+func CreateDocsEntry(label string, filename string, contentContainer *container.Scroll) *fyne.MenuItem {
+	content, ok := contentContainer.Content.(*widget.RichText)
+	util.Assert(ok)
+
+	return fyne.NewMenuItem(label, func() {
+		if homeContent, err := readDocsFile(filename); err != nil {
+			slog.Error("Error reading docs entry", "filename", filename, "error", err)
+		} else {
+			content.ParseMarkdown(homeContent)
+			contentContainer.ScrollToTop()
+		}
+	})
+}
+
 func MakeDocs() *fyne.MenuItem {
 	return fyne.NewMenuItem("Documentation", func() {
-		for _, window := range fyne.CurrentApp().Driver().AllWindows() {
-			if window.Title() == "Documentation" {
-				window.RequestFocus()
-				return
-			}
-		}
-		w := fyne.CurrentApp().NewWindow("Documentation")
+		w := util.NewWindowIfNotExists("Documentation")
 
 		content := widget.NewRichText()
+		contentContainer := container.NewVScroll(content)
 		if homeContent, err := readDocsFile("default.md"); err != nil {
 			slog.Error("Error reading default", "error", err)
 		} else {
 			content.ParseMarkdown(homeContent)
 		}
 
+		// TODO: Replace with list widget, so the currently selected
+		// menu item can be highlighted
 		menu := widget.NewMenu(fyne.NewMenu("",
-			fyne.NewMenuItem("Home", func() {
-				if homeContent, err := readDocsFile("default.md"); err != nil {
-					slog.Error("Error reading default", "error", err)
-				} else {
-					content.ParseMarkdown(homeContent)
-				}
-			}),
-			fyne.NewMenuItem("Iphone setup", func() {
-				if iphoneSetupContent, err := readDocsFile("setup-iphone.md"); err != nil {
-					slog.Error("Error reading Iphone setup", "error", err)
-				} else {
-					content.ParseMarkdown(iphoneSetupContent)
-				}
-			}),
+			CreateDocsEntry("Home", "default.md", contentContainer),
+			CreateDocsEntry("Iphone setup", "setup-iphone.md", contentContainer),
+			CreateDocsEntry("Firefox setup", "firefox.md", contentContainer),
 		))
 
-		w.SetContent(container.NewBorder(nil, nil, menu, nil, container.NewVScroll(content)))
+		w.SetContent(container.NewBorder(nil, nil, menu, nil, contentContainer))
 		w.Show()
 	})
 }

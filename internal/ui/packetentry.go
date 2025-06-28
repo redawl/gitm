@@ -207,14 +207,13 @@ func (p *PacketEntry) selectAll() {
 	p.Refresh()
 }
 
-// TappedSecondary handle when the user right clicks
+// TappedSecondary handles when the user right clicks
 // Creates the right click menu with entries for the supported decodings
 func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 	c := fyne.CurrentApp().Driver().CanvasForObject(p)
 
 	decodeEntries := make([]*fyne.MenuItem, 0)
 
-	// Builtin encodings
 	for encodingKey := range GetEncodings() {
 		decodeEntries = append(decodeEntries, fyne.NewMenuItem(encodingKey, func() {
 			if !p.HasSelectedText() {
@@ -232,7 +231,6 @@ func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 
 	decodeEntries = append(decodeEntries, fyne.NewMenuItemSeparator())
 
-	// Custom encodings
 	customDecodeEntries := fyne.CurrentApp().Preferences().StringList(config.CUSTOM_DECODINGS)
 
 	for _, decodeEntry := range customDecodeEntries {
