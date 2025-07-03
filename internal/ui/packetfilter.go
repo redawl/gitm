@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -69,6 +70,9 @@ func (p *PacketFilter) AppendPacket(packet *packet.HttpPacket) {
 // Calls all listeners added by AddListener
 func (p *PacketFilter) SetPackets(newPackets []*packet.HttpPacket) {
 	p.Packets = newPackets
+	slices.SortFunc(p.Packets, func(a, b *packet.HttpPacket) int {
+		return a.TimeStamp.Compare(b.TimeStamp)
+	})
 	p.triggerListeners()
 }
 

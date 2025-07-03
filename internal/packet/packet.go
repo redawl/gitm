@@ -10,16 +10,18 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+	"time"
 )
 
 // HttpPacket represents a captured packet from either the https or http proxy.
 // An HttpPacket contains all the information from the http request, as well as the information from the http response (once it has been captured).
 type HttpPacket struct {
-	Id       [16]byte `json:"id"`
-	Hostname string
-	Method   string
-	Status   string
-	Path     string
+	TimeStamp time.Time
+	Id        [16]byte `json:"id"`
+	Hostname  string
+	Method    string
+	Status    string
+	Path      string
 	// The request protocol version, i.e. "HTTP/1.1"
 	// The response protocol version, i.e. "HTTP/1.1"
 	ReqProto    string
@@ -43,6 +45,7 @@ func CreatePacket(
 	reqBody []byte,
 ) HttpPacket {
 	packet := HttpPacket{
+		TimeStamp:   time.Now(),
 		Hostname:    hostname,
 		Method:      method,
 		Status:      status,

@@ -3,7 +3,7 @@ module github.com/redawl/gitm
 go 1.23
 
 require (
-	fyne.io/fyne/v2 v2.6.1-rc1.0.20250609112233-ca6538196ac7
+	fyne.io/fyne/v2 v2.6.1-rc1.0.20250627213119-e3e89c1d66f3
 	github.com/mattn/go-sqlite3 v1.14.24
 )
 
@@ -22,6 +22,7 @@ require (
 	github.com/go-text/render v0.2.0 // indirect
 	github.com/go-text/typesetting v0.2.1 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
+	github.com/google/pprof v0.0.0-20211214055906-6f57359322fd // indirect
 	github.com/hack-pad/go-indexeddb v0.3.2 // indirect
 	github.com/hack-pad/safejs v0.1.0 // indirect
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade // indirect

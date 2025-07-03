@@ -5,6 +5,9 @@ import (
 	"log/slog"
 	"os"
 
+	realHttp "net/http"
+	_ "net/http/pprof"
+
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/storage/repository"
 	"github.com/redawl/gitm/docs"
@@ -59,8 +62,11 @@ func setupBackend(conf config.Config, httpHandler func(packet.HttpPacket)) (func
 }
 
 func main() {
+	go func() {
+		realHttp.ListenAndServe(":8081", nil)
+	}()
 	app := app.NewWithID("com.github.redawl.gitm")
-	conf := config.ParseFlags(app.Preferences())
+	conf := config.FromPreferences(app.Preferences())
 
 	packetChan := make(chan packet.HttpPacket)
 
@@ -78,7 +84,7 @@ func main() {
 	mainWindow := ui.MakeUi(packetChan, func() {
 		slog.Info("Restarting backend...")
 		restart()
-		restart, err = setupBackend(config.ParseFlags(app.Preferences()), func(p packet.HttpPacket) {
+		restart, err = setupBackend(config.FromPreferences(app.Preferences()), func(p packet.HttpPacket) {
 			packetChan <- p
 		})
 	})

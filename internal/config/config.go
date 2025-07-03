@@ -46,9 +46,9 @@ func boolWithFallbackSave(prefs fyne.Preferences, key string, defaultValue bool)
 	return value
 }
 
-// ParseFlags parses the currently saved user preferences, and if any are missing saves the default values
-// for those preferences to disk
-func ParseFlags(preferences fyne.Preferences) Config {
+// FromPreferences creates a new config from fyne preferences, and if any are missing saves the default values
+// to the fyne preferences object
+func FromPreferences(preferences fyne.Preferences) Config {
 	userCfgDir, err := os.UserConfigDir()
 	if err != nil {
 		userCfgDir = ""

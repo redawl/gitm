@@ -49,7 +49,10 @@ func NewPacketEntry(w fyne.Window) *PacketEntry {
 }
 
 func (p *PacketEntry) SetText(text string) {
-	TEXTGRID_COLOR_NORMAL := &widget.CustomTextGridStyle{BGColor: theme.Color(theme.ColorNameBackground)}
+	TEXTGRID_COLOR_NORMAL := &widget.CustomTextGridStyle{
+		FGColor: theme.Color(theme.ColorNameForeground),
+		BGColor: theme.Color(theme.ColorNameBackground),
+	}
 	p.selecting = false
 
 	p.SetStyleRange(0, 0, len(p.Rows), len(p.Row(len(p.Rows)-1).Cells), TEXTGRID_COLOR_NORMAL)
@@ -58,7 +61,10 @@ func (p *PacketEntry) SetText(text string) {
 
 func (p *PacketEntry) MouseDown(event *desktop.MouseEvent) {
 	if event.Button == desktop.MouseButtonPrimary {
-		TEXTGRID_COLOR_NORMAL := &widget.CustomTextGridStyle{BGColor: theme.Color(theme.ColorNameBackground)}
+		TEXTGRID_COLOR_NORMAL := &widget.CustomTextGridStyle{
+			FGColor: theme.Color(theme.ColorNameForeground),
+			BGColor: theme.Color(theme.ColorNameBackground),
+		}
 
 		p.SetStyleRange(0, 0, len(p.Rows), len(p.Row(len(p.Rows)-1).Cells), TEXTGRID_COLOR_NORMAL)
 		row, col := p.CursorLocationForPosition(event.Position)
@@ -81,7 +87,10 @@ func (p *PacketEntry) MouseIn(event *desktop.MouseEvent) {
 func (p *PacketEntry) MouseMoved(event *desktop.MouseEvent) {
 	if p.selecting && event.Button == desktop.MouseButtonPrimary {
 		TEXTGRID_COLOR_HIGHLIGHTED := &widget.CustomTextGridStyle{BGColor: theme.Color(theme.ColorNameSelection)}
-		TEXTGRID_COLOR_NORMAL := &widget.CustomTextGridStyle{BGColor: theme.Color(theme.ColorNameBackground)}
+		TEXTGRID_COLOR_NORMAL := &widget.CustomTextGridStyle{
+			FGColor: theme.Color(theme.ColorNameForeground),
+			BGColor: theme.Color(theme.ColorNameBackground),
+		}
 		row, col := p.CursorLocationForPosition(event.Position)
 
 		if p.selectEndRow == row && p.selectEndCol == col {
