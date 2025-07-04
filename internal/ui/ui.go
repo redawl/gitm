@@ -10,18 +10,67 @@ import (
 	"github.com/redawl/gitm/internal/util"
 )
 
-func makeMenu(clearHandler func(), saveHandler func(), loadHandler func(), settingsHandler func()) *fyne.MainMenu {
-	saveItem := fyne.NewMenuItem("Save", saveHandler)
-	saveItem.Shortcut = SaveShortcut
+const RECENTLY_OPENED = "RecentlyOpened"
+
+func makeMenu(packetFilter *PacketFilter, settingsHandler func()) *fyne.MainMenu {
+	recentlyOpenedFiles := fyne.CurrentApp().Preferences().StringList(RECENTLY_OPENED)
+	recentlyOpenedItem := &fyne.MenuItem{
+		Label: "Open Recent",
+	}
+
+	recentlyOpenItems := make([]*fyne.MenuItem, len(recentlyOpenedFiles))
+	if len(recentlyOpenedFiles) == 0 {
+		recentlyOpenedItem.Disabled = true
+	} else {
+		recentlyOpenedItem.Disabled = false
+		for index, recentlyOpened := range recentlyOpenedFiles {
+			recentlyOpenItems[index] = fyne.NewMenuItem(recentlyOpened, func() {
+				packetFilter.LoadPacketsFromFile(recentlyOpened)
+			})
+		}
+	}
+
+	recentlyOpenedItem.ChildMenu = fyne.NewMenu("", recentlyOpenItems...)
 	mainMenu := fyne.NewMainMenu(
 		fyne.NewMenu("File",
-			fyne.NewMenuItem("Load", loadHandler),
-			fyne.NewMenuItem("Clear", clearHandler),
-			saveItem,
-			fyne.NewMenuItem("Settings", settingsHandler),
+			&fyne.MenuItem{
+				Label:    "Open",
+				Action:   packetFilter.LoadPackets,
+				Shortcut: OpenShortcut,
+			},
+			recentlyOpenedItem,
+			// TODO: Shortcut
+			fyne.NewMenuItem("Clear", packetFilter.ClearPackets),
+			&fyne.MenuItem{
+				Label:    "Save",
+				Action:   packetFilter.SavePackets,
+				Shortcut: SaveShortcut,
+			},
+			&fyne.MenuItem{
+				Label:    "Settings",
+				Action:   settingsHandler,
+				Shortcut: SettingsShortcut,
+			},
 		),
 		MakeHelp(),
 	)
+	fyne.CurrentApp().Preferences().AddChangeListener(func() {
+		recentlyOpenedFiles = fyne.CurrentApp().Preferences().StringList(RECENTLY_OPENED)
+		if len(recentlyOpenedFiles) == 0 {
+			recentlyOpenedItem.Disabled = true
+		} else {
+			recentlyOpenedItem.Disabled = false
+			newItems := make([]*fyne.MenuItem, len(recentlyOpenedFiles))
+			for index, recentlyOpened := range recentlyOpenedFiles {
+				newItems[index] = fyne.NewMenuItem(recentlyOpened, func() {
+					packetFilter.LoadPacketsFromFile(recentlyOpened)
+				})
+			}
+			recentlyOpenedItem.ChildMenu.Items = newItems
+			// TODO: Do I really need to refresh the whole menu?
+			mainMenu.Refresh()
+		}
+	})
 	return mainMenu
 }
 
@@ -43,7 +92,7 @@ func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 
 	packetFilter := NewPacketFilter(w)
 
-	registerShortcuts(packetFilter, w)
+	registerShortcuts(packetFilter, w, restart)
 
 	uiList := widget.NewList(func() int {
 		return len(packetFilter.FilteredPackets())
@@ -127,9 +176,7 @@ func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 
 	w.SetMainMenu(
 		makeMenu(
-			packetFilter.ClearPackets,
-			packetFilter.SavePackets,
-			packetFilter.LoadPackets,
+			packetFilter,
 			func() {
 				settings.MakeSettingsUi(restart).Show()
 			},

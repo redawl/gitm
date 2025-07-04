@@ -3,3 +3,5 @@ fyne-cross
 perf.data*
 **/testdata/failed/**
 **/*.apk
+go.work
+go.work.sum

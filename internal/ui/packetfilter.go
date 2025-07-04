@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"slices"
 	"strings"
 
@@ -120,10 +121,10 @@ func (p *PacketFilter) SavePackets() {
 	}, p.parent).Show()
 }
 
-// SavePackets asks the user for a file to load from,
-// and then json unmarshalls the packet list from the file contents.
+// LoadPackets asks the user for a file to load from
+// and then loads packets from that file
 func (p *PacketFilter) LoadPackets() {
-	showConfirmDialog := func() {
+	showFilePicker := func() {
 		dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 			if err != nil {
 				slog.Error("Error reading from file", "filename", reader.URI().Path(), "error", err)
@@ -134,22 +135,21 @@ func (p *PacketFilter) LoadPackets() {
 			if reader == nil {
 				return
 			}
+			currRecentlyOpened := fyne.CurrentApp().Preferences().StringList(RECENTLY_OPENED)
+			length := min(len(currRecentlyOpened)+1, 10)
+			recentlyOpened := make([]string, length)
 
-			fileContents, err := io.ReadAll(reader)
-			if err != nil {
-				slog.Error("Error reading from file", "filename", reader.URI().Path(), "error", err)
-				dialog.ShowError(err, p.parent)
-				return
+			recentlyOpened[0] = reader.URI().Path()
+			count := 1
+			for i := 1; i < length; i++ {
+				if currRecentlyOpened[i-1] != recentlyOpened[0] {
+					recentlyOpened[i] = currRecentlyOpened[i-1]
+					count++
+				}
 			}
 
-			packets := make([]*packet.HttpPacket, 0)
-			if err := json.Unmarshal(fileContents, &packets); err != nil {
-				slog.Error("Error unmarshalling file contents", "filename", reader.URI().Path(), "error", err)
-				dialog.ShowError(err, p.parent)
-				return
-			}
-
-			p.SetPackets(packets)
+			fyne.CurrentApp().Preferences().SetStringList(RECENTLY_OPENED, recentlyOpened[:count])
+			p.LoadPacketsFromReader(reader)
 		}, p.parent).Show()
 	}
 
@@ -159,13 +159,41 @@ func (p *PacketFilter) LoadPackets() {
 			"Are you sure you want to overwrite the currently displayed packets?",
 			func(confirmed bool) {
 				if confirmed {
-					showConfirmDialog()
+					showFilePicker()
 				}
 			},
 			p.parent).Show()
 	} else {
-		showConfirmDialog()
+		showFilePicker()
 	}
+}
+
+// LoadPacketsFromMostRecentFile loads packets from the file most recently opened
+func (p *PacketFilter) LoadPacketsFromFile(filename string) {
+	reader, err := os.Open(filename)
+	if err != nil {
+		dialog.ShowError(err, p.parent)
+		return
+	}
+
+	p.LoadPacketsFromReader(reader)
+}
+
+// LoadPacketsFromReader json unmarshals the reader contents
+func (p *PacketFilter) LoadPacketsFromReader(reader io.Reader) {
+	fileContents, err := io.ReadAll(reader)
+	if err != nil {
+		dialog.ShowError(err, p.parent)
+		return
+	}
+
+	packets := make([]*packet.HttpPacket, 0)
+	if err := json.Unmarshal(fileContents, &packets); err != nil {
+		dialog.ShowError(err, p.parent)
+		return
+	}
+
+	p.SetPackets(packets)
 }
 
 // FilteredPackets returns the list of packets that match the current filter
