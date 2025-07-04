@@ -15,7 +15,7 @@ It is currently in heavy development. More info to come!
 - Save intercepted packets for later analysis, using open humanreadable format (yes, json lol)
 
 Future:
-- [ ] Add your own decoding mappings
+- [x] Add your own decoding mappings
 - [ ] Add your own automatic decompressors or other preprocessors
 - [ ] Maybe modify requests and responses in flight???
 

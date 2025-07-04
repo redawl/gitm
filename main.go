@@ -5,9 +5,6 @@ import (
 	"log/slog"
 	"os"
 
-	realHttp "net/http"
-	_ "net/http/pprof"
-
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/storage/repository"
 	"github.com/redawl/gitm/docs"
@@ -62,9 +59,6 @@ func setupBackend(conf config.Config, httpHandler func(packet.HttpPacket)) (func
 }
 
 func main() {
-	go func() {
-		realHttp.ListenAndServe(":8081", nil)
-	}()
 	app := app.NewWithID("com.github.redawl.gitm")
 	conf := config.FromPreferences(app.Preferences())
 
