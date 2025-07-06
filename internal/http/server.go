@@ -44,27 +44,23 @@ func ListenAndServeTls(conf config.Config, httpPacketHandler func(packet.HttpPac
 
 	cfg.GetCertificate = func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
 		domainInfo, err := db.GetDomain(chi.ServerName)
-
 		if err != nil {
 			return nil, err
 		}
 
 		if domainInfo == nil {
 			err = cacert.AddHostname(chi.ServerName)
-
 			if err != nil {
 				return nil, err
 			}
 
 			domainInfo, err = db.GetDomain(chi.ServerName)
-
 			if err != nil {
 				return nil, err
 			}
 		}
 
 		certificate, err := tls.X509KeyPair(domainInfo.Cert, domainInfo.PrivKey)
-
 		if err != nil {
 			return nil, err
 		}

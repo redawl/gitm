@@ -10,6 +10,8 @@ var (
 	SaveShortcut     fyne.Shortcut = &desktop.CustomShortcut{KeyName: "S", Modifier: fyne.KeyModifierControl}
 	OpenShortcut     fyne.Shortcut = &desktop.CustomShortcut{KeyName: "O", Modifier: fyne.KeyModifierControl}
 	SettingsShortcut fyne.Shortcut = &desktop.CustomShortcut{KeyName: "S", Modifier: fyne.KeyModifierControl | fyne.KeyModifierShift}
+	ClearShortcut    fyne.Shortcut = &desktop.CustomShortcut{KeyName: "X", Modifier: fyne.KeyModifierControl | fyne.KeyModifierShift}
+	QuitShortcut     fyne.Shortcut = &desktop.CustomShortcut{KeyName: "Q", Modifier: fyne.KeyModifierControl}
 )
 
 // registerShortcuts registers the toplevel shortcuts for gitm
@@ -19,4 +21,6 @@ func registerShortcuts(p *PacketFilter, w fyne.Window, restart func()) {
 	c.AddShortcut(SaveShortcut, func(shortcut fyne.Shortcut) { p.SavePackets() })
 	c.AddShortcut(OpenShortcut, func(shortcut fyne.Shortcut) { p.LoadPackets() })
 	c.AddShortcut(SettingsShortcut, func(shortcut fyne.Shortcut) { settings.MakeSettingsUi(restart) })
+	c.AddShortcut(ClearShortcut, func(shortcut fyne.Shortcut) { p.ClearPackets() })
+	c.AddShortcut(QuitShortcut, func(shortcut fyne.Shortcut) { fyne.CurrentApp().Quit() })
 }

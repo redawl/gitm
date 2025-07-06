@@ -12,7 +12,6 @@ import (
 
 func StartTransparentSocksProxy(conf config.Config) (net.Listener, error) {
 	listener, err := net.Listen("tcp", conf.SocksListenUri)
-
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +42,6 @@ func handleConnection(client net.Conn, conf config.Config) error {
 	slog.Debug("Received connection", "address", client.RemoteAddr())
 
 	greeting, err := ParseClientGreeting(client)
-
 	if err != nil {
 		return err
 	}

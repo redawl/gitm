@@ -39,8 +39,11 @@ func makeMenu(packetFilter *PacketFilter, settingsHandler func()) *fyne.MainMenu
 				Shortcut: OpenShortcut,
 			},
 			recentlyOpenedItem,
-			// TODO: Shortcut
-			fyne.NewMenuItem("Clear", packetFilter.ClearPackets),
+			&fyne.MenuItem{
+				Label:    "Clear",
+				Action:   packetFilter.ClearPackets,
+				Shortcut: ClearShortcut,
+			},
 			&fyne.MenuItem{
 				Label:    "Save",
 				Action:   packetFilter.SavePackets,
@@ -50,6 +53,13 @@ func makeMenu(packetFilter *PacketFilter, settingsHandler func()) *fyne.MainMenu
 				Label:    "Settings",
 				Action:   settingsHandler,
 				Shortcut: SettingsShortcut,
+			},
+			fyne.NewMenuItemSeparator(),
+			&fyne.MenuItem{
+				Label:    "Quit",
+				Action:   fyne.CurrentApp().Quit,
+				Shortcut: QuitShortcut,
+				IsQuit:   true,
 			},
 		),
 		MakeHelp(),

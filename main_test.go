@@ -21,7 +21,6 @@ func setup(t *testing.T) (*config.Config, []*packet.HttpPacket, func()) {
 	cleanup, err := setupBackend(conf, func(hp packet.HttpPacket) {
 		packets = append(packets, &hp)
 	})
-
 	if err != nil {
 		t.Errorf("Expected err = nil, got err = %v", err)
 	}
@@ -35,7 +34,6 @@ func TestProxyPacIsAccessible(t *testing.T) {
 	defer cleanup()
 
 	resp, err := http.DefaultClient.Get("http://" + conf.HttpListenUri + "/proxy.pac")
-
 	if err != nil {
 		t.Errorf("Expected err = nil, got err = %v", err)
 		return
@@ -59,7 +57,6 @@ func TestCaCertIsAccessble(t *testing.T) {
 	}
 
 	resp, err := client.Get("http://gitm/ca.crt")
-
 	if err != nil {
 		t.Errorf("Expected err = nil, got err = %v", err)
 		return
