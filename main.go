@@ -10,14 +10,13 @@ import (
 	"github.com/redawl/gitm/docs"
 	"github.com/redawl/gitm/internal/cacert"
 	"github.com/redawl/gitm/internal/config"
-	"github.com/redawl/gitm/internal/http"
 	"github.com/redawl/gitm/internal/packet"
 	"github.com/redawl/gitm/internal/socks5"
 	"github.com/redawl/gitm/internal/ui"
 	"github.com/redawl/gitm/internal/ui/settings"
 )
 
-// setupBackend sets up the socks5 proxy, as well as the http and https proxy listeners.
+// setupBackend sets up the socks5 proxy.
 // Returns a cleanup function for gracefully shutting down the backend
 func setupBackend(conf config.Config, httpHandler func(packet.HttpPacket)) (func(), error) {
 	logLevel := slog.LevelInfo
@@ -35,27 +34,20 @@ func setupBackend(conf config.Config, httpHandler func(packet.HttpPacket)) (func
 	if err := cacert.InitCaCert(); err != nil {
 		return nil, err
 	}
-
-	httpListener, err := http.ListenAndServe(conf, httpHandler)
-	if err != nil {
-		return nil, fmt.Errorf("http server: %w", err)
-	}
-
-	httpsListener, err := http.ListenAndServeTls(conf, httpHandler)
-	if err != nil {
-		return nil, fmt.Errorf("https server: %w", err)
-	}
-
-	socksListener, err := socks5.StartTransparentSocksProxy(conf)
+	socksListener, err := socks5.StartTransparentSocksProxy(conf, httpHandler)
 	if err != nil {
 		return nil, fmt.Errorf("socks5 proxy: %w", err)
 	}
 
-	return func() {
-		_ = httpListener.Close()
-		_ = httpsListener.Close()
-		_ = socksListener.Close()
-	}, nil
+	if conf.EnablePacServer {
+		go func() {
+			if err := socks5.ListenAndServePac(&conf); err != nil {
+				slog.Error("Error starting pac server", "error", err)
+			}
+		}()
+	}
+
+	return func() { _ = socksListener.Close }, nil
 }
 
 func main() {
@@ -75,6 +67,9 @@ func main() {
 		return
 	}
 
+	repository.Register("docs", &docs.DocsRepository{})
+
+	slog.Info("Showing ui...")
 	mainWindow := ui.MakeUi(packetChan, func() {
 		slog.Info("Restarting backend...")
 		restart()
@@ -82,9 +77,5 @@ func main() {
 			packetChan <- p
 		})
 	})
-
-	repository.Register("docs", &docs.DocsRepository{})
-
-	slog.Info("Showing ui...")
 	mainWindow.ShowAndRun()
 }

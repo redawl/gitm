@@ -84,14 +84,21 @@ func MakeSettingsUi(restart func()) fyne.Window {
 	socks5Url := &widget.Entry{
 		Text: prefs.String(config.SOCKS_LISTEN_URI),
 	}
-
-	httpUrl := &widget.Entry{
-		Text: prefs.String(config.HTTP_LISTEN_URI),
+	pacUrl := &widget.Entry{
+		Text: prefs.String(config.PAC_LISTEN_URI),
+	}
+	pacEnabled := &widget.Check{
+		Checked: prefs.Bool(config.ENABLE_PAC_SERVER),
+		OnChanged: func(b bool) {
+			if !b {
+				pacUrl.Disable()
+			} else {
+				pacUrl.Enable()
+			}
+		},
 	}
 
-	httpsUrl := &widget.Entry{
-		Text: prefs.String(config.TLS_LISTEN_URI),
-	}
+	pacEnabled.OnChanged(pacEnabled.Checked)
 
 	configDir := &widget.Entry{
 		Text: prefs.String(config.CONFIGDIR),
@@ -169,8 +176,8 @@ func MakeSettingsUi(restart func()) fyne.Window {
 	// TODO: Remove entryLayout? How does this look now?
 	// Keeping it causes issues on some devices
 	form.Append("Socks5 proxy URL", container.New(&entryLayout{}, socks5Url))
-	form.Append("HTTP proxy URL", container.New(&entryLayout{}, httpUrl))
-	form.Append("HTTPS proxy URL", container.New(&entryLayout{}, httpsUrl))
+	form.Append("Enable PAC server", pacEnabled)
+	form.Append("PAC URL (host:port)", container.New(&entryLayout{}, pacUrl))
 	form.Append("GITM config dir", container.New(&entryLayout{}, configDir))
 	form.Append("Custom decodings",
 		container.NewBorder(
@@ -191,8 +198,8 @@ func MakeSettingsUi(restart func()) fyne.Window {
 	form.SubmitText = "Save"
 	form.OnSubmit = func() {
 		prefs.SetString(config.SOCKS_LISTEN_URI, socks5Url.Text)
-		prefs.SetString(config.HTTP_LISTEN_URI, httpUrl.Text)
-		prefs.SetString(config.TLS_LISTEN_URI, httpsUrl.Text)
+		prefs.SetBool(config.ENABLE_PAC_SERVER, pacEnabled.Checked)
+		prefs.SetString(config.PAC_LISTEN_URI, pacUrl.Text)
 		prefs.SetString(config.CONFIGDIR, configDir.Text)
 		prefs.SetBool(config.ENABLE_DEBUG_LOGGING, debugEnabled.Checked)
 
@@ -216,8 +223,6 @@ func MakeSettingsUi(restart func()) fyne.Window {
 	form.CancelText = "Reset"
 	form.OnCancel = func() {
 		socks5Url.SetText(prefs.String(config.SOCKS_LISTEN_URI))
-		httpUrl.SetText(prefs.String(config.HTTP_LISTEN_URI))
-		httpsUrl.SetText(prefs.String(config.TLS_LISTEN_URI))
 		debugEnabled.SetChecked(prefs.Bool(config.ENABLE_DEBUG_LOGGING))
 	}
 	form.Refresh()

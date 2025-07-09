@@ -15,17 +15,14 @@ type DomainInfo struct {
 
 func getConn() (*sql.DB, error) {
 	configDir, err := util.GetConfigDir()
-
 	if err != nil {
 		return nil, err
 	}
 
 	conn, err := sql.Open("sqlite3", configDir+"/domains.db")
-
 	if err != nil {
 		return nil, err
 	}
-
 	if _, err := conn.Exec(`
         CREATE TABLE IF NOT EXISTS DOMAINS (
             domain varchar(100) PRIMARY KEY,
@@ -41,13 +38,12 @@ func getConn() (*sql.DB, error) {
 
 func GetDomains() ([]DomainInfo, error) {
 	conn, err := getConn()
-
 	if err != nil {
 		return nil, err
 	}
+	defer conn.Close()
 
 	rows, err := conn.Query("SELECT domain, cert, privkey from DOMAINS")
-
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +63,6 @@ func GetDomains() ([]DomainInfo, error) {
 
 func GetDomain(domain string) (*DomainInfo, error) {
 	conn, err := getConn()
-
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +83,6 @@ func GetDomain(domain string) (*DomainInfo, error) {
 
 func AddDomain(domain string, cert []byte, privkey []byte) error {
 	conn, err := getConn()
-
 	if err != nil {
 		return err
 	}
