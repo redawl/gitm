@@ -27,6 +27,7 @@ func makeMenu(packetFilter *PacketFilter, settingsHandler func()) *fyne.MainMenu
 			recentlyOpenItems[index] = fyne.NewMenuItem(recentlyOpened, func() {
 				packetFilter.LoadPacketsFromFile(recentlyOpened)
 			})
+			recentlyOpenItems[index].Icon = theme.FileApplicationIcon()
 		}
 	}
 

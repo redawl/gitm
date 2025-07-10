@@ -5,3 +5,4 @@ perf.data*
 **/*.apk
 go.work
 go.work.sum
+gitm
