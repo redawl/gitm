@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"fmt"
-
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
@@ -81,27 +79,22 @@ func (row *PacketRow) CreateRenderer() fyne.WidgetRenderer {
 	return widget.NewSimpleRenderer(c)
 }
 
-func (row *PacketRow) UpdateRow(p packet.HttpPacket) {
-	path := p.Path
-
-	if len(path) == 0 {
-		path = "/"
+func (row *PacketRow) UpdateRow(p packet.Packet) {
+	hostname := p.FormatHostname()
+	if row.hostname.Text != hostname {
+		row.hostname.SetText(hostname)
 	}
 
-	if row.hostname.Text != p.Hostname {
-		row.hostname.SetText(p.Hostname)
+	requestLine := p.FormatRequestLine()
+
+	if row.request.Text != requestLine {
+		row.request.SetText(requestLine)
 	}
 
-	requestContent := fmt.Sprintf("%s %s %s", p.Method, path, p.ReqProto)
+	responseLine := p.FormatResponseLine()
 
-	if row.request.Text != requestContent {
-		row.request.SetText(requestContent)
-	}
-
-	responseContent := fmt.Sprintf("%s %s", p.RespProto, p.Status)
-
-	if row.response.Text != responseContent {
-		row.response.SetText(responseContent)
+	if row.response.Text != responseLine {
+		row.response.SetText(responseLine)
 	}
 
 	row.ExtendBaseWidget(row)

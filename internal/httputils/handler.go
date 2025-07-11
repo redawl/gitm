@@ -15,10 +15,14 @@ import (
 	"github.com/redawl/gitm/internal/packet"
 )
 
-// HandleHttpRequest
-// TODO: Docs
+// HandleHttpRequest reads http requests from inboundConn to outboundConn,
+// and then read http responses from outboundConn to inboundConn.
+//
+// httpPacketHandler is called first on the packet when inboundConn -> outboundConn completes,
+// and again when outboundConn -> inboundConn completes.
+//
 // TODO: Handle websockets
-func HandleHttpRequest(inboundConn, outboundConn net.Conn, httpPacketHandler func(packet.HttpPacket)) error {
+func HandleHttpRequest(inboundConn, outboundConn net.Conn, httpPacketHandler func(packet.Packet)) error {
 	bufReader := bufio.NewReader(io.TeeReader(inboundConn, outboundConn))
 	reader := textproto.NewReader(bufReader)
 	clientBufioReader := bufio.NewReader(io.TeeReader(outboundConn, inboundConn))
@@ -51,7 +55,7 @@ func HandleHttpRequest(inboundConn, outboundConn net.Conn, httpPacketHandler fun
 		requestBody,
 	)
 
-	go httpPacketHandler(httpPacket)
+	go httpPacketHandler(&httpPacket)
 
 	respProto, statusCode, statusCodeMessage, err := ReadLine1(clientReader)
 	if err != nil {
@@ -83,7 +87,7 @@ func HandleHttpRequest(inboundConn, outboundConn net.Conn, httpPacketHandler fun
 
 	httpPacket.UpdatePacket(&completedPacket)
 
-	go httpPacketHandler(httpPacket)
+	go httpPacketHandler(&httpPacket)
 
 	return nil
 }

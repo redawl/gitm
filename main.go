@@ -18,7 +18,7 @@ import (
 
 // setupBackend sets up the socks5 proxy.
 // Returns a cleanup function for gracefully shutting down the backend
-func setupBackend(conf config.Config, httpHandler func(packet.HttpPacket)) (func(), error) {
+func setupBackend(conf config.Config, httpHandler func(packet.Packet)) (func(), error) {
 	logLevel := slog.LevelInfo
 
 	if conf.Debug {
@@ -54,10 +54,10 @@ func main() {
 	app := app.NewWithID("com.github.redawl.gitm")
 	conf := config.FromPreferences(app.Preferences())
 
-	packetChan := make(chan packet.HttpPacket)
+	packetChan := make(chan packet.Packet)
 
 	slog.Info("Setting up backend...")
-	restart, err := setupBackend(conf, func(p packet.HttpPacket) {
+	restart, err := setupBackend(conf, func(p packet.Packet) {
 		packetChan <- p
 	})
 	if err != nil {
@@ -73,7 +73,7 @@ func main() {
 	mainWindow := ui.MakeUi(packetChan, func() {
 		slog.Info("Restarting backend...")
 		restart()
-		restart, err = setupBackend(config.FromPreferences(app.Preferences()), func(p packet.HttpPacket) {
+		restart, err = setupBackend(config.FromPreferences(app.Preferences()), func(p packet.Packet) {
 			packetChan <- p
 		})
 	})

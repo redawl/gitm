@@ -56,7 +56,7 @@ var (
 	}
 )
 
-func StartTransparentSocksProxy(conf config.Config, httpHandler func(packet.HttpPacket)) (net.Listener, error) {
+func StartTransparentSocksProxy(conf config.Config, httpHandler func(packet.Packet)) (net.Listener, error) {
 	listener, err := net.Listen("tcp", conf.SocksListenUri)
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func StartTransparentSocksProxy(conf config.Config, httpHandler func(packet.Http
 	return listener, err
 }
 
-func handleConnection(client net.Conn, httpHandler func(packet.HttpPacket)) error {
+func handleConnection(client net.Conn, httpHandler func(packet.Packet)) error {
 	logger := slog.With("RemoteAddr", client.RemoteAddr(), "LocalAddr", client.LocalAddr())
 	logger.Debug("Received connection", "address", client.RemoteAddr())
 

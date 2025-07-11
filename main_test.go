@@ -10,17 +10,17 @@ import (
 	"github.com/redawl/gitm/internal/packet"
 )
 
-func setup(portOffset int, t *testing.T) (*config.Config, []*packet.HttpPacket, func()) {
+func setup(portOffset int, t *testing.T) (*config.Config, []packet.Packet, func()) {
 	conf := config.Config{
 		SocksListenUri:  fmt.Sprintf("127.0.0.1:%d", 1080+portOffset),
 		PacListenUri:    fmt.Sprintf("127.0.0.1:%d", 8080+portOffset),
 		EnablePacServer: true,
 	}
 
-	packets := make([]*packet.HttpPacket, 0)
+	packets := make([]packet.Packet, 0)
 
-	cleanup, err := setupBackend(conf, func(hp packet.HttpPacket) {
-		packets = append(packets, &hp)
+	cleanup, err := setupBackend(conf, func(hp packet.Packet) {
+		packets = append(packets, hp)
 	})
 	if err != nil {
 		t.Errorf("Expected err = nil, got err = %v", err)

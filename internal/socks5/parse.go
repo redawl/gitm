@@ -58,7 +58,7 @@ func ParseClientConnRequest(conn net.Conn) (*ClientConnRequest, byte, error) {
 			return nil, STATUS_GENERAL_FAILURE, fmt.Errorf("reading domain name: %w", err)
 		}
 
-		// Special handling here for our internal hostname, for /proxy.pac and /ca.crt
+		// Special handling here for our internal hostname
 		if string(domain) == "gitm" {
 			dstIp = "gitm"
 		} else {

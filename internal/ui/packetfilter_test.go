@@ -7,14 +7,14 @@ import (
 func TestGetTokens(t *testing.T) {
 	filterString := "host:google.com statuscode:200"
 
-	filterPairs := getTokens(filterString)
+	tokens := getTokens(filterString)
 
-	if len(filterPairs) != 2 {
-		t.Errorf("len(getTokens(\"%s\") = %d, expected 2", filterString, len(filterPairs))
-	} else if filterPairs[0].filterType != "host" || filterPairs[0].filterContent != "google.com" {
-		t.Errorf("filterType = \"%s\" && filterContent = \"%s\", expected host && google.com", filterPairs[0].filterType, filterPairs[0].filterContent)
-	} else if filterPairs[1].filterType != "statuscode" || filterPairs[1].filterContent != "200" {
-		t.Errorf("filterType = \"%s\" && filterContent = \"%s\", expected statuscode && 200", filterPairs[1].filterType, filterPairs[1].filterContent)
+	if len(tokens) != 2 {
+		t.Errorf("len(getTokens(\"%s\") = %d, expected 2", filterString, len(tokens))
+	} else if tokens[0].FilterType != "host" || tokens[0].FilterContent != "google.com" {
+		t.Errorf("filterType = \"%s\" && filterContent = \"%s\", expected host && google.com", tokens[0].FilterType, tokens[0].FilterContent)
+	} else if tokens[1].FilterType != "statuscode" || tokens[1].FilterContent != "200" {
+		t.Errorf("filterType = \"%s\" && filterContent = \"%s\", expected statuscode && 200", tokens[1].FilterType, tokens[1].FilterContent)
 	}
 }
 
@@ -31,15 +31,15 @@ func TestGetTokensNoColon(t *testing.T) {
 func TestGetTokensInvalidPart(t *testing.T) {
 	filterString := "host:google.com whatfieldamifiltering"
 
-	filterPairs := getTokens(filterString)
+	tokens := getTokens(filterString)
 
-	if len(filterPairs) != 1 {
-		t.Errorf("len(getTokens(\"%s\")) = %d, expected 1", filterString, len(filterPairs))
+	if len(tokens) != 1 {
+		t.Errorf("len(getTokens(\"%s\")) = %d, expected 1", filterString, len(tokens))
 		return
 	}
 
-	if filterPairs[0].filterType != "host" || filterPairs[0].filterContent != "google.com" {
-		t.Errorf("filterType = \"%s\" && filterContent = \"%s\", expected host && google.com", filterPairs[0].filterType, filterPairs[0].filterContent)
+	if tokens[0].FilterType != "host" || tokens[0].FilterContent != "google.com" {
+		t.Errorf("filterType = \"%s\" && filterContent = \"%s\", expected host && google.com", tokens[0].FilterType, tokens[0].FilterContent)
 	}
 }
 
@@ -53,8 +53,8 @@ func TestGetTokensInvalidPart2(t *testing.T) {
 		return
 	}
 
-	if filterPairs[0].filterType != "host" || filterPairs[0].filterContent != "google.com" {
-		t.Errorf("filterType = \"%s\" && filterContent = \"%s\", expected host && google.com", filterPairs[0].filterType, filterPairs[0].filterContent)
+	if filterPairs[0].FilterType != "host" || filterPairs[0].FilterContent != "google.com" {
+		t.Errorf("filterType = \"%s\" && filterContent = \"%s\", expected host && google.com", filterPairs[0].FilterType, filterPairs[0].FilterContent)
 	}
 }
 
@@ -65,8 +65,8 @@ func TestGetTokensWithQuotes(t *testing.T) {
 
 	if len(filterPairs) != 1 {
 		t.Errorf("len(getTokens(\"%s\")) = %d, expected 1", filterString, len(filterPairs))
-	} else if filterPairs[0].filterType != "content" || filterPairs[0].filterContent != "bob joe was here" {
-		t.Errorf("filterType = \"%s\" && filterContent = \"%s\", expected content && \"bob joe was here\"", filterPairs[0].filterType, filterPairs[0].filterContent)
+	} else if filterPairs[0].FilterType != "content" || filterPairs[0].FilterContent != "bob joe was here" {
+		t.Errorf("filterType = \"%s\" && filterContent = \"%s\", expected content && \"bob joe was here\"", filterPairs[0].FilterType, filterPairs[0].FilterContent)
 	}
 }
 
@@ -77,8 +77,8 @@ func TestGetTokensOnlyFilterType(t *testing.T) {
 
 	if len(filterPairs) != 1 {
 		t.Errorf("len(getTokens(\"%s\")) = %d. expected 1", filterString, len(filterPairs))
-	} else if filterPairs[0].filterType != "host" || filterPairs[0].filterContent != "" {
-		t.Errorf("filterType = \"%s\" && filterContent = \"%s\", expected host && \"\"", filterPairs[0].filterType, filterPairs[0].filterContent)
+	} else if filterPairs[0].FilterType != "host" || filterPairs[0].FilterContent != "" {
+		t.Errorf("filterType = \"%s\" && filterContent = \"%s\", expected host && \"\"", filterPairs[0].FilterType, filterPairs[0].FilterContent)
 	}
 }
 
@@ -89,8 +89,8 @@ func TestGetTokensNegate(t *testing.T) {
 
 	if len(filterPairs) != 1 {
 		t.Errorf("len(getTokens(\"%s\")) = %d. expected 1", filterString, len(filterPairs))
-	} else if filterPairs[0].filterType != "host" || filterPairs[0].filterContent != "google.com" || !filterPairs[0].negate {
-		t.Errorf("filterType = \"%s\" && filterContent = \"%s\" && negate = %t, expected host && google.com && true", filterPairs[0].filterType, filterPairs[0].filterContent, filterPairs[0].negate)
+	} else if filterPairs[0].FilterType != "host" || filterPairs[0].FilterContent != "google.com" || !filterPairs[0].Negate {
+		t.Errorf("filterType = \"%s\" && filterContent = \"%s\" && negate = %t, expected host && google.com && true", filterPairs[0].FilterType, filterPairs[0].FilterContent, filterPairs[0].Negate)
 	}
 }
 
@@ -101,7 +101,7 @@ func TestGetTokensNegateEmpty(t *testing.T) {
 
 	if len(filterPairs) != 1 {
 		t.Errorf("len(getTokens(\"%s\")) = %d. expected 1", filterString, len(filterPairs))
-	} else if filterPairs[0].filterType != "host" || filterPairs[0].filterContent != "" || !filterPairs[0].negate {
-		t.Errorf("filterType = \"%s\" && filterContent = \"%s\" && negate = %t, expected host && \"\" && true", filterPairs[0].filterType, filterPairs[0].filterContent, filterPairs[0].negate)
+	} else if filterPairs[0].FilterType != "host" || filterPairs[0].FilterContent != "" || !filterPairs[0].Negate {
+		t.Errorf("filterType = \"%s\" && filterContent = \"%s\" && negate = %t, expected host && \"\" && true", filterPairs[0].FilterType, filterPairs[0].FilterContent, filterPairs[0].Negate)
 	}
 }

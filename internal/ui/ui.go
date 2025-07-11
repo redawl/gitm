@@ -86,7 +86,7 @@ func makeMenu(packetFilter *PacketFilter, settingsHandler func()) *fyne.MainMenu
 }
 
 // MakeUi Creates the Fyne UI for GITM, and then runs the UI event loop.
-func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
+func MakeUi(packetChan chan packet.Packet, restart func()) fyne.Window {
 	a := fyne.CurrentApp()
 
 	w := util.NewWindowIfNotExists("Gopher in the middle")
@@ -114,7 +114,7 @@ func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 		filteredPackets := packetFilter.FilteredPackets()
 		if li < len(filteredPackets) && filteredPackets[li] != nil {
 			p := filteredPackets[li]
-			row.UpdateRow(*p)
+			row.UpdateRow(p)
 		}
 	})
 	uiList.HideSeparators = true
@@ -145,12 +145,12 @@ func MakeUi(packetChan chan packet.HttpPacket, restart func()) fyne.Window {
 		for {
 			p := <-packetChan
 			if recordButton.IsRecording {
-				existingPacket := packetFilter.FindPacket(&p)
+				existingPacket := packetFilter.FindPacket(p)
 
 				if existingPacket != nil {
-					existingPacket.UpdatePacket(&p)
+					existingPacket.UpdatePacket(p)
 				} else {
-					packetFilter.AppendPacket(&p)
+					packetFilter.AppendPacket(p)
 				}
 
 				fyne.Do(uiList.Refresh)

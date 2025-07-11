@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -12,17 +11,8 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
+	"github.com/redawl/gitm/internal"
 	"github.com/redawl/gitm/internal/packet"
-)
-
-const (
-	FILTER_HOSTNAME = "hostname"
-	FILTER_METHOD   = "method"
-	FILTER_PATH     = "path"
-	FILTER_REQ_BODY = "reqbody"
-	// TODO filter on version?
-	FILTER_STATUS    = "status"
-	FILTER_RESP_BODY = "respbody"
 )
 
 // PacketFilter is a text input that allows the user to filter the
@@ -30,8 +20,8 @@ const (
 type PacketFilter struct {
 	widget.Entry
 	parent          fyne.Window
-	Packets         []*packet.HttpPacket
-	filteredPackets []*packet.HttpPacket
+	Packets         []packet.Packet
+	filteredPackets []packet.Packet
 	listeners       []func()
 }
 
@@ -42,7 +32,7 @@ func NewPacketFilter(w fyne.Window) *PacketFilter {
 		Entry: widget.Entry{
 			Text: prefs.String("PacketFilter"),
 		},
-		Packets: make([]*packet.HttpPacket, 0),
+		Packets: make([]packet.Packet, 0),
 		parent:  w,
 	}
 
@@ -62,37 +52,37 @@ func NewPacketFilter(w fyne.Window) *PacketFilter {
 
 // AppendPacket appends packet to the list trackets by p
 // Calls all listeners added by AddListener
-func (p *PacketFilter) AppendPacket(packet *packet.HttpPacket) {
+func (p *PacketFilter) AppendPacket(packet packet.Packet) {
 	p.Packets = append(p.Packets, packet)
 	p.triggerListeners()
 }
 
 // SetPackets overwrites the tracked packets with packets
 // Calls all listeners added by AddListener
-func (p *PacketFilter) SetPackets(newPackets []*packet.HttpPacket) {
+func (p *PacketFilter) SetPackets(newPackets []packet.Packet) {
 	p.Packets = newPackets
-	slices.SortFunc(p.Packets, func(a, b *packet.HttpPacket) int {
-		return a.TimeStamp.Compare(b.TimeStamp)
+	slices.SortFunc(p.Packets, func(a, b packet.Packet) int {
+		return a.TimeStamp().Compare(b.TimeStamp())
 	})
 	p.triggerListeners()
 }
 
 // FindPacket searches the tracked packets for a matching packet
-func (p *PacketFilter) FindPacket(httpPacket *packet.HttpPacket) *packet.HttpPacket {
-	return packet.FindPacket(httpPacket, p.Packets)
+func (p *PacketFilter) FindPacket(httpPacket packet.Packet) packet.Packet {
+	return httpPacket.FindPacket(p.Packets)
 }
 
 // ClearPackets resets the list of tracked packets
 // Calls all listeners added by AddListener
 func (p *PacketFilter) ClearPackets() {
-	p.Packets = make([]*packet.HttpPacket, 0)
+	p.Packets = make([]packet.Packet, 0)
 	p.triggerListeners()
 }
 
 // SavePackets asks the user for a file to save to,
 // and then json marshalls the packet list, saving the result to the file.
 func (p *PacketFilter) SavePackets() {
-	jsonString, err := json.Marshal(p.Packets)
+	jsonString, err := packet.MarshalPackets(p.Packets)
 	if err != nil {
 		slog.Error("Error marshalling packetList", "error", err)
 		dialog.ShowError(err, p.parent)
@@ -187,8 +177,8 @@ func (p *PacketFilter) LoadPacketsFromReader(reader io.Reader) {
 		return
 	}
 
-	packets := make([]*packet.HttpPacket, 0)
-	if err := json.Unmarshal(fileContents, &packets); err != nil {
+	packets := make([]packet.Packet, 0)
+	if err := packet.UnmarshalPackets(fileContents, &packets); err != nil {
 		dialog.ShowError(err, p.parent)
 		return
 	}
@@ -198,7 +188,7 @@ func (p *PacketFilter) LoadPacketsFromReader(reader io.Reader) {
 
 // FilteredPackets returns the list of packets that match the current filter
 // input by the user
-func (p *PacketFilter) FilteredPackets() []*packet.HttpPacket {
+func (p *PacketFilter) FilteredPackets() []packet.Packet {
 	return p.filteredPackets
 }
 
@@ -214,16 +204,10 @@ func (p *PacketFilter) triggerListeners() {
 	}
 }
 
-type filterPair struct {
-	filterType    string
-	negate        bool
-	filterContent string
-}
-
-func getTokens(filterString string) []filterPair {
+func getTokens(filterString string) []internal.FilterToken {
 	filterStringStripped := strings.Trim(filterString, " ")
 
-	filterPairs := make([]filterPair, 0)
+	tokens := make([]internal.FilterToken, 0)
 
 	i := 0
 	length := len(filterStringStripped)
@@ -234,42 +218,42 @@ func getTokens(filterString string) []filterPair {
 			continue
 		}
 
-		fp := filterPair{}
+		token := internal.FilterToken{}
 		colonIndex := strings.Index(filterStringStripped[i:], ":")
 
 		if colonIndex == -1 {
-			return filterPairs
+			return tokens
 		} else {
 			colonIndex += i
 		}
 
 		// Get filter type
-		fp.filterType = filterStringStripped[i:colonIndex]
-		if strings.Contains(fp.filterType, " ") {
+		token.FilterType = filterStringStripped[i:colonIndex]
+		if strings.Contains(token.FilterType, " ") {
 			// Get rid of prev cruft
-			spaceIndex := strings.Index(fp.filterType, " ")
-			fp.filterType = fp.filterType[spaceIndex+1:]
+			spaceIndex := strings.Index(token.FilterType, " ")
+			token.FilterType = token.FilterType[spaceIndex+1:]
 		}
 
 		if len(filterStringStripped) <= colonIndex+1 {
 			// found filterType without filterContent
-			fp.negate = false
-			filterPairs = append(filterPairs, fp)
-			return filterPairs
+			token.Negate = false
+			tokens = append(tokens, token)
+			return tokens
 		}
 
 		// Get filter content
 		if filterStringStripped[colonIndex+1] == '-' {
-			fp.negate = true
+			token.Negate = true
 			colonIndex++
 		} else {
-			fp.negate = false
+			token.Negate = false
 		}
 
 		if len(filterStringStripped) <= colonIndex+1 {
 			// found filterType without filterContent
-			filterPairs = append(filterPairs, fp)
-			return filterPairs
+			tokens = append(tokens, token)
+			return tokens
 		}
 
 		if filterStringStripped[colonIndex+1] == '"' {
@@ -278,66 +262,40 @@ func getTokens(filterString string) []filterPair {
 				spaceIndex := strings.Index(filterStringStripped[colonIndex+2:], " ")
 
 				if spaceIndex == -1 {
-					fp.filterContent = filterStringStripped[colonIndex+1:]
+					token.FilterContent = filterStringStripped[colonIndex+1:]
 					i = length
 				} else {
-					fp.filterContent = filterStringStripped[colonIndex+1 : colonIndex+spaceIndex]
+					token.FilterContent = filterStringStripped[colonIndex+1 : colonIndex+spaceIndex]
 					i = spaceIndex + colonIndex
 				}
 			} else {
-				fp.filterContent = filterStringStripped[colonIndex+2 : colonIndex+quoteIndex+2]
+				token.FilterContent = filterStringStripped[colonIndex+2 : colonIndex+quoteIndex+2]
 				i = quoteIndex + colonIndex + 1
 			}
 		} else {
 			spaceIndex := strings.Index(filterStringStripped[colonIndex:], " ")
 
 			if spaceIndex == -1 {
-				fp.filterContent = filterStringStripped[colonIndex+1:]
+				token.FilterContent = filterStringStripped[colonIndex+1:]
 				i = length
 			} else {
-				fp.filterContent = filterStringStripped[colonIndex+1 : colonIndex+spaceIndex]
+				token.FilterContent = filterStringStripped[colonIndex+1 : colonIndex+spaceIndex]
 				i = spaceIndex + colonIndex
 			}
 		}
 
-		filterPairs = append(filterPairs, fp)
+		tokens = append(tokens, token)
 	}
 
-	return filterPairs
+	return tokens
 }
 
-func filterPackets(filterString string, packets []*packet.HttpPacket) []*packet.HttpPacket {
+func filterPackets(filterString string, packets []packet.Packet) []packet.Packet {
 	filterPairs := getTokens(filterString)
-	passedPackets := make([]*packet.HttpPacket, 0, len(packets))
+	passedPackets := make([]packet.Packet, 0, len(packets))
 
 	for _, p := range packets {
-		passed := true
-		for _, filterPair := range filterPairs {
-			filterStr := ""
-			switch filterPair.filterType {
-			case FILTER_HOSTNAME:
-				filterStr = p.Hostname
-			case FILTER_METHOD:
-				filterStr = p.Method
-			case FILTER_PATH:
-				filterStr = p.Path
-			case FILTER_REQ_BODY:
-				filterStr = string(p.ReqBody)
-			case FILTER_STATUS:
-				filterStr = p.Status
-			case FILTER_RESP_BODY:
-				filterStr = string(p.RespBody)
-			default:
-				slog.Warn("Unknown filter specified", "filterType", filterPair.filterType, "filterContent", filterPair.filterContent)
-			}
-
-			if len(filterStr) > 0 && filterPair.negate == (strings.Contains(filterStr, filterPair.filterContent)) {
-				passed = false
-				break
-			}
-		}
-		// Passed all filters
-		if passed {
+		if p.MatchesFilter(filterPairs) {
 			passedPackets = append(passedPackets, p)
 		}
 	}
