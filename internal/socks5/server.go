@@ -90,16 +90,18 @@ func handleConnection(client net.Conn, httpHandler func(packet.Packet)) error {
 
 	greeting, err := ParseClientGreeting(client)
 	if err != nil {
-		return err
+		return fmt.Errorf("parsing client greeting: %w", err)
 	}
 
 	logger.Debug("Parsed client greeting", "greeting", greeting)
 
 	if greeting.CanHandle() {
 		logger.Debug("Handling Request")
-		client.Write(
+		if _, err := client.Write(
 			FormatServerChoice(SOCKS_VER_5, METHOD_NO_AUTH_REQUIRED),
-		)
+		); err != nil {
+			return fmt.Errorf("formatting server choice: %w", err)
+		}
 
 		request, status, err := ParseClientConnRequest(client)
 
@@ -109,7 +111,7 @@ func handleConnection(client net.Conn, httpHandler func(packet.Packet)) error {
 				status,
 				client.LocalAddr(),
 			)); err != nil {
-				return err
+				return fmt.Errorf("formatting conn response: %w", err)
 			}
 			return fmt.Errorf("parsing client connection request: %w", err)
 		}
@@ -125,7 +127,7 @@ func handleConnection(client net.Conn, httpHandler func(packet.Packet)) error {
 				STATUS_SUCCEEDED,
 				client.RemoteAddr(),
 			)); err != nil {
-				return err
+				return fmt.Errorf("formatting conn response: %w", err)
 			}
 			return handleGitm(client)
 		}
@@ -140,7 +142,7 @@ func handleConnection(client net.Conn, httpHandler func(packet.Packet)) error {
 					STATUS_HOST_UNREACHABLE,
 					client.RemoteAddr(),
 				)); err != nil {
-					return err
+					return fmt.Errorf("formatting conn response: %w", err)
 				}
 				return err
 			}
@@ -148,11 +150,13 @@ func handleConnection(client net.Conn, httpHandler func(packet.Packet)) error {
 
 			logger.Debug("Proxy success")
 
-			client.Write(FormatConnResponse(
+			if _, err := client.Write(FormatConnResponse(
 				SOCKS_VER_5,
 				STATUS_SUCCEEDED,
 				server.LocalAddr(),
-			))
+			)); err != nil {
+				return fmt.Errorf("formatting conn response: %w", err)
+			}
 
 			return httputils.HandleHttpRequest(client, server, httpHandler)
 		case 443:
@@ -164,7 +168,7 @@ func handleConnection(client net.Conn, httpHandler func(packet.Packet)) error {
 					STATUS_HOST_UNREACHABLE,
 					client.LocalAddr(),
 				))
-				return err
+				return fmt.Errorf("contacting proxied ip: %w", err)
 			}
 			defer outboundConn.Close()
 			logger.Debug("Proxy success")
@@ -178,6 +182,9 @@ func handleConnection(client net.Conn, httpHandler func(packet.Packet)) error {
 			inboundConn := tls.Server(client, SERVER_CONFIG)
 			defer inboundConn.Close()
 			if err := inboundConn.Handshake(); err != nil {
+				if errors.Is(err, io.EOF) || err.Error() == "tls: client using inappropriate protocol fallback" {
+					return nil
+				}
 				return fmt.Errorf("tls client handshake: %w", err)
 			}
 			config := CLIENT_CONFIG.Clone()
@@ -185,10 +192,10 @@ func handleConnection(client net.Conn, httpHandler func(packet.Packet)) error {
 			config.ServerName = inboundConn.ConnectionState().ServerName
 			return httputils.HandleHttpRequest(inboundConn, tls.Client(outboundConn, config), httpHandler)
 		default:
-			logger.Error("Unrecognized port, forwarding without logging", "request", request)
+			logger.Info("Unrecognized port, forwarding without logging", "request", request)
 			server, err := net.Dial("tcp", net.JoinHostPort(request.DstIp, fmt.Sprintf("%d", request.DstPort)))
 			if err != nil {
-				client.Write(FormatConnResponse(
+				_, _ = client.Write(FormatConnResponse(
 					SOCKS_VER_5,
 					STATUS_HOST_UNREACHABLE,
 					client.RemoteAddr(),
@@ -197,11 +204,13 @@ func handleConnection(client net.Conn, httpHandler func(packet.Packet)) error {
 			}
 
 			logger.Debug("Proxy success")
-			client.Write(FormatConnResponse(
+			if _, err := client.Write(FormatConnResponse(
 				SOCKS_VER_5,
 				STATUS_SUCCEEDED,
 				server.LocalAddr(),
-			))
+			)); err != nil {
+				return err
+			}
 			transparentProxy(client, server)
 		}
 

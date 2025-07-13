@@ -44,6 +44,12 @@ func UnmarshalPackets(data []byte, p *[]Packet) error {
 				return err
 			}
 			*p = append(*p, &httpPacket)
+		} else if pacMap["Type"] == "websocket" {
+			var websocketPacket WebsocketPacket
+			if err := json.Unmarshal(*pac, &websocketPacket); err != nil {
+				return err
+			}
+			*p = append(*p, &websocketPacket)
 		} else {
 			slog.Error("Unknown packet type encountered!", "type", pacMap["Type"])
 		}

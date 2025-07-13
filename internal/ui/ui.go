@@ -152,8 +152,6 @@ func MakeUi(packetChan chan packet.Packet, restart func()) fyne.Window {
 				} else {
 					packetFilter.AppendPacket(p)
 				}
-
-				fyne.Do(uiList.Refresh)
 			}
 		}
 	}()

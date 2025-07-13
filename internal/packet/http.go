@@ -131,7 +131,7 @@ func (p *HttpPacket) MatchesFilter(tokens []internal.FilterToken) bool {
 			slog.Warn("Unknown filter specified", "filterType", token.FilterType, "filterContent", token.FilterContent)
 		}
 
-		if len(filterStr) > 0 && token.Negate == (strings.Contains(filterStr, token.FilterContent)) {
+		if token.Negate == strings.Contains(filterStr, token.FilterContent) {
 			return false
 		}
 	}
@@ -203,13 +203,11 @@ func decodeBody(body []byte, contentEncodings []string) string {
 				decoded, err := gzip.NewReader(decoded)
 				if err != nil {
 					slog.Error("Failed decoding gzip", "error", err)
-					break
 				}
 
 				ret, err = io.ReadAll(decoded)
 				if err != nil {
 					slog.Error("Failed reading stream", "error", err)
-					break
 				}
 			case "deflate":
 				decoded := flate.NewReader(decoded)
@@ -218,13 +216,11 @@ func decodeBody(body []byte, contentEncodings []string) string {
 				ret, err = io.ReadAll(decoded)
 				if err != nil {
 					slog.Error("Failed reading stream", "error", err)
-					break
 				}
 			case "UTF-8":
 			case "none":
 			default:
 				slog.Error("Unhandled compression", "compression", contentEncoding)
-				break
 			}
 		}
 	}

@@ -2,6 +2,8 @@ package util
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"log/slog"
 	"os"
 
@@ -40,4 +42,19 @@ func GetConfigDir() (string, error) {
 	}
 
 	return cfgDir, nil
+}
+
+// ReadCount reads at most length bytes from reader.
+// If less than length bytes are read from reader, the bytes are returned along with an err
+func ReadCount(reader io.Reader, length int) ([]byte, error) {
+	buff := make([]byte, length)
+
+	count, err := io.ReadAtLeast(reader, buff, length)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, err
+	} else if count == 0 {
+		return nil, fmt.Errorf("reader closed before reading any bytes")
+	}
+
+	return buff, nil
 }

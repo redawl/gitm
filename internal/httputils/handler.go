@@ -2,6 +2,8 @@ package httputils
 
 import (
 	"bufio"
+	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -11,8 +13,10 @@ import (
 	"net/textproto"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/redawl/gitm/internal/packet"
+	"github.com/redawl/gitm/internal/util"
 )
 
 // HandleHttpRequest reads http requests from inboundConn to outboundConn,
@@ -20,8 +24,6 @@ import (
 //
 // httpPacketHandler is called first on the packet when inboundConn -> outboundConn completes,
 // and again when outboundConn -> inboundConn completes.
-//
-// TODO: Handle websockets
 func HandleHttpRequest(inboundConn, outboundConn net.Conn, httpPacketHandler func(packet.Packet)) error {
 	bufReader := bufio.NewReader(io.TeeReader(inboundConn, outboundConn))
 	reader := textproto.NewReader(bufReader)
@@ -55,7 +57,9 @@ func HandleHttpRequest(inboundConn, outboundConn net.Conn, httpPacketHandler fun
 		requestBody,
 	)
 
-	go httpPacketHandler(&httpPacket)
+	if headers.Get("Upgrade") != "websocket" {
+		go httpPacketHandler(&httpPacket)
+	}
 
 	respProto, statusCode, statusCodeMessage, err := ReadLine1(clientReader)
 	if err != nil {
@@ -87,7 +91,38 @@ func HandleHttpRequest(inboundConn, outboundConn net.Conn, httpPacketHandler fun
 
 	httpPacket.UpdatePacket(&completedPacket)
 
-	go httpPacketHandler(&httpPacket)
+	if headers.Get("Upgrade") == "websocket" {
+		done := make(chan bool)
+		p := packet.CreateWebsocketPacket(httpPacket)
+		httpPacketHandler(p)
+		go func() {
+			for {
+				if err := handleWebsocket(bufReader, &p.ClientFrames); err != nil {
+					if !errors.Is(err, io.EOF) {
+						slog.Error("Error handling websocket", "error", err)
+					}
+					break
+				}
+				go httpPacketHandler(p)
+			}
+			done <- true
+		}()
+		go func() {
+			for {
+				if err := handleWebsocket(clientBufioReader, &p.ServerFrames); err != nil {
+					if !errors.Is(err, io.EOF) {
+						slog.Error("Error handling websocket", "error", err)
+					}
+					break
+				}
+				go httpPacketHandler(p)
+			}
+			done <- true
+		}()
+		<-done
+		<-done
+		return nil
+	}
 
 	return nil
 }
@@ -110,14 +145,12 @@ func readBody(headers textproto.MIMEHeader, reader io.Reader) ([]byte, error) {
 		// TODO: handle other encodings
 		// For now, handle chunked only
 		if transferEncoding == "chunked" {
-			logger.Debug("Handling chunking encoding request")
 			return io.ReadAll(httputil.NewChunkedReader(reader))
 		} else {
 			logger.Error("Not handling unknown Transfer-Encoding", "encoding", transferEncoding)
 		}
 	}
 
-	logger.Debug("Handling normal encoding request", "headers", headers)
 	contentLengthHeader := headers.Get("Content-Length")
 
 	if contentLengthHeader == "" {
@@ -127,7 +160,6 @@ func readBody(headers textproto.MIMEHeader, reader io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	logger.Debug("About to read data", "Content-Length", contentLength)
 
 	if contentLength == 0 {
 		return []byte{}, nil
@@ -143,4 +175,68 @@ func readBody(headers textproto.MIMEHeader, reader io.Reader) ([]byte, error) {
 	}
 
 	return bytes, nil
+}
+
+func handleWebsocket(reader *bufio.Reader, frames *[]*packet.WebsocketFrame) error {
+	header, err := util.ReadCount(reader, 2)
+	if err != nil {
+		return fmt.Errorf("header: %w", err)
+	}
+	byte1 := header[0]
+	byte2 := header[1]
+
+	fin := byte1 >> 7
+	rsv1 := byte1 >> 6 & 0x01
+	rsv2 := byte1 >> 5 & 0x01
+	rsv3 := byte1 >> 4 & 0x01
+	opcode := byte1 & 0x0F
+
+	masked := byte2 >> 7
+	payloadLength := uint64(byte2 & 0x7F)
+	var payloadLengthBytes []byte
+	switch payloadLength {
+	case 126:
+		payloadLengthBytes, err = util.ReadCount(reader, 2)
+		if err != nil {
+			return fmt.Errorf("length(16 bit): %w", err)
+		}
+		payloadLength = uint64(binary.BigEndian.Uint16(payloadLengthBytes))
+	case 127:
+		payloadLengthBytes, err = util.ReadCount(reader, 8)
+		if err != nil {
+			return fmt.Errorf("length(64 bit): %w", err)
+		}
+
+		payloadLength = binary.BigEndian.Uint64(payloadLengthBytes)
+	}
+	maskingKey := [4]byte{}
+	if masked == 1 {
+		maskingKeyBytes, err := util.ReadCount(reader, 4)
+		if err != nil {
+			return fmt.Errorf("masking key: %w", err)
+		}
+		maskingKey = [4]byte(maskingKeyBytes)
+	}
+
+	bodyBytes, err := util.ReadCount(reader, int(payloadLength))
+	if err != nil {
+		return fmt.Errorf("payload: %w", err)
+	}
+
+	*frames = append(*frames,
+		&packet.WebsocketFrame{
+			TimeStamp:     time.Now(),
+			Fin:           fin != 0,
+			RSV1:          rsv1 != 0,
+			RSV2:          rsv2 != 0,
+			RSV3:          rsv3 != 0,
+			Opcode:        opcode,
+			Masked:        masked != 0,
+			PayloadLength: payloadLength,
+			MaskingKey:    maskingKey,
+			Payload:       bodyBytes,
+		},
+	)
+
+	return nil
 }
