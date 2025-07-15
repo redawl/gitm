@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	CLIENT_CONFIG = &tls.Config{InsecureSkipVerify: true}
+	CLIENT_CONFIG = &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS10}
 	SERVER_CONFIG = &tls.Config{
 		// Make sure we can forward ALL tls traffic
 		// (or as much as possible with go)
@@ -56,37 +56,36 @@ var (
 	}
 )
 
-func StartTransparentSocksProxy(conf config.Config, httpHandler func(packet.Packet)) (net.Listener, error) {
-	listener, err := net.Listen("tcp", conf.SocksListenUri)
-	if err != nil {
+// ListenAndServeSocks5 starts a socks5 proxy which will pass any intercepted packets to packetHandler.
+// If net.Listen fails for the server, an error is returned.
+func ListenAndServeSocks5(conf config.Config, packetHandler func(packet.Packet)) (net.Listener, error) {
+	if listener, err := net.Listen("tcp", conf.SocksListenUri); err != nil {
 		return nil, err
-	}
-
-	go func() {
-		for {
-			client, err := listener.Accept()
-			if errors.Is(err, net.ErrClosed) {
-				continue
-			}
-
-			if err != nil {
-				slog.Error("Error accepting connection", "error", err)
-				continue
-			}
-			go func() {
-				if err := handleConnection(client, httpHandler); err != nil {
-					slog.Error("Error handling connection", "error", err)
+	} else {
+		go func() {
+			for {
+				if client, err := listener.Accept(); err != nil {
+					if !errors.Is(err, net.ErrClosed) {
+						slog.Error("Error accepting connection", "error", err)
+					}
+				} else {
+					logger := slog.With("RemoteAddr", client.RemoteAddr(), "LocalAddr", client.LocalAddr())
+					go func() {
+						if err := handleConnection(client, packetHandler); err != nil {
+							logger.Error("Error handling connection", "error", err)
+						}
+					}()
 				}
-			}()
-		}
-	}()
+			}
+		}()
 
-	return listener, err
+		return listener, err
+	}
 }
 
-func handleConnection(client net.Conn, httpHandler func(packet.Packet)) error {
+func handleConnection(client net.Conn, packetHandler func(packet.Packet)) error {
 	logger := slog.With("RemoteAddr", client.RemoteAddr(), "LocalAddr", client.LocalAddr())
-	logger.Debug("Received connection", "address", client.RemoteAddr())
+	logger.Debug("Handling socks5 connection")
 
 	greeting, err := ParseClientGreeting(client)
 	if err != nil {
@@ -146,7 +145,11 @@ func handleConnection(client net.Conn, httpHandler func(packet.Packet)) error {
 				}
 				return err
 			}
-			defer server.Close()
+			defer func() {
+				if err := server.Close(); err != nil {
+					slog.Error("Error closing server", "error", err)
+				}
+			}()
 
 			logger.Debug("Proxy success")
 
@@ -158,19 +161,26 @@ func handleConnection(client net.Conn, httpHandler func(packet.Packet)) error {
 				return fmt.Errorf("formatting conn response: %w", err)
 			}
 
-			return httputils.HandleHttpRequest(client, server, httpHandler)
+			return httputils.HandleHttpRequest(client, server, packetHandler)
 		case 443:
 			outboundConn, err := net.Dial("tcp", net.JoinHostPort(request.DstIp, fmt.Sprintf("%d", request.DstPort)))
 			if err != nil {
 				logger.Error("Error contacting proxied ip", "error", err)
-				client.Write(FormatConnResponse(
+				if _, err := client.Write(FormatConnResponse(
 					SOCKS_VER_5,
 					STATUS_HOST_UNREACHABLE,
 					client.LocalAddr(),
-				))
+				)); err != nil {
+					return fmt.Errorf("sending host unreachable: %w", err)
+				}
 				return fmt.Errorf("contacting proxied ip: %w", err)
 			}
-			defer outboundConn.Close()
+			defer func() {
+				if err := outboundConn.Close(); err != nil {
+					logger.Error("Error closing outboundConn", "error", err)
+				}
+			}()
+
 			logger.Debug("Proxy success")
 			if _, err := client.Write(FormatConnResponse(
 				SOCKS_VER_5,
@@ -180,7 +190,11 @@ func handleConnection(client net.Conn, httpHandler func(packet.Packet)) error {
 				return err
 			}
 			inboundConn := tls.Server(client, SERVER_CONFIG)
-			defer inboundConn.Close()
+			defer func() {
+				if err := inboundConn.Close(); err != nil {
+					logger.Error("Error closing inboundConn", "error", err)
+				}
+			}()
 			if err := inboundConn.Handshake(); err != nil {
 				if errors.Is(err, io.EOF) || err.Error() == "tls: client using inappropriate protocol fallback" {
 					return nil
@@ -190,7 +204,7 @@ func handleConnection(client net.Conn, httpHandler func(packet.Packet)) error {
 			config := CLIENT_CONFIG.Clone()
 			config.InsecureSkipVerify = true
 			config.ServerName = inboundConn.ConnectionState().ServerName
-			return httputils.HandleHttpRequest(inboundConn, tls.Client(outboundConn, config), httpHandler)
+			return httputils.HandleHttpRequest(inboundConn, tls.Client(outboundConn, config), packetHandler)
 		default:
 			logger.Info("Unrecognized port, forwarding without logging", "request", request)
 			server, err := net.Dial("tcp", net.JoinHostPort(request.DstIp, fmt.Sprintf("%d", request.DstPort)))
@@ -217,15 +231,29 @@ func handleConnection(client net.Conn, httpHandler func(packet.Packet)) error {
 		logger.Debug("Finished proxying request")
 	} else {
 		logger.Debug("Cannot handle request")
-		client.Write(FormatServerChoice(SOCKS_VER_5, METHOD_NO_ACCEPTABLE_METHODS))
+		if _, err := client.Write(FormatServerChoice(SOCKS_VER_5, METHOD_NO_ACCEPTABLE_METHODS)); err != nil {
+			return fmt.Errorf("sending no acceptable methods: %w", err)
+		}
 	}
 
 	return nil
 }
 
+// transparentProxy simply forwards all traffic from client -> server, and vice versa.
+// Use transparentProxy when you don't know how to tell when a network packet ends or begins,
+// and you don't care about logging the traffic
 func transparentProxy(client net.Conn, server net.Conn) {
-	go io.Copy(client, server)
-	go io.Copy(server, client)
+	logger := slog.With("RemoteAddr", client.RemoteAddr(), "LocalAddr", client.LocalAddr())
+	go func() {
+		if _, err := io.Copy(client, server); err != nil {
+			logger.Error("Error proxying server to client", "error", err)
+		}
+	}()
+	go func() {
+		if _, err := io.Copy(server, client); err != nil {
+			logger.Error("Error proxying client to server", "error", err)
+		}
+	}()
 }
 
 func handleGitm(client net.Conn) error {
@@ -249,13 +277,18 @@ func handleGitm(client net.Conn) error {
 		contents, err := os.ReadFile(certLocation)
 		if err != nil {
 			slog.Error("Error getting ca cert", "error", err)
-			client.Write([]byte("HTTP/1.1 500 Internal Server Error\r\n\r\n"))
+			if _, err := client.Write([]byte("HTTP/1.1 500 Internal Server Error\r\n\r\n")); err != nil {
+				return fmt.Errorf("sending internal server error: %w", err)
+			}
 			return nil
 		}
 
-		client.Write([]byte("HTTP/1.1 200 OK\r\n"))
-		fmt.Fprintf(client, "Content-Length: %d\r\n\r\n", len(contents))
-		client.Write(contents)
+		if _, err := fmt.Fprintf(client, "HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n", len(contents)); err != nil {
+			return fmt.Errorf("sending 200 OK: %w", err)
+		}
+		if _, err := client.Write(contents); err != nil {
+			return fmt.Errorf("sending body: %w", err)
+		}
 	}
 
 	return nil

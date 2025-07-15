@@ -30,7 +30,7 @@ func GetConfigDir() (string, error) {
 			return "", err
 		}
 
-		cfgDir = userCfgDir + "/gitm"
+		cfgDir = userCfgDir + string(os.PathSeparator) + "gitm"
 	}
 
 	if _, err := os.Stat(cfgDir); errors.Is(err, os.ErrNotExist) {

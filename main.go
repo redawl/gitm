@@ -34,7 +34,7 @@ func setupBackend(conf config.Config, httpHandler func(packet.Packet)) (func(), 
 	if err := cacert.InitCaCert(); err != nil {
 		return nil, err
 	}
-	socksListener, err := socks5.StartTransparentSocksProxy(conf, httpHandler)
+	socksListener, err := socks5.ListenAndServeSocks5(conf, httpHandler)
 	if err != nil {
 		return nil, fmt.Errorf("socks5 proxy: %w", err)
 	}

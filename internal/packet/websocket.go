@@ -31,106 +31,39 @@ func CreateWebsocketPacket(httpPacket HttpPacket) *WebsocketPacket {
 func (w *WebsocketPacket) FormatRequestContent() string {
 	builder := bytes.Buffer{}
 	builder.WriteString(w.HttpPacket.FormatRequestContent())
-	index := 0
-
-	slices.SortFunc(w.ServerFrames, func(a *WebsocketFrame, b *WebsocketFrame) int {
-		return a.TimeStamp.Compare(b.TimeStamp)
-	})
-	for index < len(w.ServerFrames) {
-		builder.WriteString("\n-------------\n")
-		buff := bytes.Buffer{}
-		frame := w.ServerFrames[index]
-		if !frame.Masked {
-			builder.Write(frame.Payload)
-		} else {
-			for i := range len(frame.Payload) {
-				builder.WriteByte(frame.Payload[i] ^ frame.MaskingKey[i%4])
-			}
-		}
-		for !w.ServerFrames[index].Fin {
-			index++
-			if index >= len(w.ServerFrames) {
-				slog.Error("Never found ending frame")
-			}
-			frame = w.ServerFrames[index]
-			buff.Write(frame.Payload)
-			if !frame.Masked {
-				builder.Write(frame.Payload)
-			} else {
-				for i := range len(frame.Payload) {
-					builder.WriteByte(frame.Payload[i] ^ frame.MaskingKey[i%4])
-				}
-			}
-		}
-		index++
-		if w.ReqHeaders["Sec-Websocket-Extensions"][0] == "permessage-deflate" && frame.RSV1 {
-			compressed := append(buff.Bytes(), 0x00, 0x00, 0xff, 0xff)
-
-			if uncompressed, err := io.ReadAll(flate.NewReader(bytes.NewBuffer(compressed))); err != nil {
-				slog.Error("Decompress flate", "error", err)
-			} else {
-				builder.Write(uncompressed)
-			}
-		} else {
-			builder.Write(buff.Bytes())
-		}
-		buff.Reset()
-	}
+	builder.WriteString("\r\n")
+	builder.WriteString(w.HttpPacket.FormatResponseContent())
 
 	return builder.String()
 }
 
 func (w *WebsocketPacket) FormatResponseContent() string {
-	builder := bytes.Buffer{}
-	builder.WriteString(w.HttpPacket.FormatResponseContent())
-	index := 0
+	packets := append(w.createPacketsFromFrames(w.ClientFrames), w.createPacketsFromFrames(w.ServerFrames)...)
 
-	slices.SortFunc(w.ClientFrames, func(a *WebsocketFrame, b *WebsocketFrame) int {
+	slices.SortFunc(packets, func(a, b *websocketPacket) int {
 		return a.TimeStamp.Compare(b.TimeStamp)
 	})
-	for index < len(w.ClientFrames) {
-		builder.WriteString("\n-------------\n")
-		buff := bytes.Buffer{}
-		frame := w.ClientFrames[index]
-		if !frame.Masked {
-			builder.Write(frame.Payload)
-		} else {
-			for i := range len(frame.Payload) {
-				builder.WriteByte(frame.Payload[i] ^ frame.MaskingKey[i%4])
-			}
-		}
-		for !w.ClientFrames[index].Fin {
-			index++
-			if index >= len(w.ClientFrames) {
-				slog.Error("Never found ending frame")
-			}
-			frame = w.ClientFrames[index]
-			buff.Write(frame.Payload)
-			if !frame.Masked {
-				builder.Write(frame.Payload)
-			} else {
-				for i := range len(frame.Payload) {
-					builder.WriteByte(frame.Payload[i] ^ frame.MaskingKey[i%4])
-				}
-			}
-		}
-		index++
-		if w.ReqHeaders["Sec-Websocket-Extensions"][0] == "permessage-deflate" && frame.RSV1 {
-			compressed := append(buff.Bytes(), 0x00, 0x00, 0xff, 0xff)
 
-			if uncompressed, err := io.ReadAll(flate.NewReader(bytes.NewBuffer(compressed))); err != nil {
-				slog.Error("Decompress flate", "error", err)
-				builder.Write(buff.Bytes())
-			} else {
-				builder.Write(uncompressed)
-			}
+	buff := bytes.Buffer{}
+
+	for _, p := range packets {
+		buff.WriteString(p.TimeStamp.String())
+		buff.WriteByte('\n')
+		if p.Type == ClientFrame {
+			buff.WriteString("--> ")
 		} else {
-			builder.Write(buff.Bytes())
+			buff.WriteString("<-- ")
 		}
-		buff.Reset()
+		for _, c := range p.Payload {
+			buff.WriteByte(c)
+			if c == '\n' {
+				buff.WriteString("    ")
+			}
+		}
+		buff.WriteString("\n----------------------\n")
 	}
 
-	return builder.String()
+	return buff.String()
 }
 
 func (w *WebsocketPacket) FindPacket(packets []Packet) Packet {
@@ -151,8 +84,75 @@ func (w *WebsocketPacket) UpdatePacket(p Packet) {
 	}
 }
 
+func (w *WebsocketPacket) AddServerFrame(frame *WebsocketFrame) {
+	frame.Type = ServerFrame
+	w.ServerFrames = append(w.ServerFrames, frame)
+}
+
+func (w *WebsocketPacket) AddClientFrame(frame *WebsocketFrame) {
+	frame.Type = ClientFrame
+	w.ClientFrames = append(w.ClientFrames, frame)
+}
+
+func (w *WebsocketPacket) createPacketsFromFrames(frames []*WebsocketFrame) []*websocketPacket {
+	index := 0
+	packets := make([]*websocketPacket, 0)
+	for index < len(frames) {
+		buff := bytes.Buffer{}
+		frame := frames[index]
+		if !frame.Masked {
+			buff.Write(frame.Payload)
+		} else {
+			for i := range len(frame.Payload) {
+				buff.WriteByte(frame.Payload[i] ^ frame.MaskingKey[i%4])
+			}
+		}
+		for !frames[index].Fin {
+			index++
+			if index >= len(frames) {
+				slog.Error("Never found ending frame")
+				break
+			}
+			frame = frames[index]
+			if !frame.Masked {
+				buff.Write(frame.Payload)
+			} else {
+				for i := range len(frame.Payload) {
+					buff.WriteByte(frame.Payload[i] ^ frame.MaskingKey[i%4])
+				}
+			}
+		}
+		index++
+		if w.ReqHeaders["Sec-Websocket-Extensions"][0] == "permessage-deflate" && frame.RSV1 {
+			compressed := append(buff.Bytes(), 0x00, 0x00, 0xff, 0xff)
+
+			if uncompressed, err := io.ReadAll(flate.NewReader(bytes.NewBuffer(compressed))); err != nil {
+				slog.Error("Decompress flate", "error", err)
+			} else {
+				buff.Reset()
+				buff.Write(uncompressed)
+			}
+		}
+		packets = append(packets, &websocketPacket{
+			TimeStamp: frames[index-1].TimeStamp,
+			Type:      frames[index-1].Type,
+			Payload:   buff.Bytes(),
+		})
+	}
+
+	return packets
+}
+
+type frameType bool
+
+const (
+	ServerFrame frameType = frameType(false)
+	ClientFrame frameType = frameType(true)
+)
+
 type WebsocketFrame struct {
 	TimeStamp     time.Time
+	Type          frameType
 	Fin           bool
 	RSV1          bool
 	RSV2          bool
@@ -163,4 +163,11 @@ type WebsocketFrame struct {
 	MaskingKey    [4]byte
 	// TODO: Split this up into extension data and application data
 	Payload []byte
+}
+
+// TODO: Better name?
+type websocketPacket struct {
+	TimeStamp time.Time
+	Type      frameType
+	Payload   []byte
 }

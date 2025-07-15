@@ -97,7 +97,7 @@ func HandleHttpRequest(inboundConn, outboundConn net.Conn, httpPacketHandler fun
 		httpPacketHandler(p)
 		go func() {
 			for {
-				if err := handleWebsocket(bufReader, &p.ClientFrames); err != nil {
+				if err := handleWebsocket(bufReader, p.AddClientFrame); err != nil {
 					if !errors.Is(err, io.EOF) {
 						slog.Error("Error handling websocket", "error", err)
 					}
@@ -109,7 +109,7 @@ func HandleHttpRequest(inboundConn, outboundConn net.Conn, httpPacketHandler fun
 		}()
 		go func() {
 			for {
-				if err := handleWebsocket(clientBufioReader, &p.ServerFrames); err != nil {
+				if err := handleWebsocket(clientBufioReader, p.AddServerFrame); err != nil {
 					if !errors.Is(err, io.EOF) {
 						slog.Error("Error handling websocket", "error", err)
 					}
@@ -177,7 +177,7 @@ func readBody(headers textproto.MIMEHeader, reader io.Reader) ([]byte, error) {
 	return bytes, nil
 }
 
-func handleWebsocket(reader *bufio.Reader, frames *[]*packet.WebsocketFrame) error {
+func handleWebsocket(reader *bufio.Reader, frameHandler func(*packet.WebsocketFrame)) error {
 	header, err := util.ReadCount(reader, 2)
 	if err != nil {
 		return fmt.Errorf("header: %w", err)
@@ -223,7 +223,7 @@ func handleWebsocket(reader *bufio.Reader, frames *[]*packet.WebsocketFrame) err
 		return fmt.Errorf("payload: %w", err)
 	}
 
-	*frames = append(*frames,
+	frameHandler(
 		&packet.WebsocketFrame{
 			TimeStamp:     time.Now(),
 			Fin:           fin != 0,
