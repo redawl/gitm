@@ -9,7 +9,9 @@ import (
 	"strings"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/lang"
 	"fyne.io/fyne/v2/widget"
 	"github.com/redawl/gitm/internal"
 	"github.com/redawl/gitm/internal/packet"
@@ -18,7 +20,8 @@ import (
 // PacketFilter is a text input that allows the user to filter the
 // packets captured by the proxy.
 type PacketFilter struct {
-	widget.Entry
+	widget.BaseWidget
+	entry           *widget.Entry
 	parent          fyne.Window
 	Packets         []packet.Packet
 	filteredPackets []packet.Packet
@@ -29,25 +32,37 @@ type PacketFilter struct {
 func NewPacketFilter(w fyne.Window) *PacketFilter {
 	prefs := fyne.CurrentApp().Preferences()
 	input := &PacketFilter{
-		Entry: widget.Entry{
+		entry: &widget.Entry{
 			Text: prefs.String("PacketFilter"),
 		},
 		Packets: make([]packet.Packet, 0),
 		parent:  w,
 	}
 
-	input.OnChanged = func(s string) {
+	input.entry.OnChanged = func(s string) {
 		prefs.SetString("PacketFilter", s)
 		input.triggerListeners()
 	}
 
 	input.AddListener(func() {
-		input.filteredPackets = filterPackets(input.Text, input.Packets)
+		input.filteredPackets = filterPackets(input.entry.Text, input.Packets)
 	})
 
 	input.ExtendBaseWidget(input)
 
 	return input
+}
+
+func (p *PacketFilter) CreateRenderer() fyne.WidgetRenderer {
+	return widget.NewSimpleRenderer(
+		container.NewBorder(
+			nil,
+			nil,
+			widget.NewLabel(lang.L("Filter packets")),
+			nil,
+			p.entry,
+		),
+	)
 }
 
 // AppendPacket appends packet to the list trackets by p

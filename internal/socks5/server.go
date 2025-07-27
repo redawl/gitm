@@ -12,7 +12,6 @@ import (
 	"net/textproto"
 	"os"
 
-	"github.com/redawl/gitm/internal/cacert"
 	"github.com/redawl/gitm/internal/config"
 	"github.com/redawl/gitm/internal/db"
 	"github.com/redawl/gitm/internal/httputils"
@@ -35,13 +34,7 @@ var (
 			}
 
 			if domainInfo == nil {
-				err = cacert.AddHostname(chi.ServerName)
-				if err != nil {
-					return nil, err
-				}
-
-				domainInfo, err = db.GetDomain(chi.ServerName)
-				if err != nil {
+				if domainInfo, err = AddHostname(chi.ServerName); err != nil {
 					return nil, err
 				}
 			}
@@ -59,6 +52,9 @@ var (
 // ListenAndServeSocks5 starts a socks5 proxy which will pass any intercepted packets to packetHandler.
 // If net.Listen fails for the server, an error is returned.
 func ListenAndServeSocks5(conf config.Config, packetHandler func(packet.Packet)) (net.Listener, error) {
+	if err := InitCaCert(); err != nil {
+		return nil, err
+	}
 	if listener, err := net.Listen("tcp", conf.SocksListenUri); err != nil {
 		return nil, err
 	} else {

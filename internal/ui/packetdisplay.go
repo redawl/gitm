@@ -3,6 +3,7 @@ package ui
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/lang"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
@@ -21,7 +22,7 @@ func NewPacketDisplay(label string, w fyne.Window) *PacketDisplay {
 			Text:     label,
 			SizeName: theme.SizeNameSubHeadingText,
 		},
-		placeHolder: NewPlaceHolder("Select a packet", theme.InfoIcon()),
+		placeHolder: NewPlaceHolder(lang.L("Select a packet"), theme.InfoIcon()),
 	}
 
 	packetDisplay.ExtendBaseWidget(packetDisplay)

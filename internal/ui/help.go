@@ -9,13 +9,14 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/lang"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 	"github.com/redawl/gitm/internal/util"
 )
 
 func MakeHelp() *fyne.Menu {
-	about := fyne.NewMenuItem("About", func() {
+	about := fyne.NewMenuItem(lang.L("About"), func() {
 		if about, err := readDocsFile("about.md"); err != nil {
 			slog.Error("Error reading about.md")
 		} else {
@@ -31,13 +32,13 @@ func MakeHelp() *fyne.Menu {
 }
 
 // CreateDocsEntry creates a menu subentry
-func CreateDocsEntry(label string, filename string, contentContainer *container.Scroll) *fyne.MenuItem {
+func CreateDocsEntry(label string, filename string, contentContainer *container.Scroll, w fyne.Window) *fyne.MenuItem {
 	content, ok := contentContainer.Content.(*widget.RichText)
 	util.Assert(ok)
 
 	return fyne.NewMenuItem(label, func() {
 		if rawContent, err := readDocsFile(filename); err != nil {
-			slog.Error("Error reading docs entry", "filename", filename, "error", err)
+			util.ReportUiErrorWithMessage("Error reading docs entry", err, w)
 		} else {
 			content.ParseMarkdown(rawContent)
 			contentContainer.ScrollToTop()
@@ -53,7 +54,7 @@ func MakeDocs() *fyne.MenuItem {
 		content.Wrapping = fyne.TextWrapWord
 		contentContainer := container.NewVScroll(content)
 		if homeContent, err := readDocsFile("default.md"); err != nil {
-			slog.Error("Error reading default", "error", err)
+			util.ReportUiErrorWithMessage("Error reading default", err, w)
 		} else {
 			content.ParseMarkdown(homeContent)
 		}
@@ -61,8 +62,8 @@ func MakeDocs() *fyne.MenuItem {
 		// TODO: Replace with list widget, so the currently selected
 		// menu item can be highlighted
 		menu := widget.NewMenu(fyne.NewMenu("",
-			CreateDocsEntry("Home", "default.md", contentContainer),
-			CreateDocsEntry("Setup", "setup.md", contentContainer),
+			CreateDocsEntry("Home", "default.md", contentContainer, w),
+			CreateDocsEntry("Setup", "setup.md", contentContainer, w),
 			fyne.NewMenuItem("Docs Editor", Editor),
 		))
 
@@ -110,7 +111,7 @@ func Editor() {
 			fyne.NewMenuItem("Open", func() {
 				dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 					if err != nil {
-						slog.Error("Error opening file", "error", err)
+						util.ReportUiErrorWithMessage("Error opening file", err, w)
 						return
 					}
 
@@ -120,7 +121,7 @@ func Editor() {
 
 					contents, err := io.ReadAll(reader)
 					if err != nil {
-						slog.Error("Error reading file contents", "error", err)
+						util.ReportUiErrorWithMessage("Error reading file contents", err, w)
 						return
 					}
 
@@ -130,7 +131,7 @@ func Editor() {
 			fyne.NewMenuItem("Save", func() {
 				dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
 					if err != nil {
-						slog.Error("Error saving to file", "error", err)
+						util.ReportUiErrorWithMessage("Error saving to file", err, w)
 						return
 					}
 
@@ -139,7 +140,7 @@ func Editor() {
 					}
 
 					if _, err := writer.Write([]byte(entry.Text)); err != nil {
-						slog.Error("Error writing file contents", "error", err)
+						util.ReportUiErrorWithMessage("Error writing file contents", err, w)
 					}
 				}, w).Show()
 			}),

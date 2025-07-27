@@ -15,12 +15,12 @@ var (
 )
 
 // registerShortcuts registers the toplevel shortcuts for gitm
-func registerShortcuts(p *PacketFilter, w fyne.Window, restart func()) {
-	c := w.Canvas()
+func (m *MainWindow) registerShortcuts(restart func()) {
+	c := m.Canvas()
 
-	c.AddShortcut(SaveShortcut, func(shortcut fyne.Shortcut) { p.SavePackets() })
-	c.AddShortcut(OpenShortcut, func(shortcut fyne.Shortcut) { p.LoadPackets() })
+	c.AddShortcut(SaveShortcut, func(shortcut fyne.Shortcut) { m.PacketFilter.SavePackets() })
+	c.AddShortcut(OpenShortcut, func(shortcut fyne.Shortcut) { m.PacketFilter.LoadPackets() })
 	c.AddShortcut(SettingsShortcut, func(shortcut fyne.Shortcut) { settings.MakeSettingsUi(restart) })
-	c.AddShortcut(ClearShortcut, func(shortcut fyne.Shortcut) { p.ClearPackets() })
+	c.AddShortcut(ClearShortcut, func(shortcut fyne.Shortcut) { m.PacketFilter.ClearPackets() })
 	c.AddShortcut(QuitShortcut, func(shortcut fyne.Shortcut) { fyne.CurrentApp().Quit() })
 }

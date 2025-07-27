@@ -1,4 +1,4 @@
-package cacert
+package socks5
 
 import (
 	"bytes"
@@ -19,15 +19,15 @@ import (
 )
 
 // AddHostname creates a certificate for hostname, and adds it to the sqlite db stored in the config dir.
-func AddHostname(hostname string) error {
+func AddHostname(hostname string) (*db.DomainInfo, error) {
 	ca, caPrivKey, err := getCaCert()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	serialNumber, err := createSerialNumer()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	subjectKeyId := sha1.Sum(serialNumber.Bytes())
@@ -49,12 +49,12 @@ func AddHostname(hostname string) error {
 
 	certPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, cert, ca, &certPrivKey.PublicKey, caPrivKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	certPem := new(bytes.Buffer)
@@ -65,24 +65,32 @@ func AddHostname(hostname string) error {
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := pem.Encode(caPem, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: ca.Raw,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := pem.Encode(certPrivKeyPem, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
 	}); err != nil {
-		return err
+		return nil, err
+	}
+	domainCert := append(certPem.Bytes(), caPem.Bytes()...)
+	if err := db.AddDomain(hostname, domainCert, certPrivKeyPem.Bytes()); err != nil {
+		return nil, err
 	}
 
-	return db.AddDomain(hostname, append(certPem.Bytes(), caPem.Bytes()...), certPrivKeyPem.Bytes())
+	return &db.DomainInfo{
+		Domain:  hostname,
+		Cert:    domainCert,
+		PrivKey: certPrivKeyPem.Bytes(),
+	}, nil
 }
 
 func getCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {

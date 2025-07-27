@@ -8,7 +8,6 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/storage/repository"
 	"github.com/redawl/gitm/docs"
-	"github.com/redawl/gitm/internal/cacert"
 	"github.com/redawl/gitm/internal/config"
 	"github.com/redawl/gitm/internal/packet"
 	"github.com/redawl/gitm/internal/socks5"
@@ -31,9 +30,6 @@ func setupBackend(conf config.Config, httpHandler func(packet.Packet)) (func(), 
 
 	slog.SetDefault(logger)
 
-	if err := cacert.InitCaCert(); err != nil {
-		return nil, err
-	}
 	socksListener, err := socks5.ListenAndServeSocks5(conf, httpHandler)
 	if err != nil {
 		return nil, fmt.Errorf("socks5 proxy: %w", err)
@@ -56,7 +52,7 @@ func main() {
 
 	packetChan := make(chan packet.Packet)
 
-	slog.Info("Setting up backend...")
+	slog.Info("Starting backend...")
 	restart, err := setupBackend(conf, func(p packet.Packet) {
 		packetChan <- p
 	})
@@ -70,7 +66,7 @@ func main() {
 	repository.Register("docs", &docs.DocsRepository{})
 
 	slog.Info("Showing ui...")
-	mainWindow := ui.MakeUi(packetChan, func() {
+	mainWindow := ui.MakeMainWindow(packetChan, func() {
 		slog.Info("Restarting backend...")
 		restart()
 		restart, err = setupBackend(config.FromPreferences(app.Preferences()), func(p packet.Packet) {

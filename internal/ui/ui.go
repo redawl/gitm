@@ -3,8 +3,8 @@ package ui
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/lang"
 	"fyne.io/fyne/v2/theme"
-	"fyne.io/fyne/v2/widget"
 	"github.com/redawl/gitm/internal/packet"
 	"github.com/redawl/gitm/internal/ui/settings"
 	"github.com/redawl/gitm/internal/util"
@@ -12,10 +12,27 @@ import (
 
 const RECENTLY_OPENED = "RecentlyOpened"
 
+// MainWindow is the main window of GITM
+// It is the window that opens when the application is first launched.
+type MainWindow struct {
+	fyne.Window
+	// packetChan
+	// TODO: docs
+	packetChan chan packet.Packet
+	// requestContent the request content of the currently selected packet
+	requestContent *PacketDisplay
+	// responseContent the response content of the currently selected packet
+	responseContent *PacketDisplay
+	// recordButton is the button that starts/stops recording when pressed
+	recordButton *RecordButton
+	// PacketFilter manages the list of packets currently loaded into GITM
+	PacketFilter *PacketFilter
+}
+
 func makeMenu(packetFilter *PacketFilter, settingsHandler func()) *fyne.MainMenu {
 	recentlyOpenedFiles := fyne.CurrentApp().Preferences().StringList(RECENTLY_OPENED)
 	recentlyOpenedItem := &fyne.MenuItem{
-		Label: "Open Recent",
+		Label: lang.L("Open Recent"),
 	}
 
 	recentlyOpenItems := make([]*fyne.MenuItem, len(recentlyOpenedFiles))
@@ -33,35 +50,14 @@ func makeMenu(packetFilter *PacketFilter, settingsHandler func()) *fyne.MainMenu
 
 	recentlyOpenedItem.ChildMenu = fyne.NewMenu("", recentlyOpenItems...)
 	mainMenu := fyne.NewMainMenu(
-		fyne.NewMenu("File",
-			&fyne.MenuItem{
-				Label:    "Open",
-				Action:   packetFilter.LoadPackets,
-				Shortcut: OpenShortcut,
-			},
+		fyne.NewMenu(lang.L("File"),
+			&fyne.MenuItem{Label: lang.L("Open"), Action: packetFilter.LoadPackets, Shortcut: OpenShortcut},
 			recentlyOpenedItem,
-			&fyne.MenuItem{
-				Label:    "Clear",
-				Action:   packetFilter.ClearPackets,
-				Shortcut: ClearShortcut,
-			},
-			&fyne.MenuItem{
-				Label:    "Save",
-				Action:   packetFilter.SavePackets,
-				Shortcut: SaveShortcut,
-			},
-			&fyne.MenuItem{
-				Label:    "Settings",
-				Action:   settingsHandler,
-				Shortcut: SettingsShortcut,
-			},
+			&fyne.MenuItem{Label: lang.L("Clear"), Action: packetFilter.ClearPackets, Shortcut: ClearShortcut},
+			&fyne.MenuItem{Label: lang.L("Save"), Action: packetFilter.SavePackets, Shortcut: SaveShortcut},
+			&fyne.MenuItem{Label: lang.L("Settings"), Action: settingsHandler, Shortcut: SettingsShortcut},
 			fyne.NewMenuItemSeparator(),
-			&fyne.MenuItem{
-				Label:    "Quit",
-				Action:   fyne.CurrentApp().Quit,
-				Shortcut: QuitShortcut,
-				IsQuit:   true,
-			},
+			&fyne.MenuItem{Label: lang.L("Quit"), Action: fyne.CurrentApp().Quit, Shortcut: QuitShortcut, IsQuit: true},
 		),
 		MakeHelp(),
 	)
@@ -85,108 +81,63 @@ func makeMenu(packetFilter *PacketFilter, settingsHandler func()) *fyne.MainMenu
 	return mainMenu
 }
 
-// MakeUi Creates the Fyne UI for GITM, and then runs the UI event loop.
-func MakeUi(packetChan chan packet.Packet, restart func()) fyne.Window {
-	w := util.NewWindowIfNotExists("Gopher in the middle")
+// MakeMainWindow Creates the Fyne UI for GITM
+func MakeMainWindow(packetChan chan packet.Packet, restart func()) *MainWindow {
+	w := util.NewWindowIfNotExists(lang.L("GITM"))
 	w.SetMaster()
-
-	recordButton := NewRecordButton()
-
-	requestContent := NewPacketDisplay("Request", w)
-	responseContent := NewPacketDisplay("Response", w)
-
-	packetFilter := NewPacketFilter(w)
-
-	registerShortcuts(packetFilter, w, restart)
-
-	uiList := widget.NewList(func() int {
-		return len(packetFilter.FilteredPackets())
-	}, func() fyne.CanvasObject {
-		return NewPacketRow()
-	}, func(li widget.ListItemID, co fyne.CanvasObject) {
-		row := co.(*PacketRow)
-		filteredPackets := packetFilter.FilteredPackets()
-		if li < len(filteredPackets) && filteredPackets[li] != nil {
-			p := filteredPackets[li]
-			row.UpdateRow(p)
-		}
-	})
-	uiList.HideSeparators = true
-
-	packetFilter.AddListener(uiList.Refresh)
-
-	listPlaceHolder := NewPlaceHolder("Record new packets, \nor open a capture file", theme.FolderOpenIcon())
-
-	packetFilter.AddListener(func() {
-		if len(packetFilter.FilteredPackets()) > 0 {
-			listPlaceHolder.Hide()
-		} else {
-			listPlaceHolder.Show()
-			requestContent.SetText("")
-			responseContent.SetText("")
-		}
-	})
-
-	uiList.OnSelected = func(id widget.ListItemID) {
-		filteredPackets := packetFilter.FilteredPackets()
-		util.Assert(id < len(filteredPackets))
-
-		requestContent.SetText(filteredPackets[id].FormatRequestContent())
-		responseContent.SetText(filteredPackets[id].FormatResponseContent())
+	mainWindow := &MainWindow{
+		Window:          w,
+		requestContent:  NewPacketDisplay(lang.L("Request"), w),
+		responseContent: NewPacketDisplay(lang.L("Response"), w),
+		recordButton:    NewRecordButton(),
+		PacketFilter:    NewPacketFilter(w),
 	}
+	mainWindow.registerShortcuts(restart)
 
+	mainWindow.SetMainMenu(
+		makeMenu(
+			mainWindow.PacketFilter,
+			settings.MakeSettingsUi(restart).Show,
+		),
+	)
+
+	mainWindow.SetContent(
+		container.NewVSplit(
+			container.NewBorder(
+				container.NewVBox(
+					mainWindow.recordButton,
+					mainWindow.PacketFilter,
+				),
+				nil,
+				nil,
+				nil,
+				NewPacketList(mainWindow.PacketFilter, mainWindow),
+			),
+			container.NewHSplit(
+				mainWindow.requestContent,
+				mainWindow.responseContent,
+			),
+		),
+	)
+
+	mainWindow.StartPacketHandler()
+
+	return mainWindow
+}
+
+func (m *MainWindow) StartPacketHandler() {
 	go func() {
 		for {
-			p := <-packetChan
-			if recordButton.IsRecording {
-				existingPacket := packetFilter.FindPacket(p)
+			p := <-m.packetChan
+			if m.recordButton.IsRecording {
+				existingPacket := m.PacketFilter.FindPacket(p)
 
 				if existingPacket != nil {
 					existingPacket.UpdatePacket(p)
 				} else {
-					packetFilter.AppendPacket(p)
+					m.PacketFilter.AppendPacket(p)
 				}
 			}
 		}
 	}()
-
-	packetListContainer := container.NewBorder(
-		container.NewVBox(
-			container.NewHBox(recordButton),
-			container.NewBorder(
-				nil,
-				nil,
-				widget.NewLabel("Filter packets"),
-				nil,
-				packetFilter,
-			),
-		),
-		nil,
-		nil,
-		nil,
-		container.NewStack(
-			container.NewCenter(listPlaceHolder),
-			uiList,
-		),
-	)
-
-	masterLayout := container.NewVSplit(packetListContainer,
-		container.NewHSplit(
-			requestContent,
-			responseContent,
-		),
-	)
-
-	w.SetMainMenu(
-		makeMenu(
-			packetFilter,
-			func() {
-				settings.MakeSettingsUi(restart).Show()
-			},
-		),
-	)
-
-	w.SetContent(masterLayout)
-
-	return w
 }
