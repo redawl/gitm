@@ -21,13 +21,11 @@ import (
 // AddHostname creates a certificate for hostname, and adds it to the sqlite db stored in the config dir.
 func AddHostname(hostname string) error {
 	ca, caPrivKey, err := getCaCert()
-
 	if err != nil {
 		return err
 	}
 
 	serialNumber, err := createSerialNumer()
-
 	if err != nil {
 		return err
 	}
@@ -50,13 +48,11 @@ func AddHostname(hostname string) error {
 	}
 
 	certPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
-
 	if err != nil {
 		return err
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, cert, ca, &certPrivKey.PublicKey, caPrivKey)
-
 	if err != nil {
 		return err
 	}
@@ -65,40 +61,28 @@ func AddHostname(hostname string) error {
 	caPem := new(bytes.Buffer)
 	certPrivKeyPem := new(bytes.Buffer)
 
-	err = pem.Encode(certPem, &pem.Block{
+	if err := pem.Encode(certPem, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
-	})
-
-	if err != nil {
+	}); err != nil {
 		return err
 	}
 
-	err = pem.Encode(caPem, &pem.Block{
+	if err := pem.Encode(caPem, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: ca.Raw,
-	})
-
-	if err != nil {
+	}); err != nil {
 		return err
 	}
 
-	err = pem.Encode(certPrivKeyPem, &pem.Block{
+	if err := pem.Encode(certPrivKeyPem, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
-	})
-
-	if err != nil {
+	}); err != nil {
 		return err
 	}
 
-	err = db.AddDomain(hostname, append(certPem.Bytes(), caPem.Bytes()...), certPrivKeyPem.Bytes())
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return db.AddDomain(hostname, append(certPem.Bytes(), caPem.Bytes()...), certPrivKeyPem.Bytes())
 }
 
 func getCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
@@ -111,7 +95,6 @@ func getCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
 
 	if _, err := os.Stat(certLocation); errors.Is(err, os.ErrNotExist) {
 		serialNumber, err := createSerialNumer()
-
 		if err != nil {
 			return nil, nil, err
 		}
@@ -135,47 +118,38 @@ func getCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
 		}
 
 		caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, &caPrivKey.PublicKey, caPrivKey)
-
 		if err != nil {
 			return nil, nil, err
 		}
 
 		caPem := new(bytes.Buffer)
 		caPrivKeyPem := new(bytes.Buffer)
-		err = pem.Encode(caPem, &pem.Block{
+		if err := pem.Encode(caPem, &pem.Block{
 			Type:  "CERTIFICATE",
 			Bytes: caBytes,
-		})
-
-		if err != nil {
+		}); err != nil {
 			return nil, nil, err
 		}
 
-		err = pem.Encode(caPrivKeyPem, &pem.Block{
+		if err := pem.Encode(caPrivKeyPem, &pem.Block{
 			Type:  "RSA PRIVATE KEY",
 			Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
-		})
-
-		if err != nil {
+		}); err != nil {
 			return nil, nil, err
 		}
 
-		err = os.WriteFile(configDir+"/ca.crt", caBytes, 0400)
-		if err != nil {
+		if err := os.WriteFile(configDir+"/ca.crt", caBytes, 0400); err != nil {
 			return nil, nil, err
 		}
-		err = os.WriteFile(configDir+"/ca.pem", caPem.Bytes(), 0400)
-		if err != nil {
+		if err := os.WriteFile(configDir+"/ca.pem", caPem.Bytes(), 0400); err != nil {
 			return nil, nil, err
 		}
-		err = os.WriteFile(configDir+"/privkey.pem", caPrivKeyPem.Bytes(), 0400)
-		if err != nil {
+		if err := os.WriteFile(configDir+"/privkey.pem", caPrivKeyPem.Bytes(), 0400); err != nil {
 			return nil, nil, err
 		}
 	}
 
 	caPem, err := os.ReadFile(configDir + "/ca.pem")
-
 	if err != nil {
 		return nil, nil, err
 	}
@@ -187,7 +161,6 @@ func getCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
 	}
 
 	privKeyPem, err := os.ReadFile(configDir + "/privkey.pem")
-
 	if err != nil {
 		return nil, nil, err
 	}
@@ -199,13 +172,11 @@ func getCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
 	}
 
 	caCert, err := x509.ParseCertificate(caBlock.Bytes)
-
 	if err != nil {
 		return nil, nil, err
 	}
 
 	privKey, err := x509.ParsePKCS1PrivateKey(privKeyBlock.Bytes)
-
 	if err != nil {
 		return nil, nil, err
 	}
@@ -230,9 +201,8 @@ func getName() *pkix.Name {
 
 func InitCaCert() error {
 	_, _, err := getCaCert()
-
 	if err != nil {
-		return fmt.Errorf("Init ca cert: %v", err)
+		return fmt.Errorf("init ca cert: %v", err)
 	}
 
 	return nil

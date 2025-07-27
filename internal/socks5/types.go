@@ -48,9 +48,9 @@ type ClientGreeting struct {
 	Auth  []byte
 }
 
-func (greeting *ClientGreeting) CanHandle() bool {
-	return greeting.Ver == SOCKS_VER_5 &&
-		slices.Contains(greeting.Auth, METHOD_NO_AUTH_REQUIRED)
+func (g *ClientGreeting) CanHandle() bool {
+	return g.Ver == SOCKS_VER_5 &&
+		slices.Contains(g.Auth, METHOD_NO_AUTH_REQUIRED)
 }
 
 type ClientConnRequest struct {

@@ -115,6 +115,10 @@ func handleConnection(client net.Conn, packetHandler func(packet.Packet)) error 
 			return fmt.Errorf("parsing client connection request: %w", err)
 		}
 
+		if request.Cmd == CMD_UDP_ASSOCIATE {
+			return handleUdp(client, request)
+		}
+
 		logger = logger.With("DstIp", request.DstIp, "DstPort", request.DstPort)
 
 		logger.Debug("Parsed conn request", "request", request)

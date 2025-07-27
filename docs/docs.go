@@ -9,7 +9,6 @@ import (
 )
 
 //go:embed **.md
-//go:embed **.png
 var docs embed.FS
 
 var _ repository.Repository = (*DocsRepository)(nil)

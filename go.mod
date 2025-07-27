@@ -3,7 +3,7 @@ module github.com/redawl/gitm
 go 1.23
 
 require (
-	fyne.io/fyne/v2 v2.6.1-rc1.0.20250627213119-e3e89c1d66f3
+	fyne.io/fyne/v2 v2.6.2-rc1
 	github.com/mattn/go-sqlite3 v1.14.24
 )
 
@@ -13,8 +13,8 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fredbi/uri v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
-	github.com/fyne-io/gl-js v0.1.0 // indirect
-	github.com/fyne-io/glfw-js v0.2.0 // indirect
+	github.com/fyne-io/gl-js v0.2.0 // indirect
+	github.com/fyne-io/glfw-js v0.3.0 // indirect
 	github.com/fyne-io/image v0.1.1 // indirect
 	github.com/fyne-io/oksvg v0.1.0 // indirect
 	github.com/go-gl/gl v0.0.0-20231021071112-07e5d0ea2e71 // indirect

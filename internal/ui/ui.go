@@ -87,14 +87,8 @@ func makeMenu(packetFilter *PacketFilter, settingsHandler func()) *fyne.MainMenu
 
 // MakeUi Creates the Fyne UI for GITM, and then runs the UI event loop.
 func MakeUi(packetChan chan packet.Packet, restart func()) fyne.Window {
-	a := fyne.CurrentApp()
-
 	w := util.NewWindowIfNotExists("Gopher in the middle")
 	w.SetMaster()
-	w.Resize(fyne.NewSize(
-		float32(a.Preferences().FloatWithFallback("MainWindowWidth", 1000)),
-		float32(a.Preferences().FloatWithFallback("MainWindowHeight", 800)),
-	))
 
 	recordButton := NewRecordButton()
 
@@ -193,11 +187,6 @@ func MakeUi(packetChan chan packet.Packet, restart func()) fyne.Window {
 	)
 
 	w.SetContent(masterLayout)
-
-	w.SetOnClosed(func() {
-		a.Preferences().SetFloat("MainWindowWidth", float64(w.Canvas().Size().Width))
-		a.Preferences().SetFloat("MainWindowHeight", float64(w.Canvas().Size().Height))
-	})
 
 	return w
 }
