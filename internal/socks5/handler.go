@@ -1,4 +1,4 @@
-package httputils
+package socks5
 
 import (
 	"bufio"

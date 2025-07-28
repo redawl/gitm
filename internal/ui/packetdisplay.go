@@ -33,7 +33,7 @@ func NewPacketDisplay(label string, w fyne.Window) *PacketDisplay {
 func (pd *PacketDisplay) CreateRenderer() fyne.WidgetRenderer {
 	return widget.NewSimpleRenderer(
 		container.NewBorder(
-			pd.label,
+			container.NewVBox(pd.label, widget.NewSeparator()),
 			nil,
 			nil,
 			nil,

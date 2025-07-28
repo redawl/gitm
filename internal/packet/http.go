@@ -208,6 +208,7 @@ func decodeBody(body []byte, contentEncodings []string) string {
 				ret, err = io.ReadAll(decoded)
 				if err != nil {
 					slog.Error("Failed reading stream", "error", err)
+					return string(body)
 				}
 			case "deflate":
 				decoded := flate.NewReader(decoded)
@@ -217,6 +218,8 @@ func decodeBody(body []byte, contentEncodings []string) string {
 				if err != nil {
 					slog.Error("Failed reading stream", "error", err)
 				}
+			case "br":
+				slog.Error("Brotli support will be added in the future (most likely)")
 			case "UTF-8":
 			case "none":
 			default:

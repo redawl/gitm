@@ -14,7 +14,6 @@ import (
 
 	"github.com/redawl/gitm/internal/config"
 	"github.com/redawl/gitm/internal/db"
-	"github.com/redawl/gitm/internal/httputils"
 	"github.com/redawl/gitm/internal/packet"
 	"github.com/redawl/gitm/internal/util"
 )
@@ -161,7 +160,7 @@ func handleConnection(client net.Conn, packetHandler func(packet.Packet)) error 
 				return fmt.Errorf("formatting conn response: %w", err)
 			}
 
-			return httputils.HandleHttpRequest(client, server, packetHandler)
+			return HandleHttpRequest(client, server, packetHandler)
 		case 443:
 			outboundConn, err := net.Dial("tcp", net.JoinHostPort(request.DstIp, fmt.Sprintf("%d", request.DstPort)))
 			if err != nil {
@@ -204,7 +203,7 @@ func handleConnection(client net.Conn, packetHandler func(packet.Packet)) error 
 			config := CLIENT_CONFIG.Clone()
 			config.InsecureSkipVerify = true
 			config.ServerName = inboundConn.ConnectionState().ServerName
-			return httputils.HandleHttpRequest(inboundConn, tls.Client(outboundConn, config), packetHandler)
+			return HandleHttpRequest(inboundConn, tls.Client(outboundConn, config), packetHandler)
 		default:
 			logger.Info("Unrecognized port, forwarding without logging", "request", request)
 			server, err := net.Dial("tcp", net.JoinHostPort(request.DstIp, fmt.Sprintf("%d", request.DstPort)))
@@ -258,7 +257,7 @@ func transparentProxy(client net.Conn, server net.Conn) {
 
 func handleGitm(client net.Conn) error {
 	reader := textproto.NewReader(bufio.NewReader(client))
-	_, uri, _, err := httputils.ReadLine1(reader)
+	_, uri, _, err := ReadLine1(reader)
 	if err != nil {
 		return err
 	}
@@ -294,11 +293,13 @@ func handleGitm(client net.Conn) error {
 	return nil
 }
 
-func ListenAndServePac(conf *config.Config) error {
-	return http.ListenAndServe(conf.PacListenUri, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		slog.Debug("Handling pac file request")
-		if r.URL.Path == "/proxy.pac" {
-			_, _ = fmt.Fprintf(w, "function FindProxyForURL(url, host){return \"SOCKS %s\";}", conf.SocksListenUri)
-		}
-	}))
+func SetupPac(conf *config.Config) *http.Server {
+	return &http.Server{
+		Addr: conf.PacListenUri, Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			slog.Debug("Handling pac file request")
+			if r.URL.Path == "/proxy.pac" {
+				_, _ = fmt.Fprintf(w, "function FindProxyForURL(url, host){return \"SOCKS %s\";}", conf.SocksListenUri)
+			}
+		}),
+	}
 }

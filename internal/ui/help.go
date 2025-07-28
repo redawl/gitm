@@ -1,7 +1,6 @@
 package ui
 
 import (
-	_ "embed"
 	"fmt"
 	"io"
 	"log/slog"
@@ -26,7 +25,7 @@ func MakeHelp() *fyne.Menu {
 		}
 	})
 
-	menu := fyne.NewMenu("Help", MakeDocs(), about)
+	menu := fyne.NewMenu(lang.L("Help"), MakeDocs(), about)
 
 	return menu
 }
@@ -47,8 +46,8 @@ func CreateDocsEntry(label string, filename string, contentContainer *container.
 }
 
 func MakeDocs() *fyne.MenuItem {
-	return fyne.NewMenuItem("Documentation", func() {
-		w := util.NewWindowIfNotExists("Documentation")
+	return fyne.NewMenuItem(lang.L("Documentation"), func() {
+		w := util.NewWindowIfNotExists(lang.L("Documentation"))
 
 		content := widget.NewRichText()
 		content.Wrapping = fyne.TextWrapWord
@@ -62,9 +61,11 @@ func MakeDocs() *fyne.MenuItem {
 		// TODO: Replace with list widget, so the currently selected
 		// menu item can be highlighted
 		menu := widget.NewMenu(fyne.NewMenu("",
-			CreateDocsEntry("Home", "default.md", contentContainer, w),
-			CreateDocsEntry("Setup", "setup.md", contentContainer, w),
-			fyne.NewMenuItem("Docs Editor", Editor),
+			CreateDocsEntry(lang.L("Home"), "default.md", contentContainer, w),
+			CreateDocsEntry(lang.L("Setup"), "setup.md", contentContainer, w),
+			CreateDocsEntry(lang.L("Usage Tips"), "usage.md", contentContainer, w),
+			fyne.NewMenuItemSeparator(),
+			fyne.NewMenuItem(lang.L("Docs Editor"), Editor),
 		))
 
 		w.SetContent(container.NewBorder(nil, nil, menu, nil, contentContainer))
@@ -92,7 +93,7 @@ func readDocsFile(filename string) (string, error) {
 }
 
 func Editor() {
-	w := util.NewWindowIfNotExists("Editor")
+	w := util.NewWindowIfNotExists(lang.L("Editor"))
 
 	entry := widget.NewMultiLineEntry()
 	entry.Scroll = fyne.ScrollBoth
@@ -107,8 +108,8 @@ func Editor() {
 	}
 	w.SetContent(container.NewHSplit(entry, display))
 	w.SetMainMenu(fyne.NewMainMenu(
-		fyne.NewMenu("File",
-			fyne.NewMenuItem("Open", func() {
+		fyne.NewMenu(lang.L("File"),
+			fyne.NewMenuItem(lang.L("Open"), func() {
 				dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 					if err != nil {
 						util.ReportUiErrorWithMessage("Error opening file", err, w)
@@ -128,7 +129,7 @@ func Editor() {
 					entry.SetText(string(contents))
 				}, w).Show()
 			}),
-			fyne.NewMenuItem("Save", func() {
+			fyne.NewMenuItem(lang.L("Save"), func() {
 				dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
 					if err != nil {
 						util.ReportUiErrorWithMessage("Error saving to file", err, w)

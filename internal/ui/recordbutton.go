@@ -3,6 +3,8 @@ package ui
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/lang"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -16,38 +18,52 @@ type RecordButton struct {
 	IsRecording bool
 }
 
-const (
-	IS_RECORDING     = "Listening..."
-	IS_NOT_RECORDING = "Stopped."
-)
-
-func (b *RecordButton) CreateRenderer() fyne.WidgetRenderer {
-	return widget.NewSimpleRenderer(container.NewHBox(b.Button, b.Label))
-}
-
 // NewRecordButton creates a new RecordButton
-func NewRecordButton() *RecordButton {
+func NewRecordButton(packetFilter *PacketFilter, w fyne.Window) *RecordButton {
+	isRecording := lang.L("Listening...")
+	isNotRecording := lang.L("Stopped.")
+
 	button := &RecordButton{
 		Button: &widget.Button{
-			Text: "Record",
+			Text: lang.L("Record"),
 		},
-		Label: widget.NewLabel(IS_NOT_RECORDING),
+		Label: &widget.Label{Text: isNotRecording},
 	}
 
 	button.Button.OnTapped = func() {
-		button.IsRecording = !button.IsRecording
-		if button.IsRecording {
-			button.Label.SetText(IS_RECORDING)
-			button.Label.Importance = widget.DangerImportance
-			button.Label.Refresh()
+		startRecording := func() {
+			button.IsRecording = !button.IsRecording
+			if button.IsRecording {
+				button.Label.SetText(isRecording)
+				button.Label.Importance = widget.DangerImportance
+				button.Label.Refresh()
+			} else {
+				button.Label.SetText(isNotRecording)
+				button.Label.Importance = widget.MediumImportance
+				button.Label.Refresh()
+			}
+		}
+		if len(packetFilter.Packets) > 0 {
+			dialog.NewConfirm(
+				lang.L("Overwrite packets"),
+				lang.L("Starting a new capture will overwrite existing packets. Are you sure?"),
+				func(b bool) {
+					if b {
+						packetFilter.ClearPackets()
+						startRecording()
+					}
+				},
+				w).Show()
 		} else {
-			button.Label.SetText(IS_NOT_RECORDING)
-			button.Label.Importance = widget.MediumImportance
-			button.Label.Refresh()
+			startRecording()
 		}
 	}
 
 	button.ExtendBaseWidget(button)
 
 	return button
+}
+
+func (b *RecordButton) CreateRenderer() fyne.WidgetRenderer {
+	return widget.NewSimpleRenderer(container.NewHBox(b.Button, b.Label))
 }

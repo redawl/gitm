@@ -5,6 +5,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/lang"
 	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
 	"github.com/redawl/gitm/internal/packet"
 	"github.com/redawl/gitm/internal/ui/settings"
 	"github.com/redawl/gitm/internal/util"
@@ -84,20 +85,22 @@ func makeMenu(packetFilter *PacketFilter, settingsHandler func()) *fyne.MainMenu
 // MakeMainWindow Creates the Fyne UI for GITM
 func MakeMainWindow(packetChan chan packet.Packet, restart func()) *MainWindow {
 	w := util.NewWindowIfNotExists(lang.L("GITM"))
+	filter := NewPacketFilter(w)
 	w.SetMaster()
 	mainWindow := &MainWindow{
 		Window:          w,
 		requestContent:  NewPacketDisplay(lang.L("Request"), w),
 		responseContent: NewPacketDisplay(lang.L("Response"), w),
-		recordButton:    NewRecordButton(),
-		PacketFilter:    NewPacketFilter(w),
+		recordButton:    NewRecordButton(filter, w),
+		PacketFilter:    filter,
+		packetChan:      packetChan,
 	}
 	mainWindow.registerShortcuts(restart)
 
 	mainWindow.SetMainMenu(
 		makeMenu(
 			mainWindow.PacketFilter,
-			settings.MakeSettingsUi(restart).Show,
+			func() { settings.MakeSettingsUi(restart).Show() },
 		),
 	)
 
@@ -107,6 +110,7 @@ func MakeMainWindow(packetChan chan packet.Packet, restart func()) *MainWindow {
 				container.NewVBox(
 					mainWindow.recordButton,
 					mainWindow.PacketFilter,
+					widget.NewSeparator(),
 				),
 				nil,
 				nil,

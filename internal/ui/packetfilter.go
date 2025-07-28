@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"slices"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/redawl/gitm/internal"
 	"github.com/redawl/gitm/internal/packet"
+	"github.com/redawl/gitm/internal/util"
 )
 
 // PacketFilter is a text input that allows the user to filter the
@@ -99,15 +99,13 @@ func (p *PacketFilter) ClearPackets() {
 func (p *PacketFilter) SavePackets() {
 	jsonString, err := packet.MarshalPackets(p.Packets)
 	if err != nil {
-		slog.Error("Error marshalling packetList", "error", err)
-		dialog.ShowError(err, p.parent)
+		util.ReportUiErrorWithMessage("Error marshalling packetList", err, p.parent)
 		return
 	}
 
 	dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
 		if err != nil {
-			slog.Error("Error saving to file", "filename", writer.URI().Path(), "error", err)
-			dialog.ShowError(err, p.parent)
+			util.ReportUiErrorWithMessage("Error saving to file", err, p.parent)
 			return
 		}
 
@@ -117,12 +115,11 @@ func (p *PacketFilter) SavePackets() {
 		defer writer.Close() // nolint:errcheck
 
 		if _, err := writer.Write(jsonString); err != nil {
-			slog.Error("Error saving to file", "filename", writer.URI().Path(), "error", err)
-			dialog.ShowError(err, p.parent)
+			util.ReportUiErrorWithMessage("Error saving to file", err, p.parent)
 			return
 		}
 
-		dialog.NewInformation("Success!", fmt.Sprintf("Saved packets to %s successfully.", writer.URI().Path()), p.parent).Show()
+		dialog.NewInformation(lang.L("Success!"), fmt.Sprintf(lang.L("Saved packets to %s successfully."), writer.URI().Path()), p.parent).Show()
 	}, p.parent).Show()
 }
 
@@ -132,14 +129,14 @@ func (p *PacketFilter) LoadPackets() {
 	showFilePicker := func() {
 		dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 			if err != nil {
-				slog.Error("Error reading from file", "filename", reader.URI().Path(), "error", err)
-				dialog.ShowError(err, p.parent)
+				util.ReportUiErrorWithMessage("Error reading from file", err, p.parent)
 				return
 			}
 
 			if reader == nil {
 				return
 			}
+
 			currRecentlyOpened := fyne.CurrentApp().Preferences().StringList(RECENTLY_OPENED)
 			length := min(len(currRecentlyOpened)+1, 10)
 			recentlyOpened := make([]string, length)
@@ -160,8 +157,8 @@ func (p *PacketFilter) LoadPackets() {
 
 	if len(p.Packets) > 0 {
 		dialog.NewConfirm(
-			"Overwrite packets",
-			"Are you sure you want to overwrite the currently displayed packets?",
+			lang.L("Overwrite packets"),
+			lang.L("Are you sure you want to overwrite the currently displayed packets?"),
 			func(confirmed bool) {
 				if confirmed {
 					showFilePicker()
@@ -188,13 +185,13 @@ func (p *PacketFilter) LoadPacketsFromFile(filename string) {
 func (p *PacketFilter) LoadPacketsFromReader(reader io.Reader) {
 	fileContents, err := io.ReadAll(reader)
 	if err != nil {
-		dialog.ShowError(err, p.parent)
+		util.ReportUiError(err, p.parent)
 		return
 	}
 
 	packets := make([]packet.Packet, 0)
 	if err := packet.UnmarshalPackets(fileContents, &packets); err != nil {
-		dialog.ShowError(err, p.parent)
+		util.ReportUiError(err, p.parent)
 		return
 	}
 

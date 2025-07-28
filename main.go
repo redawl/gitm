@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/storage/repository"
+	"fyne.io/fyne/v2/theme"
 	"github.com/redawl/gitm/docs"
 	"github.com/redawl/gitm/internal/config"
 	"github.com/redawl/gitm/internal/packet"
@@ -35,15 +37,24 @@ func setupBackend(conf config.Config, httpHandler func(packet.Packet)) (func(), 
 		return nil, fmt.Errorf("socks5 proxy: %w", err)
 	}
 
+	var server *http.Server
 	if conf.EnablePacServer {
+		server = socks5.SetupPac(&conf)
 		go func() {
-			if err := socks5.ListenAndServePac(&conf); err != nil {
-				slog.Error("Error starting pac server", "error", err)
+			if err := server.ListenAndServe(); err != nil {
+				slog.Error("Error serving pack", "error", err)
 			}
 		}()
 	}
 
-	return func() { _ = socksListener.Close }, nil
+	return func() {
+		if err := socksListener.Close(); err != nil {
+			slog.Error("Error closing socks listener", "error", err)
+		}
+		if err := server.Close(); err != nil {
+			slog.Error("Error closing pac server", "error", err)
+		}
+	}, nil
 }
 
 func main() {
@@ -64,6 +75,16 @@ func main() {
 	}
 
 	repository.Register("docs", &docs.DocsRepository{})
+	if conf.Theme == "" {
+	} else if reader, err := os.Open(conf.Theme); err != nil {
+		slog.Error("Error opening theme, falling back to default", "error", err)
+		app.Settings().SetTheme(nil)
+	} else if th, err := theme.FromJSONReader(reader); err != nil {
+		slog.Error("Error loading theme, falling back to default", "error", err)
+		app.Settings().SetTheme(nil)
+	} else {
+		app.Settings().SetTheme(th)
+	}
 
 	slog.Info("Showing ui...")
 	mainWindow := ui.MakeMainWindow(packetChan, func() {
@@ -72,6 +93,10 @@ func main() {
 		restart, err = setupBackend(config.FromPreferences(app.Preferences()), func(p packet.Packet) {
 			packetChan <- p
 		})
+		if err != nil || restart == nil {
+			slog.Error("Error setting up backend", "error", err)
+			restart = func() {}
+		}
 	})
 	mainWindow.ShowAndRun()
 }

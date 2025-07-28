@@ -13,6 +13,7 @@ type Config struct {
 	Debug           bool
 	CustomDecodings []string
 	configDir       string
+	Theme           string
 }
 
 const (
@@ -22,6 +23,7 @@ const (
 	ENABLE_DEBUG_LOGGING = "enableDebugLogging"
 	CUSTOM_DECODINGS     = "customDecodings"
 	CONFIGDIR            = "configDir"
+	THEME                = "customTheme"
 )
 
 func stringWithFallbackSave(prefs fyne.Preferences, key string, defaultValue string) string {
@@ -62,6 +64,7 @@ func FromPreferences(preferences fyne.Preferences) Config {
 		Debug:           boolWithFallbackSave(preferences, ENABLE_DEBUG_LOGGING, false),
 		CustomDecodings: preferences.StringList(CUSTOM_DECODINGS),
 		configDir:       stringWithFallbackSave(preferences, CONFIGDIR, userCfgDir),
+		Theme:           stringWithFallbackSave(preferences, THEME, ""),
 	}
 
 	return conf
