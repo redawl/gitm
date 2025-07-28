@@ -3,7 +3,7 @@ module github.com/redawl/gitm
 go 1.23
 
 require (
-	fyne.io/fyne/v2 v2.6.2-rc1
+	fyne.io/fyne/v2 v2.6.1-rc1.0.20250727195223-0afc8bc57d90
 	github.com/mattn/go-sqlite3 v1.14.24
 )
 
