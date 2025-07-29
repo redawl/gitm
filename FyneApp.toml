@@ -5,7 +5,4 @@ Website = "https://github.com/redawl/gitm"
   Name = "gitm"
   ID = "com.github.redawl.gitm"
   Version = "0.15.0"
-  Build = 4
-
-[Migrations]
-  fyneDo = true
+  Build = 5

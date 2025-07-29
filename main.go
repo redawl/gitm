@@ -75,6 +75,7 @@ func main() {
 	}
 
 	repository.Register("docs", &docs.DocsRepository{})
+
 	if conf.Theme == "" {
 	} else if reader, err := os.Open(conf.Theme); err != nil {
 		slog.Error("Error opening theme, falling back to default", "error", err)

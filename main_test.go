@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 
@@ -73,6 +74,11 @@ func TestConnectivityThroughProxy(t *testing.T) {
 	conf, _, cleanup := setup(3, t)
 	defer cleanup()
 
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte("<h1>Hello!</h1>"))
+	}))
+
 	proxyUrl, _ := url.Parse("socks5://" + conf.SocksListenUri)
 	client := http.Client{
 		Transport: &http.Transport{
@@ -80,7 +86,7 @@ func TestConnectivityThroughProxy(t *testing.T) {
 		},
 	}
 
-	resp, err := client.Get("http://example.com")
+	resp, err := client.Get(server.URL)
 	if err != nil {
 		t.Errorf("Expected err = nil, got err = %v", err)
 		return

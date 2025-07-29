@@ -10,6 +10,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
+	"fyne.io/fyne/v2/lang"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/redawl/gitm/internal/config"
@@ -226,14 +227,14 @@ func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 	for encodingKey := range GetEncodings() {
 		decodeEntries = append(decodeEntries, fyne.NewMenuItem(encodingKey, func() {
 			if !p.HasSelectedText() {
-				dialog.NewError(fmt.Errorf("select text before attempting to decode :)"), p.parent).Show()
+				dialog.NewError(fmt.Errorf(lang.L("select text before attempting to decode :)")), p.parent).Show()
 				return
 			}
 
 			if decoded, err := ExecuteEncoding(encodingKey, p.SelectedText()); err != nil {
 				dialog.NewError(fmt.Errorf("decoding error: %w", err), p.parent).Show()
 			} else {
-				dialog.NewInformation("Decode result", string(decoded), p.parent).Show()
+				dialog.NewInformation(lang.L("Decode result"), string(decoded), p.parent).Show()
 			}
 		}))
 	}
@@ -252,7 +253,7 @@ func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 
 		decodeEntries = append(decodeEntries, fyne.NewMenuItem(label, func() {
 			if !p.HasSelectedText() {
-				dialog.NewError(fmt.Errorf("select text before attempting to decode :)"), p.parent).Show()
+				dialog.NewError(fmt.Errorf(lang.L("select text before attempting to decode :)")), p.parent).Show()
 				return
 			}
 
@@ -269,22 +270,22 @@ func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 			if decoded, err := cmd.Output(); err != nil {
 				dialog.NewError(fmt.Errorf("decoding error: %w", err), p.parent).Show()
 			} else {
-				dialog.NewInformation("Decode result", string(decoded), p.parent).Show()
+				dialog.NewInformation(lang.L("Decode result"), string(decoded), p.parent).Show()
 			}
 		}))
 	}
 
 	decodeEntries = append(decodeEntries, fyne.NewMenuItemSeparator())
 
-	copyItem := fyne.NewMenuItem("Copy", p.copyToClipBoard)
+	copyItem := fyne.NewMenuItem(lang.L("Copy"), p.copyToClipBoard)
 	copyItem.Shortcut = &fyne.ShortcutCopy{}
 
-	selectAllItem := fyne.NewMenuItem("Select All", p.selectAll)
+	selectAllItem := fyne.NewMenuItem(lang.L("Select All"), p.selectAll)
 	selectAllItem.Shortcut = &fyne.ShortcutSelectAll{}
 
 	decodeEntries = append(decodeEntries, copyItem, selectAllItem)
 
-	menu := fyne.NewMenu("Decode", decodeEntries...)
+	menu := fyne.NewMenu(lang.L("Decode"), decodeEntries...)
 
 	popup := widget.NewPopUpMenu(menu, c)
 	popup.ShowAtPosition(evt.AbsolutePosition)

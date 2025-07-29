@@ -1,7 +1,9 @@
 package settings
 
 import (
+	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -65,6 +67,55 @@ func (t *tableLayout) Layout(objs []fyne.CanvasObject, size fyne.Size) {
 	table.Resize(size)
 }
 
+func ipPortValidator(s string) error {
+	if len(s) == 0 {
+		return nil
+	}
+
+	parts := strings.Split(s, ":")
+
+	if len(parts) != 2 {
+		return fmt.Errorf("must have one colon")
+	}
+
+	ipParts := strings.Split(parts[0], ".")
+
+	if len(ipParts) != 4 {
+		return fmt.Errorf("only ipv4 addresses are supported for now")
+	}
+
+	for _, part := range ipParts {
+		if i, err := strconv.Atoi(part); err != nil {
+			return fmt.Errorf("parsing ip: %w", err)
+		} else {
+			if i < 0 || i > 255 {
+				return fmt.Errorf("quad must be between 0 and 255")
+			}
+		}
+	}
+
+	if i, err := strconv.Atoi(parts[1]); err != nil {
+		return fmt.Errorf("parsing port: %w", err)
+	} else {
+		if i < 0 || i > 65536 {
+			return fmt.Errorf("port must be between 0 and 65536")
+		}
+	}
+
+	return nil
+}
+
+func dirValidator(s string) error {
+	if s == "" {
+		return nil
+	}
+	if _, err := os.Stat(s); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // MakeSettingsUi creates a window for settings that the user can modify
 func MakeSettingsUi(restart func()) fyne.Window {
 	a := fyne.CurrentApp()
@@ -76,10 +127,12 @@ func MakeSettingsUi(restart func()) fyne.Window {
 	})
 
 	socks5Url := &widget.Entry{
-		Text: prefs.String(config.SOCKS_LISTEN_URI),
+		Text:      prefs.String(config.SOCKS_LISTEN_URI),
+		Validator: ipPortValidator,
 	}
 	pacUrl := &widget.Entry{
-		Text: prefs.String(config.PAC_LISTEN_URI),
+		Text:      prefs.String(config.PAC_LISTEN_URI),
+		Validator: ipPortValidator,
 	}
 	pacEnabled := &widget.Check{
 		Checked: prefs.Bool(config.ENABLE_PAC_SERVER),
@@ -95,7 +148,8 @@ func MakeSettingsUi(restart func()) fyne.Window {
 	pacEnabled.OnChanged(pacEnabled.Checked)
 
 	configDir := &widget.Entry{
-		Text: prefs.String(config.CONFIGDIR),
+		Text:      prefs.String(config.CONFIGDIR),
+		Validator: dirValidator,
 	}
 
 	configDir.ActionItem = widget.NewButton(lang.L("Choose"), func() {
@@ -111,7 +165,8 @@ func MakeSettingsUi(restart func()) fyne.Window {
 	})
 
 	themeEntry := &widget.Entry{
-		Text: prefs.String(config.THEME),
+		Text:      prefs.String(config.THEME),
+		Validator: dirValidator,
 	}
 	themeEntry.ActionItem = widget.NewButton(lang.L("Choose"), func() {
 		dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
@@ -190,11 +245,11 @@ func MakeSettingsUi(restart func()) fyne.Window {
 	form := widget.NewForm()
 	// TODO: Remove entryLayout? How does this look now?
 	// Keeping it causes issues on some devices
-	form.Append(lang.L("Socks5 proxy URL"), container.New(&entryLayout{}, socks5Url))
+	form.Append(lang.L("Socks5 proxy URL"), socks5Url)
 	form.Append(lang.L("Enable PAC server"), pacEnabled)
-	form.Append(lang.L("PAC URL (host:port)"), container.New(&entryLayout{}, pacUrl))
-	form.Append(lang.L("GITM config dir"), container.New(&entryLayout{}, configDir))
-	form.Append(lang.L("Theme"), container.New(&entryLayout{}, themeEntry))
+	form.Append(lang.L("PAC URL"), pacUrl)
+	form.Append(lang.L("GITM config dir"), configDir)
+	form.Append(lang.L("Theme"), themeEntry)
 	form.Append(lang.L("Custom decodings"),
 		container.NewBorder(
 			nil,
@@ -213,6 +268,10 @@ func MakeSettingsUi(restart func()) fyne.Window {
 
 	form.SubmitText = lang.L("Save")
 	form.OnSubmit = func() {
+		if err := form.Validate(); err != nil {
+			dialog.NewError(err, w).Show()
+			return
+		}
 		prefs.SetString(config.SOCKS_LISTEN_URI, socks5Url.Text)
 		prefs.SetBool(config.ENABLE_PAC_SERVER, pacEnabled.Checked)
 		prefs.SetString(config.PAC_LISTEN_URI, pacUrl.Text)

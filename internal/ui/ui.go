@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"errors"
+	"os"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/lang"
@@ -17,8 +20,8 @@ const RECENTLY_OPENED = "RecentlyOpened"
 // It is the window that opens when the application is first launched.
 type MainWindow struct {
 	fyne.Window
-	// packetChan
-	// TODO: docs
+	// packetChan is the communication chan between the backend and frontend.
+	// packets come in from the backend, and are processed by the frontend.
 	packetChan chan packet.Packet
 	// requestContent the request content of the currently selected packet
 	requestContent *PacketDisplay
@@ -30,7 +33,8 @@ type MainWindow struct {
 	PacketFilter *PacketFilter
 }
 
-func makeMenu(packetFilter *PacketFilter, settingsHandler func()) *fyne.MainMenu {
+// makeMenu creates the main menu for the master GITM window
+func (m *MainWindow) makeMenu(settingsHandler func()) {
 	recentlyOpenedFiles := fyne.CurrentApp().Preferences().StringList(RECENTLY_OPENED)
 	recentlyOpenedItem := &fyne.MenuItem{
 		Label: lang.L("Open Recent"),
@@ -43,19 +47,24 @@ func makeMenu(packetFilter *PacketFilter, settingsHandler func()) *fyne.MainMenu
 		recentlyOpenedItem.Disabled = false
 		for index, recentlyOpened := range recentlyOpenedFiles {
 			recentlyOpenItems[index] = fyne.NewMenuItem(recentlyOpened, func() {
-				packetFilter.LoadPacketsFromFile(recentlyOpened)
+				m.PacketFilter.LoadPacketsFromFile(recentlyOpened)
 			})
-			recentlyOpenItems[index].Icon = theme.FileApplicationIcon()
+			if _, err := os.Stat(recentlyOpened); errors.Is(err, os.ErrNotExist) {
+				recentlyOpenItems[index].Disabled = true
+				recentlyOpenItems[index].Icon = theme.BrokenImageIcon()
+			} else {
+				recentlyOpenItems[index].Icon = theme.FileApplicationIcon()
+			}
 		}
 	}
 
 	recentlyOpenedItem.ChildMenu = fyne.NewMenu("", recentlyOpenItems...)
 	mainMenu := fyne.NewMainMenu(
 		fyne.NewMenu(lang.L("File"),
-			&fyne.MenuItem{Label: lang.L("Open"), Action: packetFilter.LoadPackets, Shortcut: OpenShortcut},
+			&fyne.MenuItem{Label: lang.L("Open"), Action: m.PacketFilter.LoadPackets, Shortcut: OpenShortcut},
 			recentlyOpenedItem,
-			&fyne.MenuItem{Label: lang.L("Clear"), Action: packetFilter.ClearPackets, Shortcut: ClearShortcut},
-			&fyne.MenuItem{Label: lang.L("Save"), Action: packetFilter.SavePackets, Shortcut: SaveShortcut},
+			&fyne.MenuItem{Label: lang.L("Clear"), Action: m.PacketFilter.ClearPackets, Shortcut: ClearShortcut},
+			&fyne.MenuItem{Label: lang.L("Save"), Action: m.PacketFilter.SavePackets, Shortcut: SaveShortcut},
 			&fyne.MenuItem{Label: lang.L("Settings"), Action: settingsHandler, Shortcut: SettingsShortcut},
 			fyne.NewMenuItemSeparator(),
 			&fyne.MenuItem{Label: lang.L("Quit"), Action: fyne.CurrentApp().Quit, Shortcut: QuitShortcut, IsQuit: true},
@@ -71,7 +80,7 @@ func makeMenu(packetFilter *PacketFilter, settingsHandler func()) *fyne.MainMenu
 			newItems := make([]*fyne.MenuItem, len(recentlyOpenedFiles))
 			for index, recentlyOpened := range recentlyOpenedFiles {
 				newItems[index] = fyne.NewMenuItem(recentlyOpened, func() {
-					packetFilter.LoadPacketsFromFile(recentlyOpened)
+					m.PacketFilter.LoadPacketsFromFile(recentlyOpened)
 				})
 			}
 			recentlyOpenedItem.ChildMenu.Items = newItems
@@ -79,7 +88,7 @@ func makeMenu(packetFilter *PacketFilter, settingsHandler func()) *fyne.MainMenu
 			mainMenu.Refresh()
 		}
 	})
-	return mainMenu
+	m.SetMainMenu(mainMenu)
 }
 
 // MakeMainWindow Creates the Fyne UI for GITM
@@ -97,12 +106,7 @@ func MakeMainWindow(packetChan chan packet.Packet, restart func()) *MainWindow {
 	}
 	mainWindow.registerShortcuts(restart)
 
-	mainWindow.SetMainMenu(
-		makeMenu(
-			mainWindow.PacketFilter,
-			func() { settings.MakeSettingsUi(restart).Show() },
-		),
-	)
+	mainWindow.makeMenu(func() { settings.MakeSettingsUi(restart).Show() })
 
 	mainWindow.SetContent(
 		container.NewVSplit(

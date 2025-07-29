@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/lang"
 	"fyne.io/fyne/v2/widget"
@@ -43,6 +42,11 @@ func NewPacketFilter(w fyne.Window) *PacketFilter {
 		prefs.SetString("PacketFilter", s)
 		input.triggerListeners()
 	}
+	input.entry.Validator = func(s string) error {
+		_, err := getTokens(s)
+
+		return err
+	}
 
 	input.AddListener(func() {
 		input.filteredPackets = filterPackets(input.entry.Text, input.Packets)
@@ -55,12 +59,8 @@ func NewPacketFilter(w fyne.Window) *PacketFilter {
 
 func (p *PacketFilter) CreateRenderer() fyne.WidgetRenderer {
 	return widget.NewSimpleRenderer(
-		container.NewBorder(
-			nil,
-			nil,
-			widget.NewLabel(lang.L("Filter packets")),
-			nil,
-			p.entry,
+		widget.NewForm(
+			widget.NewFormItem(lang.L("Filter packets"), p.entry),
 		),
 	)
 }
@@ -216,7 +216,10 @@ func (p *PacketFilter) triggerListeners() {
 	}
 }
 
-func getTokens(filterString string) []internal.FilterToken {
+// getTokens parses filterString, returning all parsed tokens.
+// When getTokens encounters an error, it returns the error along with any
+// tokens that were parsed previously
+func getTokens(filterString string) ([]internal.FilterToken, error) {
 	filterStringStripped := strings.Trim(filterString, " ")
 
 	tokens := make([]internal.FilterToken, 0)
@@ -234,7 +237,7 @@ func getTokens(filterString string) []internal.FilterToken {
 		colonIndex := strings.Index(filterStringStripped[i:], ":")
 
 		if colonIndex == -1 {
-			return tokens
+			return tokens, fmt.Errorf("filter must have colon separating type and content")
 		} else {
 			colonIndex += i
 		}
@@ -251,7 +254,7 @@ func getTokens(filterString string) []internal.FilterToken {
 			// found filterType without filterContent
 			token.Negate = false
 			tokens = append(tokens, token)
-			return tokens
+			return tokens, fmt.Errorf("filter must have content after colon")
 		}
 
 		// Get filter content
@@ -265,7 +268,7 @@ func getTokens(filterString string) []internal.FilterToken {
 		if len(filterStringStripped) <= colonIndex+1 {
 			// found filterType without filterContent
 			tokens = append(tokens, token)
-			return tokens
+			return tokens, fmt.Errorf("filter must have content after colon")
 		}
 
 		if filterStringStripped[colonIndex+1] == '"' {
@@ -299,11 +302,11 @@ func getTokens(filterString string) []internal.FilterToken {
 		tokens = append(tokens, token)
 	}
 
-	return tokens
+	return tokens, nil
 }
 
 func filterPackets(filterString string, packets []packet.Packet) []packet.Packet {
-	filterPairs := getTokens(filterString)
+	filterPairs, _ := getTokens(filterString)
 	passedPackets := make([]packet.Packet, 0, len(packets))
 
 	for _, p := range packets {

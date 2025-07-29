@@ -7,7 +7,7 @@ import (
 func TestGetTokens(t *testing.T) {
 	filterString := "host:google.com statuscode:200"
 
-	tokens := getTokens(filterString)
+	tokens, _ := getTokens(filterString)
 
 	if len(tokens) != 2 {
 		t.Errorf("len(getTokens(\"%s\") = %d, expected 2", filterString, len(tokens))
@@ -21,7 +21,7 @@ func TestGetTokens(t *testing.T) {
 func TestGetTokensNoColon(t *testing.T) {
 	filterString := "whatfieldamifiltering"
 
-	filterPairs := getTokens(filterString)
+	filterPairs, _ := getTokens(filterString)
 
 	if len(filterPairs) != 0 {
 		t.Errorf("len(getTokens(\"%s\")) = %d, expected 0", filterString, len(filterPairs))
@@ -31,7 +31,7 @@ func TestGetTokensNoColon(t *testing.T) {
 func TestGetTokensInvalidPart(t *testing.T) {
 	filterString := "host:google.com whatfieldamifiltering"
 
-	tokens := getTokens(filterString)
+	tokens, _ := getTokens(filterString)
 
 	if len(tokens) != 1 {
 		t.Errorf("len(getTokens(\"%s\")) = %d, expected 1", filterString, len(tokens))
@@ -46,7 +46,7 @@ func TestGetTokensInvalidPart(t *testing.T) {
 func TestGetTokensInvalidPart2(t *testing.T) {
 	filterString := "whatfieldamifiltering host:google.com"
 
-	filterPairs := getTokens(filterString)
+	filterPairs, _ := getTokens(filterString)
 
 	if len(filterPairs) != 1 {
 		t.Errorf("len(getTokens(\"%s\")) = %d, expected 1", filterString, len(filterPairs))
@@ -61,7 +61,7 @@ func TestGetTokensInvalidPart2(t *testing.T) {
 func TestGetTokensWithQuotes(t *testing.T) {
 	filterString := "content:\"bob joe was here\""
 
-	filterPairs := getTokens(filterString)
+	filterPairs, _ := getTokens(filterString)
 
 	if len(filterPairs) != 1 {
 		t.Errorf("len(getTokens(\"%s\")) = %d, expected 1", filterString, len(filterPairs))
@@ -73,7 +73,7 @@ func TestGetTokensWithQuotes(t *testing.T) {
 func TestGetTokensOnlyFilterType(t *testing.T) {
 	filterString := "host:"
 
-	filterPairs := getTokens(filterString)
+	filterPairs, _ := getTokens(filterString)
 
 	if len(filterPairs) != 1 {
 		t.Errorf("len(getTokens(\"%s\")) = %d. expected 1", filterString, len(filterPairs))
@@ -85,7 +85,7 @@ func TestGetTokensOnlyFilterType(t *testing.T) {
 func TestGetTokensNegate(t *testing.T) {
 	filterString := "host:-google.com"
 
-	filterPairs := getTokens(filterString)
+	filterPairs, _ := getTokens(filterString)
 
 	if len(filterPairs) != 1 {
 		t.Errorf("len(getTokens(\"%s\")) = %d. expected 1", filterString, len(filterPairs))
@@ -97,7 +97,7 @@ func TestGetTokensNegate(t *testing.T) {
 func TestGetTokensNegateEmpty(t *testing.T) {
 	filterString := "host:-"
 
-	filterPairs := getTokens(filterString)
+	filterPairs, _ := getTokens(filterString)
 
 	if len(filterPairs) != 1 {
 		t.Errorf("len(getTokens(\"%s\")) = %d. expected 1", filterString, len(filterPairs))
