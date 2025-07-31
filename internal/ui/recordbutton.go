@@ -12,10 +12,11 @@ import (
 // packets that are MITMed by the proxy.
 type RecordButton struct {
 	widget.BaseWidget
-	Button *widget.Button
-	Label  *widget.Label
 	// IsRecording specified whether to record packets
 	IsRecording bool
+
+	button *widget.Button
+	label  *widget.Label
 }
 
 // NewRecordButton creates a new RecordButton
@@ -24,23 +25,23 @@ func NewRecordButton(packetFilter *PacketFilter, w fyne.Window) *RecordButton {
 	isNotRecording := lang.L("Stopped.")
 
 	button := &RecordButton{
-		Button: &widget.Button{
+		button: &widget.Button{
 			Text: lang.L("Record"),
 		},
-		Label: &widget.Label{Text: isNotRecording},
+		label: &widget.Label{Text: isNotRecording},
 	}
 
-	button.Button.OnTapped = func() {
+	button.button.OnTapped = func() {
 		startRecording := func() {
 			button.IsRecording = !button.IsRecording
 			if button.IsRecording {
-				button.Label.SetText(isRecording)
-				button.Label.Importance = widget.DangerImportance
-				button.Label.Refresh()
+				button.label.SetText(isRecording)
+				button.label.Importance = widget.DangerImportance
+				button.label.Refresh()
 			} else {
-				button.Label.SetText(isNotRecording)
-				button.Label.Importance = widget.MediumImportance
-				button.Label.Refresh()
+				button.label.SetText(isNotRecording)
+				button.label.Importance = widget.MediumImportance
+				button.label.Refresh()
 			}
 		}
 		if len(packetFilter.Packets) > 0 {
@@ -65,5 +66,5 @@ func NewRecordButton(packetFilter *PacketFilter, w fyne.Window) *RecordButton {
 }
 
 func (b *RecordButton) CreateRenderer() fyne.WidgetRenderer {
-	return widget.NewSimpleRenderer(container.NewHBox(b.Button, b.Label))
+	return widget.NewSimpleRenderer(container.NewHBox(b.button, b.label))
 }

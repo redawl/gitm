@@ -168,6 +168,7 @@ func MakeSettingsUi(restart func()) fyne.Window {
 		Text:      prefs.String(config.THEME),
 		Validator: dirValidator,
 	}
+
 	themeEntry.ActionItem = widget.NewButton(lang.L("Choose"), func() {
 		dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 			if err != nil {
@@ -202,6 +203,13 @@ func MakeSettingsUi(restart func()) fyne.Window {
 		func() (int, int) { return len(decodingLabels), 2 },
 		func() fyne.CanvasObject {
 			entry := widget.NewEntry()
+			entry.Validator = func(s string) error {
+				if strings.Contains(s, ":") {
+					return fmt.Errorf("cannot contain a colon")
+				}
+
+				return nil
+			}
 			return entry
 		},
 		func(tci widget.TableCellID, co fyne.CanvasObject) {

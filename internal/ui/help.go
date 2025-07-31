@@ -47,30 +47,37 @@ func CreateDocsEntry(label string, filename string, contentContainer *container.
 
 func MakeDocs() *fyne.MenuItem {
 	return fyne.NewMenuItem(lang.L("Documentation"), func() {
-		w := util.NewWindowIfNotExists(lang.L("Documentation"))
-
-		content := widget.NewRichText()
-		content.Wrapping = fyne.TextWrapWord
-		contentContainer := container.NewVScroll(content)
-		if homeContent, err := readDocsFile("default.md"); err != nil {
-			util.ReportUiErrorWithMessage("Error reading default", err, w)
-		} else {
-			content.ParseMarkdown(homeContent)
-		}
-
-		// TODO: Replace with list widget, so the currently selected
-		// menu item can be highlighted
-		menu := widget.NewMenu(fyne.NewMenu("",
-			CreateDocsEntry(lang.L("Home"), "default.md", contentContainer, w),
-			CreateDocsEntry(lang.L("Setup"), "setup.md", contentContainer, w),
-			CreateDocsEntry(lang.L("Usage Tips"), "usage.md", contentContainer, w),
-			fyne.NewMenuItemSeparator(),
-			fyne.NewMenuItem(lang.L("Docs Editor"), Editor),
-		))
-
-		w.SetContent(container.NewBorder(nil, nil, menu, nil, contentContainer))
-		w.Show()
+		OpenDoc("")
 	})
+}
+
+func OpenDoc(doc string) {
+	if doc == "" {
+		doc = "default.md"
+	}
+	w := util.NewWindowIfNotExists(lang.L("Documentation"))
+
+	content := widget.NewRichText()
+	content.Wrapping = fyne.TextWrapWord
+	contentContainer := container.NewVScroll(content)
+	if homeContent, err := readDocsFile(doc); err != nil {
+		util.ReportUiErrorWithMessage("Error reading default", err, w)
+	} else {
+		content.ParseMarkdown(homeContent)
+	}
+
+	// TODO: Replace with list widget, so the currently selected
+	// menu item can be highlighted
+	menu := widget.NewMenu(fyne.NewMenu("",
+		CreateDocsEntry(lang.L("Home"), "default.md", contentContainer, w),
+		CreateDocsEntry(lang.L("Setup"), "setup.md", contentContainer, w),
+		CreateDocsEntry(lang.L("Usage Tips"), "usage.md", contentContainer, w),
+		fyne.NewMenuItemSeparator(),
+		fyne.NewMenuItem(lang.L("Docs Editor"), Editor),
+	))
+
+	w.SetContent(container.NewBorder(nil, nil, menu, nil, contentContainer))
+	w.Show()
 }
 
 // readDocsFile reads filename from the embed storage for docs files

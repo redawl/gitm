@@ -10,6 +10,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/lang"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/redawl/gitm/internal"
 	"github.com/redawl/gitm/internal/packet"
@@ -20,9 +21,10 @@ import (
 // packets captured by the proxy.
 type PacketFilter struct {
 	widget.BaseWidget
-	entry           *widget.Entry
-	parent          fyne.Window
-	Packets         []packet.Packet
+	entry   *widget.Entry
+	parent  fyne.Window
+	Packets []packet.Packet
+
 	filteredPackets []packet.Packet
 	listeners       []func()
 }
@@ -46,6 +48,10 @@ func NewPacketFilter(w fyne.Window) *PacketFilter {
 		_, err := getTokens(s)
 
 		return err
+	}
+	input.entry.ActionItem = &widget.Button{
+		Icon:     theme.Icon(theme.IconNameQuestion),
+		OnTapped: func() { OpenDoc("usage.md") },
 	}
 
 	input.AddListener(func() {
@@ -97,12 +103,6 @@ func (p *PacketFilter) ClearPackets() {
 // SavePackets asks the user for a file to save to,
 // and then json marshalls the packet list, saving the result to the file.
 func (p *PacketFilter) SavePackets() {
-	jsonString, err := packet.MarshalPackets(p.Packets)
-	if err != nil {
-		util.ReportUiErrorWithMessage("Error marshalling packetList", err, p.parent)
-		return
-	}
-
 	dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
 		if err != nil {
 			util.ReportUiErrorWithMessage("Error saving to file", err, p.parent)
@@ -113,6 +113,12 @@ func (p *PacketFilter) SavePackets() {
 			return
 		}
 		defer writer.Close() // nolint:errcheck
+
+		jsonString, err := packet.MarshalPackets(p.Packets)
+		if err != nil {
+			util.ReportUiErrorWithMessage("Error marshalling packetList", err, p.parent)
+			return
+		}
 
 		if _, err := writer.Write(jsonString); err != nil {
 			util.ReportUiErrorWithMessage("Error saving to file", err, p.parent)

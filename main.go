@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"runtime/debug"
 
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/storage/repository"
@@ -15,6 +17,7 @@ import (
 	"github.com/redawl/gitm/internal/socks5"
 	"github.com/redawl/gitm/internal/ui"
 	"github.com/redawl/gitm/internal/ui/settings"
+	"github.com/redawl/gitm/internal/util"
 )
 
 // setupBackend sets up the socks5 proxy.
@@ -99,5 +102,26 @@ func main() {
 			restart = func() {}
 		}
 	})
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("Crash! Attempting to save data. \nReason: %s\n", r)
+			debug.PrintStack()
+			if len(mainWindow.PacketFilter.Packets) == 0 {
+				return
+			}
+			configDir, err := util.GetConfigDir()
+			if err != nil {
+				slog.Error("Error getting config dir", "error", err)
+				return
+			}
+			if buff, err := json.Marshal(mainWindow.PacketFilter.Packets); err != nil {
+				slog.Error("Error marshalling file contents", "error", err)
+			} else {
+				if err := os.WriteFile(configDir+string(os.PathSeparator)+"crash.json", buff, 0600); err != nil {
+					slog.Error("Error saving crash data", "error", err)
+				}
+			}
+		}
+	}()
 	mainWindow.ShowAndRun()
 }
