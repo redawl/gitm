@@ -5,6 +5,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/lang"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -13,36 +14,32 @@ import (
 type RecordButton struct {
 	widget.BaseWidget
 	// IsRecording specified whether to record packets
-	IsRecording bool
-
-	button *widget.Button
-	label  *widget.Label
+	IsRecording  bool
+	record, stop *widget.Button
 }
 
 // NewRecordButton creates a new RecordButton
 func NewRecordButton(packetFilter *PacketFilter, w fyne.Window) *RecordButton {
-	isRecording := lang.L("Listening...")
-	isNotRecording := lang.L("Stopped.")
-
 	button := &RecordButton{
-		button: &widget.Button{
+		record: &widget.Button{
 			Text: lang.L("Record"),
+			Icon: theme.Icon(theme.IconNameMediaPlay),
 		},
-		label: &widget.Label{Text: isNotRecording},
+		stop: &widget.Button{
+			Text:       lang.L("Stop"),
+			Importance: widget.DangerImportance,
+			Icon:       theme.Icon(theme.IconNameMediaStop),
+		},
 	}
 
-	button.button.OnTapped = func() {
+	button.record.Enable()
+	button.stop.Disable()
+
+	button.record.OnTapped = func() {
 		startRecording := func() {
-			button.IsRecording = !button.IsRecording
-			if button.IsRecording {
-				button.label.SetText(isRecording)
-				button.label.Importance = widget.DangerImportance
-				button.label.Refresh()
-			} else {
-				button.label.SetText(isNotRecording)
-				button.label.Importance = widget.MediumImportance
-				button.label.Refresh()
-			}
+			button.IsRecording = true
+			button.record.Disable()
+			button.stop.Enable()
 		}
 		if len(packetFilter.Packets) > 0 {
 			dialog.NewConfirm(
@@ -60,11 +57,17 @@ func NewRecordButton(packetFilter *PacketFilter, w fyne.Window) *RecordButton {
 		}
 	}
 
+	button.stop.OnTapped = func() {
+		button.IsRecording = false
+		button.record.Enable()
+		button.stop.Disable()
+	}
+
 	button.ExtendBaseWidget(button)
 
 	return button
 }
 
 func (b *RecordButton) CreateRenderer() fyne.WidgetRenderer {
-	return widget.NewSimpleRenderer(container.NewHBox(b.button, b.label))
+	return widget.NewSimpleRenderer(container.NewHBox(b.record, b.stop))
 }

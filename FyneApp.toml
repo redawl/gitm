@@ -6,3 +6,6 @@ Website = "https://github.com/redawl/gitm"
   ID = "com.github.redawl.gitm"
   Version = "0.15.0"
   Build = 5
+
+[Migrations]
+  fyneDo = true

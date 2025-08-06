@@ -287,9 +287,9 @@ func MakeSettingsUi(restart func()) fyne.Window {
 		if themeEntry.Text == "" {
 			fyne.CurrentApp().Settings().SetTheme(nil)
 		} else if reader, err := os.Open(themeEntry.Text); err != nil {
-			util.ReportUiErrorWithMessage("Error open theme", err, w)
+			util.ReportUiErrorWithMessage(lang.L("Error open theme"), err, w)
 		} else if th, err := theme.FromJSONReader(reader); err != nil {
-			util.ReportUiErrorWithMessage("Error parsing theme", err, w)
+			util.ReportUiErrorWithMessage(lang.L("Error parsing theme"), err, w)
 		} else {
 			fyne.CurrentApp().Settings().SetTheme(th)
 		}

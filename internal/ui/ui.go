@@ -35,18 +35,14 @@ type MainWindow struct {
 	PacketFilter *PacketFilter
 }
 
-// makeMenu creates the main menu for the master GITM window
-func (m *MainWindow) makeMenu(settingsHandler func()) {
+func (m *MainWindow) updateRecentlyOpenedItems(parent *fyne.MenuItem) {
 	recentlyOpenedFiles := fyne.CurrentApp().Preferences().StringList(RECENTLY_OPENED)
-	recentlyOpenedItem := &fyne.MenuItem{
-		Label: lang.L("Open Recent"),
-	}
 
 	recentlyOpenItems := make([]*fyne.MenuItem, len(recentlyOpenedFiles))
 	if len(recentlyOpenedFiles) == 0 {
-		recentlyOpenedItem.Disabled = true
+		parent.Disabled = true
 	} else {
-		recentlyOpenedItem.Disabled = false
+		parent.Disabled = false
 		for index, recentlyOpened := range recentlyOpenedFiles {
 			recentlyOpenItems[index] = fyne.NewMenuItem(recentlyOpened, func() {
 				m.PacketFilter.LoadPacketsFromFile(recentlyOpened)
@@ -58,9 +54,23 @@ func (m *MainWindow) makeMenu(settingsHandler func()) {
 				recentlyOpenItems[index].Icon = theme.FileApplicationIcon()
 			}
 		}
+		if parent.ChildMenu == nil {
+			parent.ChildMenu = fyne.NewMenu("")
+		}
+		parent.ChildMenu.Items = recentlyOpenItems
+	}
+	// TODO: Do I really need to refresh the whole menu?
+	m.MainMenu().Refresh()
+}
+
+// makeMenu creates the main menu for the master GITM window
+func (m *MainWindow) makeMenu(settingsHandler func()) {
+	recentlyOpenedItem := &fyne.MenuItem{
+		Label: lang.L("Open Recent"),
 	}
 
-	recentlyOpenedItem.ChildMenu = fyne.NewMenu("", recentlyOpenItems...)
+	m.updateRecentlyOpenedItems(recentlyOpenedItem)
+
 	mainMenu := fyne.NewMainMenu(
 		fyne.NewMenu(lang.L("File"),
 			&fyne.MenuItem{Label: lang.L("Open"), Action: m.PacketFilter.LoadPackets, Shortcut: OpenShortcut},
@@ -74,21 +84,7 @@ func (m *MainWindow) makeMenu(settingsHandler func()) {
 		MakeHelp(),
 	)
 	fyne.CurrentApp().Preferences().AddChangeListener(func() {
-		recentlyOpenedFiles = fyne.CurrentApp().Preferences().StringList(RECENTLY_OPENED)
-		if len(recentlyOpenedFiles) == 0 {
-			recentlyOpenedItem.Disabled = true
-		} else {
-			recentlyOpenedItem.Disabled = false
-			newItems := make([]*fyne.MenuItem, len(recentlyOpenedFiles))
-			for index, recentlyOpened := range recentlyOpenedFiles {
-				newItems[index] = fyne.NewMenuItem(recentlyOpened, func() {
-					m.PacketFilter.LoadPacketsFromFile(recentlyOpened)
-				})
-			}
-			recentlyOpenedItem.ChildMenu.Items = newItems
-			// TODO: Do I really need to refresh the whole menu?
-			mainMenu.Refresh()
-		}
+		m.updateRecentlyOpenedItems(recentlyOpenedItem)
 	})
 	m.SetMainMenu(mainMenu)
 }

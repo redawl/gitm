@@ -8,12 +8,15 @@ import (
 	"iter"
 	"maps"
 	"strings"
+
+	"fyne.io/fyne/v2/lang"
+	"github.com/redawl/gitm/internal/util"
 )
 
 var encodingsMap = map[string]func(string) (string, error){
-	"Url decode":    url,
-	"Base64 decode": b64,
-	"Hex decode":    _hex,
+	lang.L("Url decode"):    url,
+	lang.L("Base64 decode"): b64,
+	lang.L("Hex decode"):    _hex,
 }
 
 func GetEncodings() iter.Seq[string] {
@@ -37,18 +40,14 @@ func url(data string) (string, error) {
 
 	for i < len(data) {
 		if data[i] == '%' && i < len(data)-2 {
-			c := make([]byte, 1)
-			count, err := hex.Decode(c, []byte(data[i+1:i+3]))
-
-			if err != nil {
+			if c, err := hex.DecodeString(data[i+1 : i+3]); err != nil {
 				return "", err
-			}
+			} else {
+				util.Assert(len(c) == 1)
 
-			if count != 1 {
-				return "", fmt.Errorf("expected to decode 1 byte, decoded %d bytes", count)
+				out.WriteByte(c[0])
+				i += 3
 			}
-			out.WriteByte(c[0])
-			i += 3
 		} else {
 			out.WriteByte(data[i])
 			i++
@@ -63,7 +62,6 @@ func b64(data string) (string, error) {
 		reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(data))
 
 		decoded, err := io.ReadAll(reader)
-
 		if err != nil {
 			return "", err
 		}
