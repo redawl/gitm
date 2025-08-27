@@ -71,9 +71,11 @@ func main() {
 		packetChan <- p
 	})
 	if err != nil {
+		w := app.NewWindow("Settings")
 		slog.Error("Error setting up backend", "error", err)
-		settings.MakeSettingsUi(nil).ShowAndRun()
-
+		settings.MakeSettingsUi(w, nil).Show()
+		w.Show()
+		app.Run()
 		return
 	}
 

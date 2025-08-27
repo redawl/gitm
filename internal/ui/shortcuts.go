@@ -20,7 +20,7 @@ func (m *MainWindow) registerShortcuts(restart func()) {
 
 	c.AddShortcut(SaveShortcut, func(shortcut fyne.Shortcut) { m.PacketFilter.SavePackets() })
 	c.AddShortcut(OpenShortcut, func(shortcut fyne.Shortcut) { m.PacketFilter.LoadPackets() })
-	c.AddShortcut(SettingsShortcut, func(shortcut fyne.Shortcut) { settings.MakeSettingsUi(restart) })
+	c.AddShortcut(SettingsShortcut, func(shortcut fyne.Shortcut) { settings.MakeSettingsUi(m, restart) })
 	c.AddShortcut(ClearShortcut, func(shortcut fyne.Shortcut) { m.PacketFilter.ClearPackets() })
 	c.AddShortcut(QuitShortcut, func(shortcut fyne.Shortcut) { fyne.CurrentApp().Quit() })
 }

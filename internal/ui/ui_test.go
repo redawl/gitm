@@ -7,7 +7,7 @@ import (
 )
 
 func TestMakeUi(t *testing.T) {
-	_ = test.NewApp()
+	_ = test.NewTempApp(t)
 
 	window := MakeMainWindow(nil, nil)
 

@@ -14,14 +14,12 @@ import (
 	"github.com/redawl/gitm/internal/util"
 )
 
-func MakeHelp() *fyne.Menu {
+func MakeHelp(w fyne.Window) *fyne.Menu {
 	about := fyne.NewMenuItem(lang.L("About"), func() {
 		if about, err := readDocsFile("about.md"); err != nil {
 			slog.Error("Error reading about.md")
 		} else {
-			w := util.NewWindowIfNotExists("About")
-			w.SetContent(widget.NewRichTextFromMarkdown(about))
-			w.Show()
+			dialog.NewCustom(lang.L("About"), lang.L("Dismiss"), widget.NewRichTextFromMarkdown(about), w).Show()
 		}
 	})
 

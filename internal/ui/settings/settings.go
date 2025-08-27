@@ -117,14 +117,9 @@ func dirValidator(s string) error {
 }
 
 // MakeSettingsUi creates a window for settings that the user can modify
-func MakeSettingsUi(restart func()) fyne.Window {
+func MakeSettingsUi(w fyne.Window, restart func()) dialog.Dialog {
 	a := fyne.CurrentApp()
-	w := util.NewWindowIfNotExists(lang.L("Settings"))
 	prefs := a.Preferences()
-	header := container.NewPadded(&widget.Label{
-		Text:     lang.L("GITM Settings"),
-		SizeName: theme.SizeNameHeadingText,
-	})
 
 	socks5Url := &widget.Entry{
 		Text:      prefs.String(config.SOCKS_LISTEN_URI),
@@ -250,15 +245,16 @@ func MakeSettingsUi(restart func()) fyne.Window {
 
 	table.Refresh()
 
-	form := widget.NewForm()
+	form := make([]*widget.FormItem, 0)
 	// TODO: Remove entryLayout? How does this look now?
 	// Keeping it causes issues on some devices
-	form.Append(lang.L("Socks5 proxy URL"), socks5Url)
-	form.Append(lang.L("Enable PAC server"), pacEnabled)
-	form.Append(lang.L("PAC URL"), pacUrl)
-	form.Append(lang.L("GITM config dir"), configDir)
-	form.Append(lang.L("Theme"), themeEntry)
-	form.Append(lang.L("Custom decodings"),
+	form = append(form, widget.NewFormItem(lang.L("Socks5 proxy URL"), socks5Url))
+	form = append(form, widget.NewFormItem(lang.L("Socks5 proxy URL"), socks5Url))
+	form = append(form, widget.NewFormItem(lang.L("Enable PAC server"), pacEnabled))
+	form = append(form, widget.NewFormItem(lang.L("PAC URL"), pacUrl))
+	form = append(form, widget.NewFormItem(lang.L("GITM config dir"), configDir))
+	form = append(form, widget.NewFormItem(lang.L("Theme"), themeEntry))
+	form = append(form, widget.NewFormItem(lang.L("Custom decodings"),
 		container.NewBorder(
 			nil,
 			container.NewHBox(
@@ -270,57 +266,55 @@ func MakeSettingsUi(restart func()) fyne.Window {
 			), nil, nil,
 			NewTableLayout(table),
 		),
+	))
+
+	form = append(form, widget.NewFormItem(lang.L("Enable debug logging"), debugEnabled))
+
+	s := dialog.NewForm(
+		lang.L("Settings"),
+		lang.L("Save"),
+		lang.L("Reset"),
+		form,
+		func(b bool) {
+			if b {
+				prefs.SetString(config.SOCKS_LISTEN_URI, socks5Url.Text)
+				prefs.SetBool(config.ENABLE_PAC_SERVER, pacEnabled.Checked)
+				prefs.SetString(config.PAC_LISTEN_URI, pacUrl.Text)
+				prefs.SetString(config.CONFIGDIR, configDir.Text)
+				if themeEntry.Text == "" {
+					fyne.CurrentApp().Settings().SetTheme(nil)
+				} else if reader, err := os.Open(themeEntry.Text); err != nil {
+					util.ReportUiErrorWithMessage(lang.L("Error open theme"), err, w)
+				} else if th, err := theme.FromJSONReader(reader); err != nil {
+					util.ReportUiErrorWithMessage(lang.L("Error parsing theme"), err, w)
+				} else {
+					fyne.CurrentApp().Settings().SetTheme(th)
+				}
+				prefs.SetString(config.THEME, themeEntry.Text)
+				prefs.SetBool(config.ENABLE_DEBUG_LOGGING, debugEnabled.Checked)
+
+				newCustomDecodings := make([]string, len(decodingLabels))
+
+				for index := range decodingLabels {
+					newCustomDecodings[index] = decodingLabels[index] + ":" + decodingCommands[index]
+				}
+
+				prefs.SetStringList(config.CUSTOM_DECODINGS, newCustomDecodings)
+
+				successPopup := dialog.NewConfirm(lang.L("Success!"), lang.L("New settings saved, would you like to restart the servers?"), func(b bool) {
+					if b {
+						restart()
+					}
+				}, w)
+				successPopup.Show()
+			} else {
+				socks5Url.SetText(prefs.String(config.SOCKS_LISTEN_URI))
+				debugEnabled.SetChecked(prefs.Bool(config.ENABLE_DEBUG_LOGGING))
+
+			}
+		},
+		w,
 	)
 
-	form.Append(lang.L("Enable debug logging"), debugEnabled)
-
-	form.SubmitText = lang.L("Save")
-	form.OnSubmit = func() {
-		if err := form.Validate(); err != nil {
-			dialog.NewError(err, w).Show()
-			return
-		}
-		prefs.SetString(config.SOCKS_LISTEN_URI, socks5Url.Text)
-		prefs.SetBool(config.ENABLE_PAC_SERVER, pacEnabled.Checked)
-		prefs.SetString(config.PAC_LISTEN_URI, pacUrl.Text)
-		prefs.SetString(config.CONFIGDIR, configDir.Text)
-		if themeEntry.Text == "" {
-			fyne.CurrentApp().Settings().SetTheme(nil)
-		} else if reader, err := os.Open(themeEntry.Text); err != nil {
-			util.ReportUiErrorWithMessage(lang.L("Error open theme"), err, w)
-		} else if th, err := theme.FromJSONReader(reader); err != nil {
-			util.ReportUiErrorWithMessage(lang.L("Error parsing theme"), err, w)
-		} else {
-			fyne.CurrentApp().Settings().SetTheme(th)
-		}
-		prefs.SetString(config.THEME, themeEntry.Text)
-		prefs.SetBool(config.ENABLE_DEBUG_LOGGING, debugEnabled.Checked)
-
-		newCustomDecodings := make([]string, len(decodingLabels))
-
-		for index := range decodingLabels {
-			newCustomDecodings[index] = decodingLabels[index] + ":" + decodingCommands[index]
-		}
-
-		prefs.SetStringList(config.CUSTOM_DECODINGS, newCustomDecodings)
-
-		successPopup := dialog.NewConfirm(lang.L("Success!"), lang.L("New settings saved, would you like to restart the servers?"), func(b bool) {
-			if b {
-				restart()
-			}
-			w.Close()
-		}, w)
-		successPopup.Show()
-	}
-
-	form.CancelText = lang.L("Reset")
-	form.OnCancel = func() {
-		socks5Url.SetText(prefs.String(config.SOCKS_LISTEN_URI))
-		debugEnabled.SetChecked(prefs.Bool(config.ENABLE_DEBUG_LOGGING))
-	}
-	form.Refresh()
-
-	w.SetContent(container.NewVBox(header, form))
-
-	return w
+	return s
 }

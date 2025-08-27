@@ -81,7 +81,7 @@ func (m *MainWindow) makeMenu(settingsHandler func()) {
 			fyne.NewMenuItemSeparator(),
 			&fyne.MenuItem{Label: lang.L("Quit"), Action: fyne.CurrentApp().Quit, Shortcut: QuitShortcut, IsQuit: true},
 		),
-		MakeHelp(),
+		MakeHelp(m),
 	)
 	fyne.CurrentApp().Preferences().AddChangeListener(func() {
 		m.updateRecentlyOpenedItems(recentlyOpenedItem)
@@ -89,7 +89,7 @@ func (m *MainWindow) makeMenu(settingsHandler func()) {
 	m.SetMainMenu(mainMenu)
 }
 
-// MakeMainWindow Creates the Fyne UI for GITM
+// MakeMainWindow creates the Fyne UI for GITM
 func MakeMainWindow(packetChan chan packet.Packet, restart func()) *MainWindow {
 	w := util.NewWindowIfNotExists(lang.L("GITM"))
 	filter := NewPacketFilter(w)
@@ -104,7 +104,7 @@ func MakeMainWindow(packetChan chan packet.Packet, restart func()) *MainWindow {
 	}
 	mainWindow.registerShortcuts(restart)
 
-	mainWindow.makeMenu(func() { settings.MakeSettingsUi(restart).Show() })
+	mainWindow.makeMenu(func() { settings.MakeSettingsUi(w, restart).Show() })
 
 	mainWindow.SetContent(
 		container.NewVSplit(
