@@ -249,7 +249,6 @@ func MakeSettingsUi(w fyne.Window, restart func()) dialog.Dialog {
 	// TODO: Remove entryLayout? How does this look now?
 	// Keeping it causes issues on some devices
 	form = append(form, widget.NewFormItem(lang.L("Socks5 proxy URL"), socks5Url))
-	form = append(form, widget.NewFormItem(lang.L("Socks5 proxy URL"), socks5Url))
 	form = append(form, widget.NewFormItem(lang.L("Enable PAC server"), pacEnabled))
 	form = append(form, widget.NewFormItem(lang.L("PAC URL"), pacUrl))
 	form = append(form, widget.NewFormItem(lang.L("GITM config dir"), configDir))

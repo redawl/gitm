@@ -289,6 +289,7 @@ func handleGitm(client net.Conn) error {
 			return fmt.Errorf("sending body: %w", err)
 		}
 	}
+	// TODO: Need to handle when user does not specify /ca.crt
 
 	return nil
 }
