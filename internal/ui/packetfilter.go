@@ -51,7 +51,7 @@ func NewPacketFilter(w fyne.Window) *PacketFilter {
 	}
 	input.entry.ActionItem = &widget.Button{
 		Icon:     theme.Icon(theme.IconNameQuestion),
-		OnTapped: func() { OpenDoc("usage.md") },
+		OnTapped: func() { OpenDoc("usage.md", w) },
 	}
 
 	input.AddListener(func() {

@@ -272,7 +272,7 @@ func MakeSettingsUi(w fyne.Window, restart func()) dialog.Dialog {
 	s := dialog.NewForm(
 		lang.L("Settings"),
 		lang.L("Save"),
-		lang.L("Reset"),
+		lang.L("Cancel"),
 		form,
 		func(b bool) {
 			if b {

@@ -23,7 +23,7 @@ func MakeHelp(w fyne.Window) *fyne.Menu {
 		}
 	})
 
-	menu := fyne.NewMenu(lang.L("Help"), MakeDocs(), about)
+	menu := fyne.NewMenu(lang.L("Help"), MakeDocs(w), about)
 
 	return menu
 }
@@ -43,17 +43,16 @@ func CreateDocsEntry(label string, filename string, contentContainer *container.
 	})
 }
 
-func MakeDocs() *fyne.MenuItem {
+func MakeDocs(w fyne.Window) *fyne.MenuItem {
 	return fyne.NewMenuItem(lang.L("Documentation"), func() {
-		OpenDoc("")
+		OpenDoc("", w)
 	})
 }
 
-func OpenDoc(doc string) {
+func OpenDoc(doc string, w fyne.Window) {
 	if doc == "" {
 		doc = "default.md"
 	}
-	w := util.NewWindowIfNotExists(lang.L("Documentation"))
 
 	content := widget.NewRichText()
 	content.Wrapping = fyne.TextWrapWord
@@ -74,8 +73,14 @@ func OpenDoc(doc string) {
 		fyne.NewMenuItem(lang.L("Docs Editor"), Editor),
 	))
 
-	w.SetContent(container.NewBorder(nil, nil, menu, nil, contentContainer))
-	w.Show()
+	helpDialog := dialog.NewCustom(lang.L("Documentation"), lang.L("Close"), container.NewBorder(nil, nil, menu, nil, contentContainer), w)
+
+	helpDialog.Resize(fyne.NewSize(
+		w.Canvas().Size().Width*(2.0/3),
+		w.Canvas().Size().Height*(2.0/3),
+	))
+
+	helpDialog.Show()
 }
 
 // readDocsFile reads filename from the embed storage for docs files
