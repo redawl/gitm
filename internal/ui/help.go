@@ -19,7 +19,7 @@ func MakeHelp(w fyne.Window) *fyne.Menu {
 		if about, err := readDocsFile("about.md"); err != nil {
 			slog.Error("Error reading about.md")
 		} else {
-			dialog.NewCustom(lang.L("About"), lang.L("Dismiss"), widget.NewRichTextFromMarkdown(about), w).Show()
+			NewPopoutDialog(lang.L("About"), lang.L("Dismiss"), widget.NewRichTextFromMarkdown(about), w).Show()
 		}
 	})
 
@@ -73,7 +73,7 @@ func OpenDoc(doc string, w fyne.Window) {
 		fyne.NewMenuItem(lang.L("Docs Editor"), Editor),
 	))
 
-	helpDialog := dialog.NewCustom(lang.L("Documentation"), lang.L("Close"), container.NewBorder(nil, nil, menu, nil, contentContainer), w)
+	helpDialog := NewPopoutDialog(lang.L("Documentation"), lang.L("Close"), container.NewBorder(nil, nil, menu, nil, contentContainer), w)
 
 	helpDialog.Resize(fyne.NewSize(
 		w.Canvas().Size().Width*(2.0/3),
