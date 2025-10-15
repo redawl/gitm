@@ -15,9 +15,9 @@ type PacketDisplay struct {
 	label       *widget.Label
 }
 
-func NewPacketDisplay(label string, w fyne.Window) *PacketDisplay {
+func NewPacketDisplay(label string, w fyne.Window, handleDecodeResult func(string)) *PacketDisplay {
 	packetDisplay := &PacketDisplay{
-		entry: NewPacketEntry(w),
+		entry: NewPacketEntry(w, handleDecodeResult),
 		label: &widget.Label{
 			Text:     label,
 			SizeName: theme.SizeNameSubHeadingText,
