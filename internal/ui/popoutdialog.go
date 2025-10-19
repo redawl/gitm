@@ -14,9 +14,9 @@ type PopoutDialog struct {
 	dialog.CustomDialog
 }
 
-func NewPopoutDialog(title string, dismiss string, content fyne.CanvasObject, parent fyne.Window) dialog.Dialog {
+func NewPopoutDialog(title string, dismiss string, creator func() fyne.CanvasObject, parent fyne.Window) dialog.Dialog {
 	d := &PopoutDialog{}
-	d.CustomDialog = *dialog.NewCustom(title, dismiss, content, parent)
+	d.CustomDialog = *dialog.NewCustom(title, dismiss, creator(), parent)
 	d.SetButtons([]fyne.CanvasObject{
 		&widget.Button{
 			Text:     dismiss,
@@ -38,7 +38,7 @@ func NewPopoutDialog(title string, dismiss string, content fyne.CanvasObject, pa
 							}),
 						),
 						nil, nil, nil,
-						content,
+						creator(),
 					),
 				)
 				d.Dismiss()

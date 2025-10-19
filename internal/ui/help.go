@@ -19,7 +19,7 @@ func MakeHelp(w fyne.Window) *fyne.Menu {
 		if about, err := readDocsFile("about.md"); err != nil {
 			slog.Error("Error reading about.md")
 		} else {
-			NewPopoutDialog(lang.L("About"), lang.L("Dismiss"), widget.NewRichTextFromMarkdown(about), w).Show()
+			NewPopoutDialog(lang.L("About"), lang.L("Dismiss"), func() fyne.CanvasObject { return widget.NewRichTextFromMarkdown(about) }, w).Show()
 		}
 	})
 
@@ -29,18 +29,15 @@ func MakeHelp(w fyne.Window) *fyne.Menu {
 }
 
 // CreateDocsEntry creates a menu subentry
-func CreateDocsEntry(label string, filename string, contentContainer *container.Scroll, w fyne.Window) *fyne.MenuItem {
-	content, ok := contentContainer.Content.(*widget.RichText)
-	util.Assert(ok)
+func CreateDocsEntry(label string, filename string, w fyne.Window) *container.TabItem {
+	content := widget.NewRichText()
+	if rawContent, err := readDocsFile(filename); err != nil {
+		util.ReportUiErrorWithMessage("Error reading docs entry", err, w)
+	} else {
+		content.ParseMarkdown(rawContent)
+	}
 
-	return fyne.NewMenuItem(label, func() {
-		if rawContent, err := readDocsFile(filename); err != nil {
-			util.ReportUiErrorWithMessage("Error reading docs entry", err, w)
-		} else {
-			content.ParseMarkdown(rawContent)
-			contentContainer.ScrollToTop()
-		}
-	})
+	return container.NewTabItem(label, content)
 }
 
 func MakeDocs(w fyne.Window) *fyne.MenuItem {
@@ -51,29 +48,27 @@ func MakeDocs(w fyne.Window) *fyne.MenuItem {
 
 func OpenDoc(doc string, w fyne.Window) {
 	if doc == "" {
-		doc = "default.md"
+		doc = "Home"
+	}
+	creator := func() fyne.CanvasObject {
+		content := container.NewAppTabs(
+			CreateDocsEntry(lang.L("Home"), "default.md", w),
+			CreateDocsEntry(lang.L("Setup"), "setup.md", w),
+			CreateDocsEntry(lang.L("Usage Tips"), "usage.md", w),
+			// TODO: How to display editor, since it's designed to be in its own window...
+			// container.NewTabItem(lang.L("Docs Editor"), Editor),
+		)
+		content.SetTabLocation(container.TabLocationLeading)
+		for index, item := range content.Items {
+			if item.Text == doc {
+				content.SelectIndex(index)
+				break
+			}
+		}
+		return content
 	}
 
-	content := widget.NewRichText()
-	content.Wrapping = fyne.TextWrapWord
-	contentContainer := container.NewVScroll(content)
-	if homeContent, err := readDocsFile(doc); err != nil {
-		util.ReportUiErrorWithMessage("Error reading default", err, w)
-	} else {
-		content.ParseMarkdown(homeContent)
-	}
-
-	// TODO: Replace with list widget, so the currently selected
-	// menu item can be highlighted
-	menu := widget.NewMenu(fyne.NewMenu("",
-		CreateDocsEntry(lang.L("Home"), "default.md", contentContainer, w),
-		CreateDocsEntry(lang.L("Setup"), "setup.md", contentContainer, w),
-		CreateDocsEntry(lang.L("Usage Tips"), "usage.md", contentContainer, w),
-		fyne.NewMenuItemSeparator(),
-		fyne.NewMenuItem(lang.L("Docs Editor"), Editor),
-	))
-
-	helpDialog := NewPopoutDialog(lang.L("Documentation"), lang.L("Close"), container.NewBorder(nil, nil, menu, nil, contentContainer), w)
+	helpDialog := NewPopoutDialog(lang.L("Documentation"), lang.L("Close"), creator, w)
 
 	helpDialog.Resize(fyne.NewSize(
 		w.Canvas().Size().Width*(2.0/3),

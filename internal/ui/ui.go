@@ -115,6 +115,7 @@ func MakeMainWindow(packetChan chan packet.Packet, restart func()) *MainWindow {
 
 	l.Hide()
 	// TODO: Fix the ugly double pointer situation with content
+	// TODO: Finish placeholder implementation
 	var content *container.Split
 	mainWindow := &MainWindow{
 		Window:          w,
@@ -125,7 +126,6 @@ func MakeMainWindow(packetChan chan packet.Packet, restart func()) *MainWindow {
 		packetChan:      packetChan,
 	}
 	mainWindow.registerShortcuts(restart)
-
 	mainWindow.makeMenu(func() { settings.MakeSettingsUi(w, restart).Show() })
 	content = container.NewHSplit(
 		container.NewVSplit(
