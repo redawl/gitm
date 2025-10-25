@@ -68,5 +68,13 @@ func (p *PacketList) CreateRenderer() fyne.WidgetRenderer {
 }
 
 func (p *PacketList) MinSize() fyne.Size {
-	return p.list.MinSize()
+	minSize := p.list.MinSize()
+	if minSize.Height < p.placeholder.MinSize().Height {
+		minSize.Height = p.placeholder.MinSize().Height
+	}
+
+	if minSize.Width < p.placeholder.MinSize().Width {
+		minSize.Width = p.placeholder.MinSize().Width
+	}
+	return minSize
 }
