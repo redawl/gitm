@@ -119,7 +119,7 @@ func main() {
 			if buff, err := json.Marshal(mainWindow.PacketFilter.Packets); err != nil {
 				slog.Error("Error marshalling file contents", "error", err)
 			} else {
-				if err := os.WriteFile(configDir+string(os.PathSeparator)+"crash.json", buff, 0600); err != nil {
+				if err := os.WriteFile(configDir+string(os.PathSeparator)+"crash.json", buff, 0o600); err != nil {
 					slog.Error("Error saving crash data", "error", err)
 				}
 			}
