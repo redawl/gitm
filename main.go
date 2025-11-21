@@ -6,13 +6,14 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/storage/repository"
 	"fyne.io/fyne/v2/theme"
 	"github.com/redawl/gitm/docs"
-	"github.com/redawl/gitm/internal/config"
+	"github.com/redawl/gitm/internal"
 	"github.com/redawl/gitm/internal/packet"
 	"github.com/redawl/gitm/internal/socks5"
 	"github.com/redawl/gitm/internal/ui"
@@ -22,7 +23,7 @@ import (
 
 // setupBackend sets up the socks5 proxy.
 // Returns a cleanup function for gracefully shutting down the backend
-func setupBackend(conf config.Config, httpHandler func(packet.Packet)) (func(), error) {
+func setupBackend(conf internal.Config, httpHandler func(packet.Packet)) (func(), error) {
 	logLevel := slog.LevelInfo
 
 	if conf.Debug {
@@ -41,8 +42,8 @@ func setupBackend(conf config.Config, httpHandler func(packet.Packet)) (func(), 
 	}
 
 	var server *http.Server
-	if conf.EnablePacServer {
-		server = socks5.SetupPac(&conf)
+	if conf.EnablePACServer {
+		server = socks5.SetupPAC(&conf)
 		go func() {
 			if err := server.ListenAndServe(); err != nil {
 				slog.Error("Error serving pack", "error", err)
@@ -62,7 +63,7 @@ func setupBackend(conf config.Config, httpHandler func(packet.Packet)) (func(), 
 
 func main() {
 	app := app.NewWithID("com.github.redawl.gitm")
-	conf := config.FromPreferences(app.Preferences())
+	conf := internal.FromPreferences(app.Preferences())
 
 	packetChan := make(chan packet.Packet)
 
@@ -73,7 +74,7 @@ func main() {
 	if err != nil {
 		w := app.NewWindow("Settings")
 		slog.Error("Error setting up backend", "error", err)
-		settings.MakeSettingsUi(w, nil).Show()
+		settings.MakeSettingsUI(w, nil).Show()
 		w.Show()
 		app.Run()
 		return
@@ -96,7 +97,7 @@ func main() {
 	mainWindow := ui.MakeMainWindow(packetChan, func() {
 		slog.Info("Restarting backend...")
 		restart()
-		restart, err = setupBackend(config.FromPreferences(app.Preferences()), func(p packet.Packet) {
+		restart, err = setupBackend(internal.FromPreferences(app.Preferences()), func(p packet.Packet) {
 			packetChan <- p
 		})
 		if err != nil || restart == nil {
@@ -119,7 +120,7 @@ func main() {
 			if buff, err := json.Marshal(mainWindow.PacketFilter.Packets); err != nil {
 				slog.Error("Error marshalling file contents", "error", err)
 			} else {
-				if err := os.WriteFile(configDir+string(os.PathSeparator)+"crash.json", buff, 0o600); err != nil {
+				if err := os.WriteFile(filepath.Join(configDir, "crash.json"), buff, 0o600); err != nil {
 					slog.Error("Error saving crash data", "error", err)
 				}
 			}

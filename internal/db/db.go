@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"path/filepath"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/redawl/gitm/internal/util"
@@ -19,7 +20,7 @@ func getConn() (*sql.DB, error) {
 		return nil, err
 	}
 
-	conn, err := sql.Open("sqlite3", configDir+"/domains.db")
+	conn, err := sql.Open("sqlite3", filepath.Join(configDir, "domains.db"))
 	if err != nil {
 		return nil, err
 	}
@@ -41,24 +42,28 @@ func GetDomains() ([]DomainInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			util.ReportUIError(err, nil)
+		}
+	}()
 
 	rows, err := conn.Query("SELECT domain, cert, privkey from DOMAINS")
 	if err != nil {
 		return nil, err
 	}
 
-	domainInfos := make([]DomainInfo, 0)
+	domains := make([]DomainInfo, 0)
 	for rows.Next() {
 		domainInfo := DomainInfo{}
 		if err := rows.Scan(&domainInfo.Domain, &domainInfo.Cert, &domainInfo.PrivKey); err != nil {
 			return nil, err
 		}
 
-		domainInfos = append(domainInfos, domainInfo)
+		domains = append(domains, domainInfo)
 	}
 
-	return domainInfos, nil
+	return domains, nil
 }
 
 func GetDomain(domain string) (*DomainInfo, error) {

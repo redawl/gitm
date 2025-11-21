@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/redawl/gitm/internal/db"
@@ -25,12 +26,12 @@ func AddHostname(hostname string) (*db.DomainInfo, error) {
 		return nil, err
 	}
 
-	serialNumber, err := createSerialNumer()
+	serialNumber, err := createSerialNumber()
 	if err != nil {
 		return nil, err
 	}
 
-	subjectKeyId := sha1.Sum(serialNumber.Bytes())
+	subjectKeyID := sha1.Sum(serialNumber.Bytes())
 
 	cert := &x509.Certificate{
 		SerialNumber: serialNumber,
@@ -40,7 +41,7 @@ func AddHostname(hostname string) (*db.DomainInfo, error) {
 		}, DNSNames: []string{hostname},
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().AddDate(1, 0, 0),
-		SubjectKeyId: subjectKeyId[:],
+		SubjectKeyId: subjectKeyID[:],
 		ExtKeyUsage: []x509.ExtKeyUsage{
 			x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth,
 		},
@@ -99,10 +100,10 @@ func getCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
 		return nil, nil, err
 	}
 
-	certLocation := configDir + "/ca.crt"
+	certLocation := filepath.Join(configDir, "ca.crt")
 
 	if _, err := os.Stat(certLocation); errors.Is(err, os.ErrNotExist) {
-		serialNumber, err := createSerialNumer()
+		serialNumber, err := createSerialNumber()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -146,18 +147,18 @@ func getCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
 			return nil, nil, err
 		}
 
-		if err := os.WriteFile(configDir+"/ca.crt", caBytes, 0400); err != nil {
+		if err := os.WriteFile(filepath.Join(configDir, "ca.crt"), caBytes, 0o400); err != nil {
 			return nil, nil, err
 		}
-		if err := os.WriteFile(configDir+"/ca.pem", caPem.Bytes(), 0400); err != nil {
+		if err := os.WriteFile(filepath.Join(configDir, "ca.pem"), caPem.Bytes(), 0o400); err != nil {
 			return nil, nil, err
 		}
-		if err := os.WriteFile(configDir+"/privkey.pem", caPrivKeyPem.Bytes(), 0400); err != nil {
+		if err := os.WriteFile(filepath.Join(configDir, "privkey.pem"), caPrivKeyPem.Bytes(), 0o400); err != nil {
 			return nil, nil, err
 		}
 	}
 
-	caPem, err := os.ReadFile(configDir + "/ca.pem")
+	caPem, err := os.ReadFile(filepath.Join(configDir, "ca.pem"))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -168,7 +169,7 @@ func getCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
 		return nil, nil, fmt.Errorf("parsing ca.pem, leftover bytes")
 	}
 
-	privKeyPem, err := os.ReadFile(configDir + "/privkey.pem")
+	privKeyPem, err := os.ReadFile(filepath.Join(configDir, "/privkey.pem"))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -192,7 +193,7 @@ func getCaCert() (*x509.Certificate, *rsa.PrivateKey, error) {
 	return caCert, privKey, nil
 }
 
-func createSerialNumer() (*big.Int, error) {
+func createSerialNumber() (*big.Int, error) {
 	return rand.Int(rand.Reader, big.NewInt(999999999999999999))
 }
 
@@ -210,7 +211,7 @@ func getName() *pkix.Name {
 func InitCaCert() error {
 	_, _, err := getCaCert()
 	if err != nil {
-		return fmt.Errorf("init ca cert: %v", err)
+		return fmt.Errorf("init ca cert: %w", err)
 	}
 
 	return nil

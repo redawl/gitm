@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
@@ -94,6 +96,18 @@ func (row *PacketRow) UpdateRow(p packet.Packet) {
 	responseLine := p.FormatResponseLine()
 
 	if row.response.Text != responseLine {
+		if httpPacket, ok := p.(*packet.HttpPacket); ok && len(httpPacket.Status) > 0 {
+			switch strings.Split(httpPacket.Status, " ")[0][0] {
+			case '2':
+				row.response.Importance = widget.SuccessImportance
+			case '3':
+				row.response.Importance = widget.HighImportance
+			case '4':
+				row.response.Importance = widget.DangerImportance
+			case '5':
+				row.response.Importance = widget.WarningImportance
+			}
+		}
 		row.response.SetText(responseLine)
 	}
 

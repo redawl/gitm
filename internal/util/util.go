@@ -6,9 +6,10 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 
 	"fyne.io/fyne/v2"
-	"github.com/redawl/gitm/internal/config"
+	"github.com/redawl/gitm/internal"
 )
 
 // GetConfigDir returns the path to the user config dir on the current machine as a string.
@@ -22,7 +23,7 @@ func GetConfigDir() (string, error) {
 	a := fyne.CurrentApp()
 	var cfgDir string
 	if a != nil {
-		cfgDir = a.Preferences().String(config.CONFIGDIR)
+		cfgDir = a.Preferences().String(internal.ConfigDir)
 	} else {
 		// TODO: Use config here instead of hardcoding os config dir
 		userCfgDir, err := os.UserConfigDir()
@@ -30,13 +31,12 @@ func GetConfigDir() (string, error) {
 			return "", err
 		}
 
-		cfgDir = userCfgDir + string(os.PathSeparator) + "gitm"
+		cfgDir = filepath.Join(userCfgDir, "gitm")
 	}
 
 	if _, err := os.Stat(cfgDir); errors.Is(err, os.ErrNotExist) {
 		slog.Debug("Config dir doesn't exist, creating")
-		err := os.Mkdir(cfgDir, 0700)
-		if err != nil {
+		if err := os.Mkdir(cfgDir, 0o700); err != nil {
 			return "", err
 		}
 	}

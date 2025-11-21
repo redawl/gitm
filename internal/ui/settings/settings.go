@@ -12,7 +12,7 @@ import (
 	"fyne.io/fyne/v2/lang"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/redawl/gitm/internal/config"
+	"github.com/redawl/gitm/internal"
 	"github.com/redawl/gitm/internal/util"
 )
 
@@ -20,18 +20,18 @@ var _ fyne.Layout = (*entryLayout)(nil)
 
 type entryLayout struct{}
 
-const ENTRY_SIZE = 400
+const EntrySize = 400
 
-func (l *entryLayout) MinSize(objs []fyne.CanvasObject) fyne.Size {
-	util.Assert(len(objs) == 1)
+func (l *entryLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
+	util.Assert(len(objects) == 1)
 
-	return fyne.NewSize(ENTRY_SIZE, objs[0].MinSize().Height)
+	return fyne.NewSize(EntrySize, objects[0].MinSize().Height)
 }
 
-func (l *entryLayout) Layout(objs []fyne.CanvasObject, size fyne.Size) {
-	util.Assert(len(objs) == 1)
+func (l *entryLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
+	util.Assert(len(objects) == 1)
 
-	objs[0].Resize(size)
+	objects[0].Resize(size)
 }
 
 var _ fyne.Layout = (*tableLayout)(nil)
@@ -51,19 +51,19 @@ func NewTableLayout(table *widget.Table) *fyne.Container {
 	return container.New(tl, table)
 }
 
-func (t *tableLayout) MinSize(objs []fyne.CanvasObject) fyne.Size {
-	util.Assert(len(objs) == 1)
+func (t *tableLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
+	util.Assert(len(objects) == 1)
 
-	return fyne.NewSize(ENTRY_SIZE, t.height)
+	return fyne.NewSize(EntrySize, t.height)
 }
 
-func (t *tableLayout) Layout(objs []fyne.CanvasObject, size fyne.Size) {
-	util.Assert(len(objs) == 1)
-	table := objs[0].(*widget.Table)
+func (t *tableLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
+	util.Assert(len(objects) == 1)
+	table := objects[0].(*widget.Table)
 
 	spacerSize := theme.Size(theme.SizeNameSeparatorThickness)
-	table.SetColumnWidth(0, (ENTRY_SIZE-spacerSize)*0.4)
-	table.SetColumnWidth(1, (ENTRY_SIZE-spacerSize)*0.5)
+	table.SetColumnWidth(0, (EntrySize-spacerSize)*0.4)
+	table.SetColumnWidth(1, (EntrySize-spacerSize)*0.5)
 	table.Resize(size)
 }
 
@@ -81,7 +81,7 @@ func ipPortValidator(s string) error {
 	ipParts := strings.Split(parts[0], ".")
 
 	if len(ipParts) != 4 {
-		return fmt.Errorf("only ipv4 addresses are supported for now")
+		return fmt.Errorf("only IPv4 addresses are supported for now")
 	}
 
 	for _, part := range ipParts {
@@ -116,26 +116,26 @@ func dirValidator(s string) error {
 	return nil
 }
 
-// MakeSettingsUi creates a window for settings that the user can modify
-func MakeSettingsUi(w fyne.Window, restart func()) dialog.Dialog {
+// MakeSettingsUI creates a window for settings that the user can modify
+func MakeSettingsUI(w fyne.Window, restart func()) dialog.Dialog {
 	a := fyne.CurrentApp()
 	prefs := a.Preferences()
 
 	socks5Url := &widget.Entry{
-		Text:      prefs.String(config.SOCKS_LISTEN_URI),
+		Text:      prefs.String(internal.SocksListenURI),
 		Validator: ipPortValidator,
 	}
-	pacUrl := &widget.Entry{
-		Text:      prefs.String(config.PAC_LISTEN_URI),
+	pacURL := &widget.Entry{
+		Text:      prefs.String(internal.PACListenURI),
 		Validator: ipPortValidator,
 	}
 	pacEnabled := &widget.Check{
-		Checked: prefs.Bool(config.ENABLE_PAC_SERVER),
+		Checked: prefs.Bool(internal.EnablePACServer),
 		OnChanged: func(b bool) {
 			if !b {
-				pacUrl.Disable()
+				pacURL.Disable()
 			} else {
-				pacUrl.Enable()
+				pacURL.Enable()
 			}
 		},
 	}
@@ -143,14 +143,14 @@ func MakeSettingsUi(w fyne.Window, restart func()) dialog.Dialog {
 	pacEnabled.OnChanged(pacEnabled.Checked)
 
 	configDir := &widget.Entry{
-		Text:      prefs.String(config.CONFIGDIR),
+		Text:      prefs.String(internal.ConfigDir),
 		Validator: dirValidator,
 	}
 
 	configDir.ActionItem = widget.NewButton(lang.L("Choose"), func() {
 		dialog.NewFolderOpen(func(lu fyne.ListableURI, err error) {
 			if err != nil {
-				util.ReportUiErrorWithMessage("Error opening folder", err, w)
+				util.ReportUIErrorWithMessage("Error opening folder", err, w)
 				return
 			}
 			if lu != nil {
@@ -160,14 +160,14 @@ func MakeSettingsUi(w fyne.Window, restart func()) dialog.Dialog {
 	})
 
 	themeEntry := &widget.Entry{
-		Text:      prefs.String(config.THEME),
+		Text:      prefs.String(internal.Theme),
 		Validator: dirValidator,
 	}
 
 	themeEntry.ActionItem = widget.NewButton(lang.L("Choose"), func() {
 		dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 			if err != nil {
-				util.ReportUiErrorWithMessage("Error opening theme", err, w)
+				util.ReportUIErrorWithMessage("Error opening theme", err, w)
 				return
 			}
 			if reader == nil {
@@ -179,10 +179,10 @@ func MakeSettingsUi(w fyne.Window, restart func()) dialog.Dialog {
 	})
 
 	debugEnabled := &widget.Check{
-		Checked: prefs.Bool(config.ENABLE_DEBUG_LOGGING),
+		Checked: prefs.Bool(internal.EnableDebugLogging),
 	}
 
-	customDecodings := prefs.StringList(config.CUSTOM_DECODINGS)
+	customDecodings := prefs.StringList(internal.CustomDecodings)
 
 	decodingLabels := make([]string, len(customDecodings))
 	decodingCommands := make([]string, len(customDecodings))
@@ -207,18 +207,18 @@ func MakeSettingsUi(w fyne.Window, restart func()) dialog.Dialog {
 			}
 			return entry
 		},
-		func(tci widget.TableCellID, co fyne.CanvasObject) {
+		func(id widget.TableCellID, co fyne.CanvasObject) {
 			entry := co.(*widget.Entry)
-			if tci.Col == 0 {
+			if id.Col == 0 {
 				entry.OnChanged = func(s string) {
-					decodingLabels[tci.Row] = s
+					decodingLabels[id.Row] = s
 				}
-				entry.SetText(decodingLabels[tci.Row])
+				entry.SetText(decodingLabels[id.Row])
 			} else {
 				entry.OnChanged = func(s string) {
-					decodingCommands[tci.Row] = s
+					decodingCommands[id.Row] = s
 				}
-				entry.SetText(decodingCommands[tci.Row])
+				entry.SetText(decodingCommands[id.Row])
 			}
 		},
 	)
@@ -248,16 +248,16 @@ func MakeSettingsUi(w fyne.Window, restart func()) dialog.Dialog {
 	form := make([]*widget.FormItem, 0)
 	// TODO: Remove entryLayout? How does this look now?
 	// Keeping it causes issues on some devices
-	form = append(form, widget.NewFormItem(lang.L("Socks5 proxy URL"), socks5Url))
+	form = append(form, widget.NewFormItem(lang.L("Socks5 Proxy URL"), socks5Url))
 	form = append(form, widget.NewFormItem(lang.L("Enable PAC server"), pacEnabled))
-	form = append(form, widget.NewFormItem(lang.L("PAC URL"), pacUrl))
-	form = append(form, widget.NewFormItem(lang.L("GITM config dir"), configDir))
+	form = append(form, widget.NewFormItem(lang.L("PAC URL"), pacURL))
+	form = append(form, widget.NewFormItem(lang.L("GITM Config Directory"), configDir))
 	form = append(form, widget.NewFormItem(lang.L("Theme"), themeEntry))
-	form = append(form, widget.NewFormItem(lang.L("Custom decodings"),
+	form = append(form, widget.NewFormItem(lang.L("Custom Decodings"),
 		container.NewBorder(
 			nil,
 			container.NewHBox(
-				widget.NewButton(lang.L("Add decoding"), func() {
+				widget.NewButton(lang.L("Add Decoding"), func() {
 					decodingLabels = append(decodingLabels, "")
 					decodingCommands = append(decodingCommands, "")
 					table.Refresh()
@@ -267,7 +267,7 @@ func MakeSettingsUi(w fyne.Window, restart func()) dialog.Dialog {
 		),
 	))
 
-	form = append(form, widget.NewFormItem(lang.L("Enable debug logging"), debugEnabled))
+	form = append(form, widget.NewFormItem(lang.L("Enable Debug Logging"), debugEnabled))
 
 	s := dialog.NewForm(
 		lang.L("Settings"),
@@ -276,21 +276,21 @@ func MakeSettingsUi(w fyne.Window, restart func()) dialog.Dialog {
 		form,
 		func(b bool) {
 			if b {
-				prefs.SetString(config.SOCKS_LISTEN_URI, socks5Url.Text)
-				prefs.SetBool(config.ENABLE_PAC_SERVER, pacEnabled.Checked)
-				prefs.SetString(config.PAC_LISTEN_URI, pacUrl.Text)
-				prefs.SetString(config.CONFIGDIR, configDir.Text)
+				prefs.SetString(internal.SocksListenURI, socks5Url.Text)
+				prefs.SetBool(internal.EnablePACServer, pacEnabled.Checked)
+				prefs.SetString(internal.PACListenURI, pacURL.Text)
+				prefs.SetString(internal.ConfigDir, configDir.Text)
 				if themeEntry.Text == "" {
 					fyne.CurrentApp().Settings().SetTheme(nil)
 				} else if reader, err := os.Open(themeEntry.Text); err != nil {
-					util.ReportUiErrorWithMessage(lang.L("Error open theme"), err, w)
+					util.ReportUIErrorWithMessage(lang.L("Error open theme"), err, w)
 				} else if th, err := theme.FromJSONReader(reader); err != nil {
-					util.ReportUiErrorWithMessage(lang.L("Error parsing theme"), err, w)
+					util.ReportUIErrorWithMessage(lang.L("Error parsing theme"), err, w)
 				} else {
 					fyne.CurrentApp().Settings().SetTheme(th)
 				}
-				prefs.SetString(config.THEME, themeEntry.Text)
-				prefs.SetBool(config.ENABLE_DEBUG_LOGGING, debugEnabled.Checked)
+				prefs.SetString(internal.Theme, themeEntry.Text)
+				prefs.SetBool(internal.EnableDebugLogging, debugEnabled.Checked)
 
 				newCustomDecodings := make([]string, len(decodingLabels))
 
@@ -298,7 +298,7 @@ func MakeSettingsUi(w fyne.Window, restart func()) dialog.Dialog {
 					newCustomDecodings[index] = decodingLabels[index] + ":" + decodingCommands[index]
 				}
 
-				prefs.SetStringList(config.CUSTOM_DECODINGS, newCustomDecodings)
+				prefs.SetStringList(internal.CustomDecodings, newCustomDecodings)
 
 				successPopup := dialog.NewConfirm(lang.L("Success!"), lang.L("New settings saved, would you like to restart the servers?"), func(b bool) {
 					if b {
@@ -307,8 +307,8 @@ func MakeSettingsUi(w fyne.Window, restart func()) dialog.Dialog {
 				}, w)
 				successPopup.Show()
 			} else {
-				socks5Url.SetText(prefs.String(config.SOCKS_LISTEN_URI))
-				debugEnabled.SetChecked(prefs.Bool(config.ENABLE_DEBUG_LOGGING))
+				socks5Url.SetText(prefs.String(internal.SocksListenURI))
+				debugEnabled.SetChecked(prefs.Bool(internal.EnableDebugLogging))
 
 			}
 		},

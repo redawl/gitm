@@ -20,7 +20,6 @@ func FormatConnResponse(
 	parts := strings.Split(bndAddr.String(), ":")
 	ip := parts[0]
 	port, err := strconv.Atoi(parts[1])
-
 	if err != nil {
 		slog.Error("Cannot parse port", "port", parts[1])
 	}
@@ -32,7 +31,7 @@ func FormatConnResponse(
 		status,
 		0x00, // Rsv is always 0x00
 		// No IPV6 support for now
-		ADDRESS_TYPE_IPV4, i1, i2, i3, i4,
+		AddressTypeIPv4, i1, i2, i3, i4,
 		byte(port >> 8),
 		byte(port & 0xFF),
 	}

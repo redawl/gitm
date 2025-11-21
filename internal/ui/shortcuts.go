@@ -14,13 +14,13 @@ var (
 	QuitShortcut     fyne.Shortcut = &desktop.CustomShortcut{KeyName: "Q", Modifier: fyne.KeyModifierControl}
 )
 
-// registerShortcuts registers the toplevel shortcuts for gitm
+// registerShortcuts registers the top-level shortcuts for gitm
 func (m *MainWindow) registerShortcuts(restart func()) {
 	c := m.Canvas()
 
 	c.AddShortcut(SaveShortcut, func(shortcut fyne.Shortcut) { m.PacketFilter.SavePackets() })
 	c.AddShortcut(OpenShortcut, func(shortcut fyne.Shortcut) { m.PacketFilter.LoadPackets() })
-	c.AddShortcut(SettingsShortcut, func(shortcut fyne.Shortcut) { settings.MakeSettingsUi(m, restart) })
+	c.AddShortcut(SettingsShortcut, func(shortcut fyne.Shortcut) { settings.MakeSettingsUI(m, restart) })
 	c.AddShortcut(ClearShortcut, func(shortcut fyne.Shortcut) { m.PacketFilter.ClearPackets() })
 	c.AddShortcut(QuitShortcut, func(shortcut fyne.Shortcut) { fyne.CurrentApp().Quit() })
 }

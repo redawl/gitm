@@ -187,7 +187,7 @@ func formatHeaders(headers map[string][]string) string {
 				builder.WriteString(", ")
 			}
 		}
-		builder.WriteString("\n")
+		builder.WriteByte('\n')
 	}
 
 	return builder.String()
@@ -203,6 +203,7 @@ func decodeBody(body []byte, contentEncodings []string) string {
 				decoded, err := gzip.NewReader(decoded)
 				if err != nil {
 					slog.Error("Failed decoding gzip", "error", err)
+					return string(body)
 				}
 
 				ret, err = io.ReadAll(decoded)
@@ -217,6 +218,7 @@ func decodeBody(body []byte, contentEncodings []string) string {
 				ret, err = io.ReadAll(decoded)
 				if err != nil {
 					slog.Error("Failed reading stream", "error", err)
+					return string(body)
 				}
 			case "br":
 				slog.Error("Brotli support will be added in the future (most likely)")
@@ -224,6 +226,7 @@ func decodeBody(body []byte, contentEncodings []string) string {
 			case "none":
 			default:
 				slog.Error("Unhandled compression", "compression", contentEncoding)
+				return string(body)
 			}
 		}
 	}

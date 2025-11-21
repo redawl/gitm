@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"os"
+	"path/filepath"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -16,7 +17,7 @@ import (
 	"github.com/redawl/gitm/internal/util"
 )
 
-const RECENTLY_OPENED = "RecentlyOpened"
+const RecentlyOpened = "RecentlyOpened"
 
 // MainWindow is the main window of GITM
 // It is the window that opens when the application is first launched.
@@ -36,7 +37,7 @@ type MainWindow struct {
 }
 
 func (m *MainWindow) updateRecentlyOpenedItems(parent *fyne.MenuItem) {
-	recentlyOpenedFiles := fyne.CurrentApp().Preferences().StringList(RECENTLY_OPENED)
+	recentlyOpenedFiles := fyne.CurrentApp().Preferences().StringList(RecentlyOpened)
 
 	recentlyOpenItems := make([]*fyne.MenuItem, len(recentlyOpenedFiles))
 	if len(recentlyOpenedFiles) == 0 {
@@ -126,7 +127,7 @@ func MakeMainWindow(packetChan chan packet.Packet, restart func()) *MainWindow {
 		packetChan:      packetChan,
 	}
 	mainWindow.registerShortcuts(restart)
-	mainWindow.makeMenu(func() { settings.MakeSettingsUi(w, restart).Show() })
+	mainWindow.makeMenu(func() { settings.MakeSettingsUI(w, restart).Show() })
 	content = container.NewHSplit(
 		container.NewVSplit(
 			NewPacketList(mainWindow.PacketFilter, mainWindow),
@@ -185,14 +186,14 @@ func (m *MainWindow) CheckForCrashData() {
 	if err != nil {
 		slog.Error("Error getting config location", "error", err)
 	}
-	crashData := configDir + string(os.PathSeparator) + "crash.json"
+	crashData := filepath.Join(configDir, "crash.json")
 	if _, err := os.Stat(crashData); err == nil {
 		dialog.ShowConfirm(lang.L("Crash data found"), lang.L("There was crash data found. Want to load it?"), func(b bool) {
 			if b {
 				m.PacketFilter.LoadPacketsFromFile(crashData)
 			}
 			if err := os.Remove(crashData); err != nil {
-				util.ReportUiError(err, m)
+				util.ReportUIError(err, m)
 			}
 		}, m)
 	}

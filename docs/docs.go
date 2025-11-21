@@ -1,3 +1,5 @@
+// Package docs holds the docs repository implementation,
+// for reading bundled *.md files
 package docs
 
 import (

@@ -11,16 +11,17 @@ import (
 	"net/http"
 	"net/textproto"
 	"os"
+	"strconv"
 
-	"github.com/redawl/gitm/internal/config"
+	"github.com/redawl/gitm/internal"
 	"github.com/redawl/gitm/internal/db"
 	"github.com/redawl/gitm/internal/packet"
 	"github.com/redawl/gitm/internal/util"
 )
 
 var (
-	CLIENT_CONFIG = &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS10}
-	SERVER_CONFIG = &tls.Config{
+	ClientConfig = &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS10}
+	ServerConfig = &tls.Config{
 		// Make sure we can forward ALL tls traffic
 		// (or as much as possible with go)
 		MinVersion: tls.VersionTLS10,
@@ -50,11 +51,11 @@ var (
 
 // ListenAndServeSocks5 starts a socks5 proxy which will pass any intercepted packets to packetHandler.
 // If net.Listen fails for the server, an error is returned.
-func ListenAndServeSocks5(conf config.Config, packetHandler func(packet.Packet)) (net.Listener, error) {
+func ListenAndServeSocks5(conf internal.Config, packetHandler func(packet.Packet)) (net.Listener, error) {
 	if err := InitCaCert(); err != nil {
 		return nil, err
 	}
-	if listener, err := net.Listen("tcp", conf.SocksListenUri); err != nil {
+	if listener, err := net.Listen("tcp", conf.SocksListenURI); err != nil {
 		return nil, err
 	} else {
 		go func() {
@@ -92,16 +93,16 @@ func handleConnection(client net.Conn, packetHandler func(packet.Packet)) error 
 	if greeting.CanHandle() {
 		logger.Debug("Handling Request")
 		if _, err := client.Write(
-			FormatServerChoice(SOCKS_VER_5, METHOD_NO_AUTH_REQUIRED),
+			FormatServerChoice(SocksVer5, MethodNoAuthRequired),
 		); err != nil {
 			return fmt.Errorf("formatting server choice: %w", err)
 		}
 
 		request, status, err := ParseClientConnRequest(client)
 
-		if status != STATUS_SUCCEEDED {
+		if status != StatusSucceeded {
 			if _, err := client.Write(FormatConnResponse(
-				SOCKS_VER_5,
+				SocksVer5,
 				status,
 				client.LocalAddr(),
 			)); err != nil {
@@ -110,34 +111,34 @@ func handleConnection(client net.Conn, packetHandler func(packet.Packet)) error 
 			return fmt.Errorf("parsing client connection request: %w", err)
 		}
 
-		if request.Cmd == CMD_UDP_ASSOCIATE {
-			return handleUdp(client, request)
+		if request.Cmd == CmdUDPAssociate {
+			return handleUDP(client, request)
 		}
 
-		logger = logger.With("DstIp", request.DstIp, "DstPort", request.DstPort)
+		logger = logger.With("DstIp", request.DstIP, "DstPort", request.DstPort)
 
 		logger.Debug("Parsed conn request", "request", request)
 
-		if request.DstIp == "gitm" {
+		if request.DstIP == "gitm" {
 			logger.Debug("Handling with gitm webserver")
 			if _, err := client.Write(FormatConnResponse(
-				SOCKS_VER_5,
-				STATUS_SUCCEEDED,
+				SocksVer5,
+				StatusSucceeded,
 				client.RemoteAddr(),
 			)); err != nil {
 				return fmt.Errorf("formatting conn response: %w", err)
 			}
-			return handleGitm(client)
+			return handleGITM(client)
 		}
 
 		switch request.DstPort {
 		case 80:
-			server, err := net.Dial("tcp", net.JoinHostPort(request.DstIp, fmt.Sprintf("%d", request.DstPort)))
+			server, err := net.Dial("tcp", net.JoinHostPort(request.DstIP, strconv.FormatUint(uint64(request.DstPort), 10)))
 			if err != nil {
 				logger.Error("Error contacting proxied ip", "error", err)
 				if _, err := client.Write(FormatConnResponse(
-					SOCKS_VER_5,
-					STATUS_HOST_UNREACHABLE,
+					SocksVer5,
+					StatusHostUnreachable,
 					client.RemoteAddr(),
 				)); err != nil {
 					return fmt.Errorf("formatting conn response: %w", err)
@@ -153,21 +154,21 @@ func handleConnection(client net.Conn, packetHandler func(packet.Packet)) error 
 			logger.Debug("Proxy success")
 
 			if _, err := client.Write(FormatConnResponse(
-				SOCKS_VER_5,
-				STATUS_SUCCEEDED,
+				SocksVer5,
+				StatusSucceeded,
 				server.LocalAddr(),
 			)); err != nil {
 				return fmt.Errorf("formatting conn response: %w", err)
 			}
 
-			return HandleHttpRequest(client, server, packetHandler)
+			return HandleHTTPRequest(client, server, packetHandler)
 		case 443:
-			outboundConn, err := net.Dial("tcp", net.JoinHostPort(request.DstIp, fmt.Sprintf("%d", request.DstPort)))
+			outboundConn, err := net.Dial("tcp", net.JoinHostPort(request.DstIP, strconv.FormatUint(uint64(request.DstPort), 10)))
 			if err != nil {
 				logger.Error("Error contacting proxied ip", "error", err)
 				if _, err := client.Write(FormatConnResponse(
-					SOCKS_VER_5,
-					STATUS_HOST_UNREACHABLE,
+					SocksVer5,
+					StatusHostUnreachable,
 					client.LocalAddr(),
 				)); err != nil {
 					return fmt.Errorf("sending host unreachable: %w", err)
@@ -182,13 +183,13 @@ func handleConnection(client net.Conn, packetHandler func(packet.Packet)) error 
 
 			logger.Debug("Proxy success")
 			if _, err := client.Write(FormatConnResponse(
-				SOCKS_VER_5,
-				STATUS_SUCCEEDED,
+				SocksVer5,
+				StatusSucceeded,
 				client.RemoteAddr(),
 			)); err != nil {
 				return err
 			}
-			inboundConn := tls.Server(client, SERVER_CONFIG)
+			inboundConn := tls.Server(client, ServerConfig)
 			defer func() {
 				if err := inboundConn.Close(); err != nil {
 					logger.Error("Error closing inboundConn", "error", err)
@@ -200,17 +201,17 @@ func handleConnection(client net.Conn, packetHandler func(packet.Packet)) error 
 				}
 				return fmt.Errorf("tls client handshake: %w", err)
 			}
-			config := CLIENT_CONFIG.Clone()
+			config := ClientConfig.Clone()
 			config.InsecureSkipVerify = true
 			config.ServerName = inboundConn.ConnectionState().ServerName
-			return HandleHttpRequest(inboundConn, tls.Client(outboundConn, config), packetHandler)
+			return HandleHTTPRequest(inboundConn, tls.Client(outboundConn, config), packetHandler)
 		default:
 			logger.Info("Unrecognized port, forwarding without logging", "request", request)
-			server, err := net.Dial("tcp", net.JoinHostPort(request.DstIp, fmt.Sprintf("%d", request.DstPort)))
+			server, err := net.Dial("tcp", net.JoinHostPort(request.DstIP, strconv.FormatUint(uint64(request.DstPort), 10)))
 			if err != nil {
 				_, _ = client.Write(FormatConnResponse(
-					SOCKS_VER_5,
-					STATUS_HOST_UNREACHABLE,
+					SocksVer5,
+					StatusHostUnreachable,
 					client.RemoteAddr(),
 				))
 				return err
@@ -218,8 +219,8 @@ func handleConnection(client net.Conn, packetHandler func(packet.Packet)) error 
 
 			logger.Debug("Proxy success")
 			if _, err := client.Write(FormatConnResponse(
-				SOCKS_VER_5,
-				STATUS_SUCCEEDED,
+				SocksVer5,
+				StatusSucceeded,
 				server.LocalAddr(),
 			)); err != nil {
 				return err
@@ -230,7 +231,7 @@ func handleConnection(client net.Conn, packetHandler func(packet.Packet)) error 
 		logger.Debug("Finished proxying request")
 	} else {
 		logger.Debug("Cannot handle request")
-		if _, err := client.Write(FormatServerChoice(SOCKS_VER_5, METHOD_NO_ACCEPTABLE_METHODS)); err != nil {
+		if _, err := client.Write(FormatServerChoice(SocksVer5, MethodNoAcceptableMethods)); err != nil {
 			return fmt.Errorf("sending no acceptable methods: %w", err)
 		}
 	}
@@ -255,7 +256,7 @@ func transparentProxy(client net.Conn, server net.Conn) {
 	}()
 }
 
-func handleGitm(client net.Conn) error {
+func handleGITM(client net.Conn) error {
 	reader := textproto.NewReader(bufio.NewReader(client))
 	_, uri, _, err := ReadLine1(reader)
 	if err != nil {
@@ -269,7 +270,7 @@ func handleGitm(client net.Conn) error {
 	if uri == "/ca.crt" {
 		configDir, err := util.GetConfigDir()
 		if err != nil {
-			return fmt.Errorf("getting configdir: %w", err)
+			return fmt.Errorf("getting config dir: %w", err)
 		}
 
 		certLocation := configDir + "/ca.crt"
@@ -294,12 +295,12 @@ func handleGitm(client net.Conn) error {
 	return nil
 }
 
-func SetupPac(conf *config.Config) *http.Server {
+func SetupPAC(conf *internal.Config) *http.Server {
 	return &http.Server{
-		Addr: conf.PacListenUri, Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		Addr: conf.PACListenURI, Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			slog.Debug("Handling pac file request")
 			if r.URL.Path == "/proxy.pac" {
-				_, _ = fmt.Fprintf(w, "function FindProxyForURL(url, host){return \"SOCKS %s\";}", conf.SocksListenUri)
+				_, _ = fmt.Fprintf(w, "function FindProxyForURL(url, host){return \"SOCKS %s\";}", conf.SocksListenURI)
 			}
 		}),
 	}

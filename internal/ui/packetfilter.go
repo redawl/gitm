@@ -105,7 +105,7 @@ func (p *PacketFilter) ClearPackets() {
 func (p *PacketFilter) SavePackets() {
 	dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
 		if err != nil {
-			util.ReportUiErrorWithMessage("Error saving to file", err, p.parent)
+			util.ReportUIErrorWithMessage("Error saving to file", err, p.parent)
 			return
 		}
 
@@ -116,12 +116,12 @@ func (p *PacketFilter) SavePackets() {
 
 		jsonString, err := packet.MarshalPackets(p.Packets)
 		if err != nil {
-			util.ReportUiErrorWithMessage("Error marshalling packetList", err, p.parent)
+			util.ReportUIErrorWithMessage("Error marshalling packetList", err, p.parent)
 			return
 		}
 
 		if _, err := writer.Write(jsonString); err != nil {
-			util.ReportUiErrorWithMessage("Error saving to file", err, p.parent)
+			util.ReportUIErrorWithMessage("Error saving to file", err, p.parent)
 			return
 		}
 
@@ -135,7 +135,7 @@ func (p *PacketFilter) LoadPackets() {
 	showFilePicker := func() {
 		dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 			if err != nil {
-				util.ReportUiErrorWithMessage("Error reading from file", err, p.parent)
+				util.ReportUIErrorWithMessage("Error reading from file", err, p.parent)
 				return
 			}
 
@@ -143,7 +143,7 @@ func (p *PacketFilter) LoadPackets() {
 				return
 			}
 
-			currRecentlyOpened := fyne.CurrentApp().Preferences().StringList(RECENTLY_OPENED)
+			currRecentlyOpened := fyne.CurrentApp().Preferences().StringList(RecentlyOpened)
 			length := min(len(currRecentlyOpened)+1, 10)
 			recentlyOpened := make([]string, length)
 
@@ -156,7 +156,7 @@ func (p *PacketFilter) LoadPackets() {
 				}
 			}
 
-			fyne.CurrentApp().Preferences().SetStringList(RECENTLY_OPENED, recentlyOpened[:count])
+			fyne.CurrentApp().Preferences().SetStringList(RecentlyOpened, recentlyOpened[:count])
 			p.LoadPacketsFromReader(reader)
 		}, p.parent).Show()
 	}
@@ -191,13 +191,13 @@ func (p *PacketFilter) LoadPacketsFromFile(filename string) {
 func (p *PacketFilter) LoadPacketsFromReader(reader io.Reader) {
 	fileContents, err := io.ReadAll(reader)
 	if err != nil {
-		util.ReportUiError(err, p.parent)
+		util.ReportUIError(err, p.parent)
 		return
 	}
 
 	packets := make([]packet.Packet, 0)
 	if err := packet.UnmarshalPackets(fileContents, &packets); err != nil {
-		util.ReportUiError(err, p.parent)
+		util.ReportUIError(err, p.parent)
 		return
 	}
 

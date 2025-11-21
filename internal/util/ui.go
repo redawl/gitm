@@ -38,14 +38,14 @@ func NewWindowIfNotExists(title string) fyne.Window {
 	return w
 }
 
-// ReportUiError logs an error, and also displays a popup with the error to the user
-func ReportUiError(err error, w fyne.Window) {
-	ReportUiErrorWithMessage("", err, w)
+// ReportUIError logs an error, and also displays a popup with the error to the user
+func ReportUIError(err error, w fyne.Window) {
+	ReportUIErrorWithMessage("", err, w)
 }
 
-// ReportUiErrorWithMessage is the same as ReportUiError,
+// ReportUIErrorWithMessage is the same as ReportUiError,
 // but logs a custom error message instead of the default
-func ReportUiErrorWithMessage(message string, err error, w fyne.Window) {
+func ReportUIErrorWithMessage(message string, err error, w fyne.Window) {
 	if w != nil {
 		dialog.NewError(err, w).Show()
 	}

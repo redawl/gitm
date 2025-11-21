@@ -19,12 +19,12 @@ import (
 	"github.com/redawl/gitm/internal/util"
 )
 
-// HandleHttpRequest reads http requests from inboundConn to outboundConn,
+// HandleHTTPRequest reads http requests from inboundConn to outboundConn,
 // and then read http responses from outboundConn to inboundConn.
 //
 // httpPacketHandler is called first on the packet when inboundConn -> outboundConn completes,
 // and again when outboundConn -> inboundConn completes.
-func HandleHttpRequest(inboundConn, outboundConn net.Conn, httpPacketHandler func(packet.Packet)) error {
+func HandleHTTPRequest(inboundConn, outboundConn net.Conn, httpPacketHandler func(packet.Packet)) error {
 	bufReader := bufio.NewReader(io.TeeReader(inboundConn, outboundConn))
 	reader := textproto.NewReader(bufReader)
 	clientBufioReader := bufio.NewReader(io.TeeReader(outboundConn, inboundConn))

@@ -6,13 +6,13 @@ import (
 	"net"
 )
 
-func handleUdp(client net.Conn, request *ClientConnRequest) error {
+func handleUDP(client net.Conn, request *ClientConnRequest) error {
 	slog.Info("Handling udp!", "Addr", client.RemoteAddr())
-	server, err := net.Dial("udp", net.JoinHostPort(request.DstIp, fmt.Sprintf("%d", request.DstPort)))
+	server, err := net.Dial("udp", net.JoinHostPort(request.DstIP, fmt.Sprintf("%d", request.DstPort)))
 	if err != nil {
 		if _, err := client.Write(FormatConnResponse(
-			SOCKS_VER_5,
-			STATUS_HOST_UNREACHABLE,
+			SocksVer5,
+			StatusHostUnreachable,
 			client.RemoteAddr(),
 		)); err != nil {
 			return fmt.Errorf("formatting conn response: %w", err)
@@ -20,7 +20,7 @@ func handleUdp(client net.Conn, request *ClientConnRequest) error {
 		return fmt.Errorf("handling udp: %w", err)
 	}
 
-	if l, err := net.Listen("udp", "192.168.50.122:42069"); err != nil {
+	if l, err := net.Listen("udp", "0.0.0.0:42069"); err != nil {
 		slog.Error("Error opening udp conn for client", "error", err)
 	} else {
 		go func() {
@@ -35,8 +35,8 @@ func handleUdp(client net.Conn, request *ClientConnRequest) error {
 		}()
 
 		if _, err := client.Write(FormatConnResponse(
-			SOCKS_VER_5,
-			STATUS_SUCCEEDED,
+			SocksVer5,
+			StatusSucceeded,
 			l.Addr(),
 		)); err != nil {
 			return fmt.Errorf("formatting conn response: %w", err)

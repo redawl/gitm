@@ -18,8 +18,8 @@ func TestFormatConnResponseSuccess(t *testing.T) {
 	expected := []byte{0x05, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x50}
 
 	actual := FormatConnResponse(
-		SOCKS_VER_5,
-		STATUS_SUCCEEDED,
+		SocksVer5,
+		StatusSucceeded,
 		&net.TCPAddr{
 			IP:   net.IPv4(0x01, 0x01, 0x01, 0x01),
 			Port: 80,

@@ -9,7 +9,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// AnalysisToolbar contains the toplevel toolbar for gitm
+// AnalysisToolbar contains the top-level toolbar for gitm
 type AnalysisToolbar struct {
 	widget.BaseWidget
 	// IsRecording specified whether to record packets
@@ -36,7 +36,7 @@ func NewAnalysisToolbar(packetFilter *PacketFilter, w fyne.Window, decodeHistory
 		},
 		decodeHistory: &ToolbarButton{
 			Button: widget.Button{
-				Text: lang.L("Decode history"),
+				Text: lang.L("Decode History"),
 				Icon: theme.Icon(theme.IconNameNavigateBack),
 			},
 		},
@@ -60,7 +60,7 @@ func NewAnalysisToolbar(packetFilter *PacketFilter, w fyne.Window, decodeHistory
 	tb.record.OnTapped = func() {
 		if len(packetFilter.Packets) > 0 {
 			dialog.ShowConfirm(
-				lang.L("Overwrite packets"),
+				lang.L("Overwrite Packets"),
 				lang.L("Starting a new capture will overwrite existing packets. Are you sure?"),
 				func(b bool) {
 					if b {

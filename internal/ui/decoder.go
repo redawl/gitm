@@ -14,9 +14,9 @@ import (
 )
 
 var encodingsMap = map[string]func(string) (string, error){
-	lang.L("Url decode"):    url,
-	lang.L("Base64 decode"): b64,
-	lang.L("Hex decode"):    _hex,
+	lang.L("Url Decode"):    url,
+	lang.L("Base64 Decode"): b64,
+	lang.L("Hex Decode"):    _hex,
 }
 
 func GetEncodings() iter.Seq[string] {

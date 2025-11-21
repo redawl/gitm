@@ -14,10 +14,10 @@ import (
 	"fyne.io/fyne/v2/lang"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/redawl/gitm/internal/config"
+	"github.com/redawl/gitm/internal"
 )
 
-// Rightclick menu
+// Right-click menu
 var _ fyne.SecondaryTappable = (*PacketEntry)(nil)
 
 // Selecting text
@@ -53,24 +53,24 @@ func NewPacketEntry(w fyne.Window, handleDecodeResult func(string)) *PacketEntry
 }
 
 func (p *PacketEntry) SetText(text string) {
-	TEXTGRID_COLOR_NORMAL := &widget.CustomTextGridStyle{
+	colorNormal := &widget.CustomTextGridStyle{
 		FGColor: theme.Color(theme.ColorNameForeground),
 		BGColor: theme.Color(theme.ColorNameBackground),
 	}
 	p.selecting = false
-
-	p.SetStyleRange(0, 0, len(p.Rows), len(p.Row(len(p.Rows)-1).Cells), TEXTGRID_COLOR_NORMAL)
+	p.SetStyleRange(0, 0, len(p.Rows), len(p.Row(len(p.Rows)-1).Cells), colorNormal)
 	p.TextGrid.SetText(text)
+	p.ScrollToTop()
 }
 
 func (p *PacketEntry) MouseDown(event *desktop.MouseEvent) {
 	if event.Button == desktop.MouseButtonPrimary {
-		TEXTGRID_COLOR_NORMAL := &widget.CustomTextGridStyle{
+		colorNormal := &widget.CustomTextGridStyle{
 			FGColor: theme.Color(theme.ColorNameForeground),
 			BGColor: theme.Color(theme.ColorNameBackground),
 		}
 
-		p.SetStyleRange(0, 0, len(p.Rows), len(p.Row(len(p.Rows)-1).Cells), TEXTGRID_COLOR_NORMAL)
+		p.SetStyleRange(0, 0, len(p.Rows), len(p.Row(len(p.Rows)-1).Cells), colorNormal)
 		row, col := p.CursorLocationForPosition(event.Position)
 
 		p.selectStartRow = row
@@ -90,8 +90,8 @@ func (p *PacketEntry) MouseIn(event *desktop.MouseEvent) {
 
 func (p *PacketEntry) MouseMoved(event *desktop.MouseEvent) {
 	if p.selecting && event.Button == desktop.MouseButtonPrimary {
-		TEXTGRID_COLOR_HIGHLIGHTED := &widget.CustomTextGridStyle{BGColor: theme.Color(theme.ColorNameSelection)}
-		TEXTGRID_COLOR_NORMAL := &widget.CustomTextGridStyle{
+		colorHighlighted := &widget.CustomTextGridStyle{BGColor: theme.Color(theme.ColorNameSelection)}
+		colorNormal := &widget.CustomTextGridStyle{
 			FGColor: theme.Color(theme.ColorNameForeground),
 			BGColor: theme.Color(theme.ColorNameBackground),
 		}
@@ -102,14 +102,14 @@ func (p *PacketEntry) MouseMoved(event *desktop.MouseEvent) {
 		}
 
 		startRow, startCol, endRow, endCol := p.getActualStartAndEnd()
-		p.SetStyleRange(startRow, startCol, endRow, endCol, TEXTGRID_COLOR_NORMAL)
+		p.SetStyleRange(startRow, startCol, endRow, endCol, colorNormal)
 
 		p.selectEndRow = row
 		p.selectEndCol = col
 
 		startRow, startCol, endRow, endCol = p.getActualStartAndEnd()
 
-		p.SetStyleRange(startRow, startCol, endRow, endCol, TEXTGRID_COLOR_HIGHLIGHTED)
+		p.SetStyleRange(startRow, startCol, endRow, endCol, colorHighlighted)
 		p.Refresh()
 	}
 }
@@ -210,13 +210,13 @@ func (p *PacketEntry) copyToClipBoard() {
 }
 
 func (p *PacketEntry) selectAll() {
-	TEXTGRID_COLOR_HIGHLIGHTED := &widget.CustomTextGridStyle{BGColor: theme.Color(theme.ColorNameSelection)}
+	colorHighlighted := &widget.CustomTextGridStyle{BGColor: theme.Color(theme.ColorNameSelection)}
 	p.selectStartRow = 0
 	p.selectStartCol = 0
 	p.selectEndRow = len(p.Rows) - 1
 	p.selectEndCol = len(p.Rows[p.selectEndRow].Cells) - 1
 
-	p.SetStyleRange(p.selectStartRow, p.selectStartCol, p.selectEndRow, p.selectEndCol, TEXTGRID_COLOR_HIGHLIGHTED)
+	p.SetStyleRange(p.selectStartRow, p.selectStartCol, p.selectEndRow, p.selectEndCol, colorHighlighted)
 	p.Refresh()
 }
 
@@ -244,7 +244,7 @@ func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 
 	decodeEntries = append(decodeEntries, fyne.NewMenuItemSeparator())
 
-	customDecodeEntries := fyne.CurrentApp().Preferences().StringList(config.CUSTOM_DECODINGS)
+	customDecodeEntries := fyne.CurrentApp().Preferences().StringList(internal.CustomDecodings)
 
 	for _, decodeEntry := range customDecodeEntries {
 		index := strings.Index(decodeEntry, ":")

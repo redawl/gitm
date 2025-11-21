@@ -5,41 +5,41 @@ import (
 )
 
 const (
-	METHOD_NO_AUTH_REQUIRED  = 0x00
-	METHOD_GSSAPI            = 0x01
-	METHOD_USERNAME_PASSWORD = 0x02
+	MethodNoAuthRequired   = 0x00
+	MethodGSSAPI           = 0x01
+	MethodUsernamePassword = 0x02
 	// 0x03 to 0x7F are IANA assigned
 	// 0x80 to 0xFE are reserved for private methods
-	METHOD_NO_ACCEPTABLE_METHODS = 0xFF
+	MethodNoAcceptableMethods = 0xFF
 )
 
 const (
-	SOCKS_VER_5 = 0x05
+	SocksVer5 = 0x05
 )
 
 const (
-	STATUS_SUCCEEDED                  = 0x00
-	STATUS_GENERAL_FAILURE            = 0x01
-	STATUS_CONNECTION_NOT_ALLOWED     = 0x02
-	STATUS_NETWORK_UNREACHABLE        = 0x03
-	STATUS_HOST_UNREACHABLE           = 0x04
-	STATUS_CONNECTION_REFUSED         = 0x05
-	STATUS_TTL_EXPIRED                = 0x06
-	STATUS_COMMAND_NOT_SUPPORTED      = 0x07
-	STATUS_ADDRESS_TYPE_NOT_SUPPORTED = 0x08
+	StatusSucceeded               = 0x00
+	StatusGeneralFailure          = 0x01
+	StatusConnectionNotAllowed    = 0x02
+	StatusNetworkUnreachable      = 0x03
+	StatusHostUnreachable         = 0x04
+	StatusConnectionRefused       = 0x05
+	StatusTTLExpired              = 0x06
+	StatusCommandNotSupported     = 0x07
+	StatusAddressTypeNotSupported = 0x08
 	// 0x09 to 0xFF unassigned
 )
 
 const (
-	ADDRESS_TYPE_IPV4       = 0x01
-	ADDRESS_TYPE_DOMAINNAME = 0x03
-	ADDRESS_TYPE_IPV6       = 0x04
+	AddressTypeIPv4       = 0x01
+	AddressTypeDomainName = 0x03
+	AddressTypeIPv6       = 0x04
 )
 
 const (
-	CMD_CONNECT       = 0x01
-	CMD_BIND          = 0x02
-	CMD_UDP_ASSOCIATE = 0x03
+	CmdConnect      = 0x01
+	CmdBind         = 0x02
+	CmdUDPAssociate = 0x03
 )
 
 type ClientGreeting struct {
@@ -49,15 +49,15 @@ type ClientGreeting struct {
 }
 
 func (g *ClientGreeting) CanHandle() bool {
-	return g.Ver == SOCKS_VER_5 &&
-		slices.Contains(g.Auth, METHOD_NO_AUTH_REQUIRED)
+	return g.Ver == SocksVer5 &&
+		slices.Contains(g.Auth, MethodNoAuthRequired)
 }
 
 type ClientConnRequest struct {
 	Ver       byte
 	Cmd       byte
 	Rsv       byte
-	DstIpType byte
-	DstIp     string
+	DstIPType byte
+	DstIP     string
 	DstPort   uint16
 }
