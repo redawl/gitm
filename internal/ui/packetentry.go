@@ -291,5 +291,5 @@ func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 	menu := fyne.NewMenu(lang.L("Decode"), decodeEntries...)
 
 	popup := widget.NewPopUpMenu(menu, c)
-	popup.ShowAtPosition(evt.AbsolutePosition)
+	popup.ShowAtRelativePosition(evt.Position, p)
 }

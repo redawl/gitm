@@ -2,7 +2,7 @@ module github.com/redawl/gitm
 
 go 1.23
 
-replace fyne.io/fyne/v2 => github.com/redawl/fyne/v2 v2.6.2-0.20251121023659-93ec0fb199e1
+replace fyne.io/fyne/v2 => github.com/redawl/fyne/v2 v2.6.2-0.20251122193515-563aedc97ea7
 
 require (
 	fyne.io/fyne/v2 v2.7.0
