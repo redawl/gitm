@@ -36,7 +36,7 @@ func NewAnalysisToolbar(packetFilter *PacketFilter, w fyne.Window, decodeHistory
 		},
 		decodeHistory: &ToolbarButton{
 			Button: widget.Button{
-				Text: lang.L("Decode History"),
+				Text: lang.L("Decode history"),
 				Icon: theme.Icon(theme.IconNameNavigateBack),
 			},
 		},
@@ -60,7 +60,7 @@ func NewAnalysisToolbar(packetFilter *PacketFilter, w fyne.Window, decodeHistory
 	tb.record.OnTapped = func() {
 		if len(packetFilter.Packets) > 0 {
 			dialog.ShowConfirm(
-				lang.L("Overwrite Packets"),
+				lang.L("Overwrite packets"),
 				lang.L("Starting a new capture will overwrite existing packets. Are you sure?"),
 				func(b bool) {
 					if b {
