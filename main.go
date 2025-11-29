@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -21,20 +22,30 @@ import (
 	"github.com/redawl/gitm/internal/util"
 )
 
+func setupLogging(debugEnabled bool) error {
+	fileWriter, err := os.OpenFile(filepath.Join(os.TempDir(), "gitm.log"), os.O_RDWR|os.O_CREATE, 0o666)
+	if err != nil {
+		return fmt.Errorf("opening log file: %w", err)
+	}
+
+	logWriter := io.MultiWriter(fileWriter, os.Stdout)
+	logLevel := slog.LevelInfo
+	if debugEnabled {
+		logLevel = slog.LevelDebug
+	}
+	logger := slog.New(slog.NewTextHandler(logWriter, &slog.HandlerOptions{
+		Level: logLevel,
+	}))
+	slog.SetDefault(logger)
+	return nil
+}
+
 // setupBackend sets up the socks5 proxy.
 // Returns a cleanup function for gracefully shutting down the backend
 func setupBackend(conf internal.Config, httpHandler func(packet.Packet)) (func(), error) {
-	logLevel := slog.LevelInfo
-
-	if conf.Debug {
-		logLevel = slog.LevelDebug
+	if err := setupLogging(conf.Debug); err != nil {
+		return nil, err
 	}
-
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-		Level: logLevel,
-	}))
-
-	slog.SetDefault(logger)
 
 	socksListener, err := socks5.ListenAndServeSocks5(conf, httpHandler)
 	if err != nil {
