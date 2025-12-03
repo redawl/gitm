@@ -2,10 +2,8 @@ module github.com/redawl/gitm
 
 go 1.23
 
-replace fyne.io/fyne/v2 => github.com/redawl/fyne/v2 v2.6.2-0.20251123003548-3217591523e1
-
 require (
-	fyne.io/fyne/v2 v2.7.0
+	fyne.io/fyne/v2 v2.7.2-0.20251203185017-f400fa2c568a
 	github.com/mattn/go-sqlite3 v1.14.24
 )
 

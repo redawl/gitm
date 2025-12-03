@@ -1,3 +1,5 @@
+fyne.io/fyne/v2 v2.7.2-0.20251203185017-f400fa2c568a h1:PVrwYxrOd64kDuNmGNrYH57UOgFdf/OAerAgHd9xSD0=
+fyne.io/fyne/v2 v2.7.2-0.20251203185017-f400fa2c568a/go.mod h1:xo+SRRY+GLd0bNX/g8/FdXZ5Xlltobi1BA4VSNiEzpE=
 fyne.io/systray v1.11.1-0.20250603113521-ca66a66d8b58 h1:eA5/u2XRd8OUkoMqEv3IBlFYSruNlXD8bRHDiqm0VNI=
 fyne.io/systray v1.11.1-0.20250603113521-ca66a66d8b58/go.mod h1:RVwqP9nYMo7h5zViCBHri2FgjXF7H2cub7MAq4NSoLs=
 github.com/BurntSushi/toml v1.5.0 h1:W5quZX/G/csjUnuI8SUYlsHs9M38FC7znL0lIO+DvMg=
@@ -56,8 +58,6 @@ github.com/pkg/profile v1.7.0 h1:hnbDkaNWPCLMO9wGLdBFTIZvzDrDfBM2072E1S9gJkA=
 github.com/pkg/profile v1.7.0/go.mod h1:8Uer0jas47ZQMJ7VD+OHknK4YDY07LPUC6dEvqDjvNo=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/redawl/fyne/v2 v2.6.2-0.20251123003548-3217591523e1 h1:c7Bz9FzXhsCbg/ziXGVBx6Tkb0xw2MjnM28/SPYsjxE=
-github.com/redawl/fyne/v2 v2.6.2-0.20251123003548-3217591523e1/go.mod h1:xo+SRRY+GLd0bNX/g8/FdXZ5Xlltobi1BA4VSNiEzpE=
 github.com/rymdport/portal v0.4.2 h1:7jKRSemwlTyVHHrTGgQg7gmNPJs88xkbKcIL3NlcmSU=
 github.com/rymdport/portal v0.4.2/go.mod h1:kFF4jslnJ8pD5uCi17brj/ODlfIidOxlgUDTO5ncnC4=
 github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c h1:km8GpoQut05eY3GiYWEedbTT0qnSxrCjsVbb7yKY1KE=
