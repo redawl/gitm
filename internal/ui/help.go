@@ -55,8 +55,7 @@ func OpenDoc(doc string, w fyne.Window) {
 			CreateDocsEntry(lang.L("Home"), "default.md", w),
 			CreateDocsEntry(lang.L("Setup"), "setup.md", w),
 			CreateDocsEntry(lang.L("Usage Tips"), "usage.md", w),
-			// TODO: How to display editor, since it's designed to be in its own window...
-			// container.NewTabItem(lang.L("Docs Editor"), Editor),
+			CreateEditor(w),
 		)
 		content.SetTabLocation(container.TabLocationLeading)
 		for index, item := range content.Items {
@@ -80,7 +79,7 @@ func OpenDoc(doc string, w fyne.Window) {
 
 // readDocsFile reads filename from the embed storage for docs files
 func readDocsFile(filename string) (string, error) {
-	uri, err := storage.ParseURI(fmt.Sprintf("docs:%s", filename))
+	uri, err := storage.ParseURI("docs:" + filename)
 	if err != nil {
 		return "", fmt.Errorf("parsing uri: %w", err)
 	}
@@ -97,9 +96,8 @@ func readDocsFile(filename string) (string, error) {
 	return string(content), nil
 }
 
-func Editor() {
-	w := util.NewWindowIfNotExists(lang.L("Editor"))
-
+func CreateEditor(w fyne.Window) *container.TabItem {
+	util.Assert(w != nil)
 	entry := widget.NewMultiLineEntry()
 	entry.Scroll = fyne.ScrollBoth
 	entry.TextStyle = fyne.TextStyle{
@@ -111,46 +109,49 @@ func Editor() {
 	entry.OnChanged = func(s string) {
 		display.ParseMarkdown(s)
 	}
-	w.SetContent(container.NewHSplit(entry, display))
-	w.SetMainMenu(fyne.NewMainMenu(
-		fyne.NewMenu(lang.L("File"),
-			fyne.NewMenuItem(lang.L("Open"), func() {
-				dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
-					if err != nil {
-						util.ReportUIErrorWithMessage("Error opening file", err, w)
-						return
-					}
+	menu := fyne.NewMenu(lang.L("File"),
+		fyne.NewMenuItem(lang.L("Open"), func() {
+			dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
+				if err != nil {
+					util.ReportUIErrorWithMessage("Error opening file", err, w)
+					return
+				}
 
-					if reader == nil {
-						return
-					}
+				if reader == nil {
+					return
+				}
 
-					contents, err := io.ReadAll(reader)
-					if err != nil {
-						util.ReportUIErrorWithMessage("Error reading file contents", err, w)
-						return
-					}
+				contents, err := io.ReadAll(reader)
+				if err != nil {
+					util.ReportUIErrorWithMessage("Error reading file contents", err, w)
+					return
+				}
 
-					entry.SetText(string(contents))
-				}, w).Show()
-			}),
-			fyne.NewMenuItem(lang.L("Save"), func() {
-				dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
-					if err != nil {
-						util.ReportUIErrorWithMessage("Error saving to file", err, w)
-						return
-					}
+				entry.SetText(string(contents))
+			}, w).Show()
+		}),
+		fyne.NewMenuItem(lang.L("Save"), func() {
+			dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
+				if err != nil {
+					util.ReportUIErrorWithMessage("Error saving to file", err, w)
+					return
+				}
 
-					if writer == nil {
-						return
-					}
+				if writer == nil {
+					return
+				}
 
-					if _, err := writer.Write([]byte(entry.Text)); err != nil {
-						util.ReportUIErrorWithMessage("Error writing file contents", err, w)
-					}
-				}, w).Show()
-			}),
+				if _, err := writer.Write([]byte(entry.Text)); err != nil {
+					util.ReportUIErrorWithMessage("Error writing file contents", err, w)
+				}
+			}, w).Show()
+		}),
+	)
+
+	return container.NewTabItem("Editor",
+		container.NewBorder(
+			nil, nil, widget.NewMenu(menu), nil,
+			container.NewHSplit(entry, display),
 		),
-	))
-	w.Show()
+	)
 }

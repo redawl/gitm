@@ -51,10 +51,10 @@ func TestCaCertIsAccessble(t *testing.T) {
 	conf, _, cleanup := setup(2, t)
 	defer cleanup()
 
-	proxyUrl, _ := url.Parse("socks5://" + conf.SocksListenURI)
+	proxyURL, _ := url.Parse("socks5://" + conf.SocksListenURI)
 	client := http.Client{
 		Transport: &http.Transport{
-			Proxy: http.ProxyURL(proxyUrl),
+			Proxy: http.ProxyURL(proxyURL),
 		},
 	}
 
@@ -79,10 +79,10 @@ func TestConnectivityThroughProxy(t *testing.T) {
 		_, _ = w.Write([]byte("<h1>Hello!</h1>"))
 	}))
 
-	proxyUrl, _ := url.Parse("socks5://" + conf.SocksListenURI)
+	proxyURL, _ := url.Parse("socks5://" + conf.SocksListenURI)
 	client := http.Client{
 		Transport: &http.Transport{
-			Proxy: http.ProxyURL(proxyUrl),
+			Proxy: http.ProxyURL(proxyURL),
 		},
 	}
 
