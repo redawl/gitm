@@ -71,7 +71,6 @@ func (m *MainWindow) makeMenu(settingsHandler func()) {
 	}
 
 	m.updateRecentlyOpenedItems(recentlyOpenedItem)
-
 	mainMenu := fyne.NewMainMenu(
 		fyne.NewMenu(lang.L("File"),
 			&fyne.MenuItem{Label: lang.L("Open"), Action: m.PacketFilter.LoadPackets, Shortcut: OpenShortcut},

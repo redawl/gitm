@@ -47,7 +47,7 @@ func ReportUIError(err error, w fyne.Window) {
 // but logs a custom error message instead of the default
 func ReportUIErrorWithMessage(message string, err error, w fyne.Window) {
 	if w != nil {
-		dialog.NewError(err, w).Show()
+		dialog.ShowError(err, w)
 	}
 
 	if message == "" {

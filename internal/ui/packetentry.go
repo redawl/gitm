@@ -256,7 +256,7 @@ func (p *PacketEntry) TappedSecondary(evt *fyne.PointEvent) {
 
 		decodeEntries = append(decodeEntries, fyne.NewMenuItem(label, func() {
 			if !p.HasSelectedText() {
-				dialog.NewError(errors.New(lang.L("select text before attempting to decode :)")), p.parent).Show()
+				dialog.ShowError(errors.New(lang.L("select text before attempting to decode :)")), p.parent)
 				return
 			}
 

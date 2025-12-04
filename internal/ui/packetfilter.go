@@ -101,9 +101,9 @@ func (p *PacketFilter) ClearPackets() {
 }
 
 // SavePackets asks the user for a file to save to,
-// and then json marshalls the packet list, saving the result to the file.
+// and then json marshals the packet list, saving the result to the file.
 func (p *PacketFilter) SavePackets() {
-	dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
+	dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
 		if err != nil {
 			util.ReportUIErrorWithMessage("Error saving to file", err, p.parent)
 			return
@@ -125,15 +125,15 @@ func (p *PacketFilter) SavePackets() {
 			return
 		}
 
-		dialog.NewInformation(lang.L("Success!"), fmt.Sprintf(lang.L("Saved packets to %s successfully."), writer.URI().Path()), p.parent).Show()
-	}, p.parent).Show()
+		dialog.ShowInformation(lang.L("Success!"), fmt.Sprintf(lang.L("Saved packets to %s successfully."), writer.URI().Path()), p.parent)
+	}, p.parent)
 }
 
 // LoadPackets asks the user for a file to load from
 // and then loads packets from that file
 func (p *PacketFilter) LoadPackets() {
 	showFilePicker := func() {
-		dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
+		dialog.ShowFileOpen(func(reader fyne.URIReadCloser, err error) {
 			if err != nil {
 				util.ReportUIErrorWithMessage("Error reading from file", err, p.parent)
 				return
@@ -158,11 +158,11 @@ func (p *PacketFilter) LoadPackets() {
 
 			fyne.CurrentApp().Preferences().SetStringList(RecentlyOpened, recentlyOpened[:count])
 			p.LoadPacketsFromReader(reader)
-		}, p.parent).Show()
+		}, p.parent)
 	}
 
 	if len(p.Packets) > 0 {
-		dialog.NewConfirm(
+		dialog.ShowConfirm(
 			lang.L("Overwrite packets"),
 			lang.L("Are you sure you want to overwrite the currently displayed packets?"),
 			func(confirmed bool) {
@@ -170,7 +170,7 @@ func (p *PacketFilter) LoadPackets() {
 					showFilePicker()
 				}
 			},
-			p.parent).Show()
+			p.parent)
 	} else {
 		showFilePicker()
 	}

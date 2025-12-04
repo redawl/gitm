@@ -148,15 +148,15 @@ func MakeSettingsUI(w fyne.Window, restart func()) dialog.Dialog {
 	}
 
 	configDir.ActionItem = widget.NewButton(lang.L("Choose"), func() {
-		dialog.NewFolderOpen(func(lu fyne.ListableURI, err error) {
+		dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
 			if err != nil {
 				util.ReportUIErrorWithMessage("Error opening folder", err, w)
 				return
 			}
-			if lu != nil {
-				configDir.SetText(lu.Path())
+			if uri != nil {
+				configDir.SetText(uri.Path())
 			}
-		}, w).Show()
+		}, w)
 	})
 
 	themeEntry := &widget.Entry{
@@ -165,7 +165,7 @@ func MakeSettingsUI(w fyne.Window, restart func()) dialog.Dialog {
 	}
 
 	themeEntry.ActionItem = widget.NewButton(lang.L("Choose"), func() {
-		dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
+		dialog.ShowFileOpen(func(reader fyne.URIReadCloser, err error) {
 			if err != nil {
 				util.ReportUIErrorWithMessage("Error opening theme", err, w)
 				return
@@ -175,7 +175,7 @@ func MakeSettingsUI(w fyne.Window, restart func()) dialog.Dialog {
 			}
 
 			themeEntry.SetText(reader.URI().Path())
-		}, w).Show()
+		}, w)
 	})
 
 	debugEnabled := &widget.Check{
@@ -300,16 +300,14 @@ func MakeSettingsUI(w fyne.Window, restart func()) dialog.Dialog {
 
 				prefs.SetStringList(internal.CustomDecodings, newCustomDecodings)
 
-				successPopup := dialog.NewConfirm(lang.L("Success!"), lang.L("New settings saved, would you like to restart the servers?"), func(b bool) {
+				dialog.ShowConfirm(lang.L("Success!"), lang.L("New settings saved, would you like to restart the servers?"), func(b bool) {
 					if b {
 						restart()
 					}
 				}, w)
-				successPopup.Show()
 			} else {
 				socks5Url.SetText(prefs.String(internal.SocksListenURI))
 				debugEnabled.SetChecked(prefs.Bool(internal.EnableDebugLogging))
-
 			}
 		},
 		w,

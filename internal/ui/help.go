@@ -111,7 +111,7 @@ func CreateEditor(w fyne.Window) *container.TabItem {
 	}
 	menu := fyne.NewMenu(lang.L("File"),
 		fyne.NewMenuItem(lang.L("Open"), func() {
-			dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
+			dialog.ShowFileOpen(func(reader fyne.URIReadCloser, err error) {
 				if err != nil {
 					util.ReportUIErrorWithMessage("Error opening file", err, w)
 					return
@@ -128,10 +128,10 @@ func CreateEditor(w fyne.Window) *container.TabItem {
 				}
 
 				entry.SetText(string(contents))
-			}, w).Show()
+			}, w)
 		}),
 		fyne.NewMenuItem(lang.L("Save"), func() {
-			dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
+			dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
 				if err != nil {
 					util.ReportUIErrorWithMessage("Error saving to file", err, w)
 					return
@@ -144,7 +144,7 @@ func CreateEditor(w fyne.Window) *container.TabItem {
 				if _, err := writer.Write([]byte(entry.Text)); err != nil {
 					util.ReportUIErrorWithMessage("Error writing file contents", err, w)
 				}
-			}, w).Show()
+			}, w)
 		}),
 	)
 
