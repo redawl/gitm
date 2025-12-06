@@ -55,8 +55,10 @@ func OpenDoc(doc string, w fyne.Window) {
 			CreateDocsEntry(lang.L("Home"), "default.md", w),
 			CreateDocsEntry(lang.L("Setup"), "setup.md", w),
 			CreateDocsEntry(lang.L("Usage Tips"), "usage.md", w),
-			CreateEditor(w),
 		)
+		if !util.IsRelease {
+			content.Items = append(content.Items, CreateEditor(w))
+		}
 		content.SetTabLocation(container.TabLocationLeading)
 		for index, item := range content.Items {
 			if item.Text == doc {
