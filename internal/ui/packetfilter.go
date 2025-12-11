@@ -176,7 +176,7 @@ func (p *PacketFilter) LoadPackets() {
 	}
 }
 
-// LoadPacketsFromMostRecentFile loads packets from the file most recently opened
+// LoadPacketsFromFile loads packets from the file most recently opened
 func (p *PacketFilter) LoadPacketsFromFile(filename string) {
 	reader, err := os.Open(filename)
 	if err != nil {

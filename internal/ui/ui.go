@@ -46,7 +46,21 @@ func (m *MainWindow) updateRecentlyOpenedItems(parent *fyne.MenuItem) {
 		parent.Disabled = false
 		for index, recentlyOpened := range recentlyOpenedFiles {
 			recentlyOpenItems[index] = fyne.NewMenuItem(recentlyOpened, func() {
-				m.PacketFilter.LoadPacketsFromFile(recentlyOpened)
+				if m.analysisToolbar.IsRecording {
+					dialog.ShowConfirm(
+						lang.L("Stop recording"),
+						lang.L("You must stop recording in order to load packets from a file. Stop recording now?"),
+						func(confirmed bool) {
+							if confirmed {
+								m.analysisToolbar.stopRecording()
+								m.PacketFilter.LoadPacketsFromFile(recentlyOpened)
+							}
+						},
+						m,
+					)
+				} else {
+					m.PacketFilter.LoadPacketsFromFile(recentlyOpened)
+				}
 			})
 			if _, err := os.Stat(recentlyOpened); errors.Is(err, os.ErrNotExist) {
 				recentlyOpenItems[index].Disabled = true
@@ -73,7 +87,22 @@ func (m *MainWindow) makeMenu(settingsHandler func()) {
 	m.updateRecentlyOpenedItems(recentlyOpenedItem)
 	mainMenu := fyne.NewMainMenu(
 		fyne.NewMenu(lang.L("File"),
-			&fyne.MenuItem{Label: lang.L("Open"), Action: m.PacketFilter.LoadPackets, Shortcut: OpenShortcut},
+			&fyne.MenuItem{Label: lang.L("Open"), Action: func() {
+				if m.analysisToolbar.IsRecording {
+					dialog.ShowConfirm(
+						lang.L("Stop recording"),
+						lang.L("You must stop recording in order to load packets from a file. Stop recording now?"),
+						func(confirmed bool) {
+							if confirmed {
+								m.PacketFilter.LoadPackets()
+							}
+						},
+						m,
+					)
+				} else {
+					m.PacketFilter.LoadPackets()
+				}
+			}, Shortcut: OpenShortcut},
 			recentlyOpenedItem,
 			&fyne.MenuItem{Label: lang.L("Clear"), Action: m.PacketFilter.ClearPackets, Shortcut: ClearShortcut},
 			&fyne.MenuItem{Label: lang.L("Save"), Action: m.PacketFilter.SavePackets, Shortcut: SaveShortcut},
