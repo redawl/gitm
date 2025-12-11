@@ -6,6 +6,7 @@ import (
 	"fyne.io/fyne/v2/lang"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/redawl/gitm/internal/packet"
 )
 
 type PacketDisplay struct {
@@ -13,13 +14,15 @@ type PacketDisplay struct {
 	entry       *PacketEntry
 	placeHolder *PlaceHolder
 	label       *widget.Label
+
+	packet packet.Packet
 }
 
-func NewPacketDisplay(label string, w fyne.Window, handleDecodeResult func(string)) *PacketDisplay {
+func NewPacketDisplay(title string, w fyne.Window, handleDecodeResult func(string)) *PacketDisplay {
 	packetDisplay := &PacketDisplay{
 		entry: NewPacketEntry(w, handleDecodeResult),
 		label: &widget.Label{
-			Text:     label,
+			Text:     title,
 			SizeName: theme.SizeNameSubHeadingText,
 		},
 		placeHolder: NewPlaceHolder(lang.L("Select a packet"), theme.InfoIcon()),
@@ -30,29 +33,39 @@ func NewPacketDisplay(label string, w fyne.Window, handleDecodeResult func(strin
 	return packetDisplay
 }
 
-func (pd *PacketDisplay) CreateRenderer() fyne.WidgetRenderer {
+func (p *PacketDisplay) CreateRenderer() fyne.WidgetRenderer {
 	return widget.NewSimpleRenderer(
 		container.NewBorder(
-			container.NewVBox(pd.label, widget.NewSeparator()),
+			container.NewVBox(p.label, widget.NewSeparator()),
 			nil,
 			nil,
 			nil,
 			container.NewStack(
-				pd.placeHolder,
-				pd.entry,
+				p.placeHolder,
+				p.entry,
 			),
 		),
 	)
 }
 
-func (pd *PacketDisplay) SetText(text string) {
-	if len(text) > 0 {
-		pd.placeHolder.Hide()
+func (p *PacketDisplay) SetPacket(pack packet.Packet, displayRequest bool) {
+	p.packet = pack
+	var text string
+	if displayRequest {
+		text = pack.FormatRequestContent()
 	} else {
-		pd.placeHolder.Show()
+		text = pack.FormatResponseContent()
 	}
 
-	pd.entry.SetText(text)
+	p.placeHolder.Hide()
 
-	pd.entry.ScrollToTop()
+	p.entry.SetText(text)
+
+	p.entry.ScrollToTop()
+}
+
+func (p *PacketDisplay) UnsetPacket() {
+	p.placeHolder.Show()
+	p.entry.SetText("")
+	p.entry.ScrollToTop()
 }

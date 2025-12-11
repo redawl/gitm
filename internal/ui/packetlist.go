@@ -33,8 +33,8 @@ func NewPacketList(packetFilter *PacketFilter, mainWindow *MainWindow) *PacketLi
 				util.Assert(id < len(filteredPackets))
 				p := filteredPackets[id]
 
-				mainWindow.requestContent.SetText(p.FormatRequestContent())
-				mainWindow.responseContent.SetText(p.FormatResponseContent())
+				mainWindow.requestContent.SetPacket(p, true)
+				mainWindow.responseContent.SetPacket(p, false)
 			},
 			HideSeparators: true,
 		},
@@ -46,8 +46,8 @@ func NewPacketList(packetFilter *PacketFilter, mainWindow *MainWindow) *PacketLi
 			newList.placeholder.Hide()
 		} else {
 			newList.placeholder.Show()
-			mainWindow.requestContent.SetText("")
-			mainWindow.responseContent.SetText("")
+			mainWindow.requestContent.UnsetPacket()
+			mainWindow.responseContent.UnsetPacket()
 		}
 	})
 
