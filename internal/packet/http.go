@@ -15,24 +15,25 @@ import (
 	"github.com/redawl/gitm/internal"
 )
 
-var _ Packet = (*HttpPacket)(nil)
+var _ Packet = (*HTTPPacket)(nil)
 
 const (
-	FILTER_HOSTNAME = "hostname"
-	FILTER_METHOD   = "method"
-	FILTER_PATH     = "path"
-	FILTER_REQ_BODY = "reqbody"
+	FilterHostname = "hostname"
+	FilterMethod   = "method"
+	FilterPath     = "path"
+	FilterReqBody  = "reqbody"
 	// TODO filter on version?
-	FILTER_STATUS    = "status"
-	FILTER_RESP_BODY = "respbody"
+	FilterStatus   = "status"
+	FilterRespBody = "respbody"
 )
 
-// HttpPacket represents a captured packet from either the https or http proxy.
-// An HttpPacket contains all the information from the http request, as well as the information from the http response (once it has been captured).
-type HttpPacket struct {
+// HTTPPacket represents a captured packet from either the https or http proxy.
+// An HTTPPacket contains all the information from the http request, as well as the information from the http response (once it has been captured).
+type HTTPPacket struct {
+	Encrypted_ bool      `json:"Encrypted"`
 	TimeStamp_ time.Time `json:"TimeStamp"`
 	Type_      string    `json:"Type"`
-	Id         [16]byte  `json:"id"`
+	ID         [16]byte  `json:"id"`
 	Hostname   string
 	Method     string
 	Status     string
@@ -48,6 +49,7 @@ type HttpPacket struct {
 }
 
 func CreatePacket(
+	encrypted bool,
 	hostname string,
 	method string,
 	status string,
@@ -58,8 +60,9 @@ func CreatePacket(
 	respBody []byte,
 	reqHeaders map[string][]string,
 	reqBody []byte,
-) HttpPacket {
-	packet := HttpPacket{
+) HTTPPacket {
+	packet := HTTPPacket{
+		Encrypted_:  encrypted,
 		TimeStamp_:  time.Now(),
 		Type_:       "http",
 		Hostname:    hostname,
@@ -74,24 +77,28 @@ func CreatePacket(
 		ReqBody:     reqBody,
 	}
 
-	if _, err := rand.Read(packet.Id[:]); err != nil {
+	if _, err := rand.Read(packet.ID[:]); err != nil {
 		slog.Error("Error generating id", "error", err)
 	}
 
 	return packet
 }
 
-func (p *HttpPacket) TimeStamp() time.Time {
+func (p *HTTPPacket) Encrypted() bool {
+	return p.Encrypted_
+}
+
+func (p *HTTPPacket) TimeStamp() time.Time {
 	return p.TimeStamp_
 }
 
-func (p *HttpPacket) Type() string {
+func (p *HTTPPacket) Type() string {
 	return p.Type_
 }
 
-func (p *HttpPacket) FindPacket(packets []Packet) Packet {
+func (p *HTTPPacket) FindPacket(packets []Packet) Packet {
 	for _, pac := range packets {
-		if httpPacket, ok := pac.(*HttpPacket); ok && httpPacket.Id == p.Id {
+		if httpPacket, ok := pac.(*HTTPPacket); ok && httpPacket.ID == p.ID {
 			return p
 		}
 	}
@@ -99,33 +106,33 @@ func (p *HttpPacket) FindPacket(packets []Packet) Packet {
 	return nil
 }
 
-func (p *HttpPacket) FormatHostname() string {
+func (p *HTTPPacket) FormatHostname() string {
 	return p.Hostname
 }
 
-func (p *HttpPacket) FormatRequestLine() string {
+func (p *HTTPPacket) FormatRequestLine() string {
 	return fmt.Sprintf("%s %s %s", p.Method, p.Path, p.ReqProto)
 }
 
-func (p *HttpPacket) FormatResponseLine() string {
+func (p *HTTPPacket) FormatResponseLine() string {
 	return fmt.Sprintf("%s %s", p.RespProto, p.Status)
 }
 
-func (p *HttpPacket) MatchesFilter(tokens []internal.FilterToken) bool {
+func (p *HTTPPacket) MatchesFilter(tokens []internal.FilterToken) bool {
 	for _, token := range tokens {
 		filterStr := ""
 		switch token.FilterType {
-		case FILTER_HOSTNAME:
+		case FilterHostname:
 			filterStr = p.Hostname
-		case FILTER_METHOD:
+		case FilterMethod:
 			filterStr = p.Method
-		case FILTER_PATH:
+		case FilterPath:
 			filterStr = p.Path
-		case FILTER_REQ_BODY:
+		case FilterReqBody:
 			filterStr = string(p.ReqBody)
-		case FILTER_STATUS:
+		case FilterStatus:
 			filterStr = p.Status
-		case FILTER_RESP_BODY:
+		case FilterRespBody:
 			filterStr = string(p.RespBody)
 		default:
 			slog.Warn("Unknown filter specified", "filterType", token.FilterType, "filterContent", token.FilterContent)
@@ -139,8 +146,8 @@ func (p *HttpPacket) MatchesFilter(tokens []internal.FilterToken) bool {
 	return true
 }
 
-func (p *HttpPacket) UpdatePacket(inPacket Packet) {
-	if httpPacket, ok := inPacket.(*HttpPacket); ok {
+func (p *HTTPPacket) UpdatePacket(inPacket Packet) {
+	if httpPacket, ok := inPacket.(*HTTPPacket); ok {
 		p.Hostname = httpPacket.Hostname
 		p.Method = httpPacket.Method
 		p.Status = httpPacket.Status
@@ -154,7 +161,7 @@ func (p *HttpPacket) UpdatePacket(inPacket Packet) {
 	}
 }
 
-func (p *HttpPacket) FormatRequestContent() string {
+func (p *HTTPPacket) FormatRequestContent() string {
 	return fmt.Sprintf(
 		"%s %s %s\n%s\n%s",
 		p.Method,
@@ -165,7 +172,7 @@ func (p *HttpPacket) FormatRequestContent() string {
 	)
 }
 
-func (p *HttpPacket) FormatResponseContent() string {
+func (p *HTTPPacket) FormatResponseContent() string {
 	return fmt.Sprintf(
 		"%s %s\n%s\n%s",
 		p.RespProto,

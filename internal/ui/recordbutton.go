@@ -24,20 +24,20 @@ func NewAnalysisToolbar(packetFilter *PacketFilter, w fyne.Window, decodeHistory
 		record: &ToolbarButton{
 			Button: widget.Button{
 				Text: lang.L("Record"),
-				Icon: theme.Icon(theme.IconNameMediaPlay),
+				Icon: theme.MediaPlayIcon(),
 			},
 		},
 		stop: &ToolbarButton{
 			Button: widget.Button{
 				Text:       lang.L("Stop"),
 				Importance: widget.DangerImportance,
-				Icon:       theme.Icon(theme.IconNameMediaStop),
+				Icon:       theme.MediaStopIcon(),
 			},
 		},
 		decodeHistory: &ToolbarButton{
 			Button: widget.Button{
 				Text: lang.L("Decode history"),
-				Icon: theme.Icon(theme.IconNameNavigateBack),
+				Icon: theme.NavigateBackIcon(),
 			},
 		},
 	}
@@ -45,10 +45,10 @@ func NewAnalysisToolbar(packetFilter *PacketFilter, w fyne.Window, decodeHistory
 	tb.decodeHistory.OnTapped = func() {
 		if decodeHistoryList.Hidden {
 			decodeHistoryList.Show()
-			tb.decodeHistory.SetIcon(theme.Icon(theme.IconNameNavigateNext))
+			tb.decodeHistory.SetIcon(theme.NavigateNextIcon())
 		} else {
 			decodeHistoryList.Hide()
-			tb.decodeHistory.SetIcon(theme.Icon(theme.IconNameNavigateBack))
+			tb.decodeHistory.SetIcon(theme.NavigateBackIcon())
 		}
 		decodeHistoryList.Refresh()
 		(*parentContainer).Refresh()

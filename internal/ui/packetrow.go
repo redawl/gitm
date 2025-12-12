@@ -12,9 +12,10 @@ import (
 
 type PacketRow struct {
 	widget.BaseWidget
-	hostname widget.Label
-	request  widget.Label
-	response widget.Label
+	icon     *widget.Icon
+	hostname *widget.Label
+	request  *widget.Label
+	response *widget.Label
 }
 
 type packetRowLayout struct{}
@@ -51,19 +52,20 @@ func (pr *packetRowLayout) Layout(objects []fyne.CanvasObject, containerSize fyn
 
 func NewPacketRow() *PacketRow {
 	row := &PacketRow{
-		hostname: widget.Label{
+		icon: widget.NewIcon(NotEncryptedIcon()),
+		hostname: &widget.Label{
 			TextStyle: fyne.TextStyle{
 				Monospace: true,
 			},
 			Truncation: fyne.TextTruncateEllipsis,
 		},
-		request: widget.Label{
+		request: &widget.Label{
 			TextStyle: fyne.TextStyle{
 				Monospace: true,
 			},
 			Truncation: fyne.TextTruncateEllipsis,
 		},
-		response: widget.Label{
+		response: &widget.Label{
 			TextStyle: fyne.TextStyle{
 				Monospace: true,
 			},
@@ -76,12 +78,18 @@ func NewPacketRow() *PacketRow {
 }
 
 func (row *PacketRow) CreateRenderer() fyne.WidgetRenderer {
-	c := container.New(&packetRowLayout{}, &row.hostname, &row.request, &row.response)
+	c := container.New(&packetRowLayout{}, row.hostname, row.request, row.response)
 
-	return widget.NewSimpleRenderer(c)
+	return widget.NewSimpleRenderer(container.NewBorder(nil, nil, row.icon, nil, c))
 }
 
 func (row *PacketRow) UpdateRow(p packet.Packet) {
+	if p.Encrypted() {
+		row.icon.SetResource(EncryptedIcon())
+	} else {
+		row.icon.SetResource(NotEncryptedIcon())
+	}
+
 	hostname := p.FormatHostname()
 	if row.hostname.Text != hostname {
 		row.hostname.SetText(hostname)
@@ -96,7 +104,7 @@ func (row *PacketRow) UpdateRow(p packet.Packet) {
 	responseLine := p.FormatResponseLine()
 
 	if row.response.Text != responseLine {
-		if httpPacket, ok := p.(*packet.HttpPacket); ok && len(httpPacket.Status) > 0 {
+		if httpPacket, ok := p.(*packet.HTTPPacket); ok && len(httpPacket.Status) > 0 {
 			switch strings.Split(httpPacket.Status, " ")[0][0] {
 			case '2':
 				row.response.Importance = widget.SuccessImportance

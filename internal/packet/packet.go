@@ -10,6 +10,7 @@ import (
 
 type Packet interface {
 	TimeStamp() time.Time
+	Encrypted() bool
 	Type() string
 	FindPacket([]Packet) Packet
 	UpdatePacket(Packet)
@@ -39,7 +40,7 @@ func UnmarshalPackets(data []byte, p *[]Packet) error {
 		}
 
 		if pacMap["Type"] == nil || pacMap["Type"].(string) == "http" {
-			var httpPacket HttpPacket
+			var httpPacket HTTPPacket
 			if err := json.Unmarshal(*pac, &httpPacket); err != nil {
 				return err
 			}

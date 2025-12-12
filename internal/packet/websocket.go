@@ -12,14 +12,14 @@ import (
 var _ Packet = (*WebsocketPacket)(nil)
 
 type WebsocketPacket struct {
-	HttpPacket
+	HTTPPacket
 	ServerFrames []*WebsocketFrame
 	ClientFrames []*WebsocketFrame
 }
 
-func CreateWebsocketPacket(httpPacket HttpPacket) *WebsocketPacket {
+func CreateWebsocketPacket(httpPacket HTTPPacket) *WebsocketPacket {
 	packet := &WebsocketPacket{
-		HttpPacket:   httpPacket,
+		HTTPPacket:   httpPacket,
 		ServerFrames: make([]*WebsocketFrame, 0),
 		ClientFrames: make([]*WebsocketFrame, 0),
 	}
@@ -30,9 +30,9 @@ func CreateWebsocketPacket(httpPacket HttpPacket) *WebsocketPacket {
 
 func (w *WebsocketPacket) FormatRequestContent() string {
 	builder := bytes.Buffer{}
-	builder.WriteString(w.HttpPacket.FormatRequestContent())
+	builder.WriteString(w.HTTPPacket.FormatRequestContent())
 	builder.WriteString("\r\n")
-	builder.WriteString(w.HttpPacket.FormatResponseContent())
+	builder.WriteString(w.HTTPPacket.FormatResponseContent())
 
 	return builder.String()
 }
@@ -68,7 +68,7 @@ func (w *WebsocketPacket) FormatResponseContent() string {
 
 func (w *WebsocketPacket) FindPacket(packets []Packet) Packet {
 	for _, pac := range packets {
-		if websocketPacket, ok := pac.(*WebsocketPacket); ok && w.Id == websocketPacket.Id {
+		if websocketPacket, ok := pac.(*WebsocketPacket); ok && w.ID == websocketPacket.ID {
 			return websocketPacket
 		}
 	}
@@ -77,7 +77,7 @@ func (w *WebsocketPacket) FindPacket(packets []Packet) Packet {
 }
 
 func (w *WebsocketPacket) UpdatePacket(p Packet) {
-	w.HttpPacket.UpdatePacket(p)
+	w.HTTPPacket.UpdatePacket(p)
 	if wp, ok := p.(*WebsocketPacket); ok {
 		w.ServerFrames = wp.ServerFrames
 		w.ClientFrames = wp.ClientFrames

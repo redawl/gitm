@@ -18,7 +18,7 @@ type HistoryItem struct {
 
 func NewHistoryItem(text string) *HistoryItem {
 	h := &HistoryItem{
-		button: widget.NewButtonWithIcon("", theme.Icon(theme.IconNameContentCopy), func() {
+		button: widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
 			fyne.CurrentApp().Clipboard().SetContent(text)
 		}),
 		label: widget.NewLabel(text),

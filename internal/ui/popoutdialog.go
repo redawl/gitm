@@ -20,19 +20,19 @@ func NewPopoutDialog(title string, dismiss string, creator func() fyne.CanvasObj
 	d.SetButtons([]fyne.CanvasObject{
 		&widget.Button{
 			Text:     dismiss,
-			Icon:     theme.Icon(theme.IconNameContentClear),
+			Icon:     theme.ContentClearIcon(),
 			OnTapped: d.Dismiss,
 		},
 		&widget.Button{
 			Text: lang.L("Popout"),
-			Icon: theme.Icon(theme.IconNameUpload),
+			Icon: theme.UploadIcon(),
 			OnTapped: func() {
 				w := util.NewWindowIfNotExists(title)
 				w.SetContent(
 					container.NewBorder(
 						widget.NewToolbar(
 							widget.NewToolbarSpacer(),
-							widget.NewToolbarAction(theme.Icon(theme.IconNameDownload), func() {
+							widget.NewToolbarAction(theme.DownloadIcon(), func() {
 								w.Hide()
 								d.Show()
 							}),

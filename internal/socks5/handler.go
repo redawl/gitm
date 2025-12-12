@@ -25,6 +25,7 @@ import (
 // httpPacketHandler is called first on the packet when inboundConn -> outboundConn completes,
 // and again when outboundConn -> inboundConn completes.
 func HandleHTTPRequest(inboundConn, outboundConn net.Conn, httpPacketHandler func(packet.Packet)) error {
+	encrypted := strings.HasSuffix(outboundConn.RemoteAddr().String(), ":443")
 	bufReader := bufio.NewReader(io.TeeReader(inboundConn, outboundConn))
 	reader := textproto.NewReader(bufReader)
 	clientBufioReader := bufio.NewReader(io.TeeReader(outboundConn, inboundConn))
@@ -45,6 +46,7 @@ func HandleHTTPRequest(inboundConn, outboundConn net.Conn, httpPacketHandler fun
 	}
 
 	httpPacket := packet.CreatePacket(
+		encrypted,
 		headers.Get("Host"),
 		method,
 		"",
@@ -77,6 +79,7 @@ func HandleHTTPRequest(inboundConn, outboundConn net.Conn, httpPacketHandler fun
 	}
 
 	completedPacket := packet.CreatePacket(
+		encrypted,
 		headers.Get("Host"),
 		method,
 		fmt.Sprintf("%s %s", statusCode, statusCodeMessage),
