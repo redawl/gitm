@@ -154,8 +154,11 @@ func MakeMainWindow(packetChan chan packet.Packet, restart func()) *MainWindow {
 		PacketFilter:    filter,
 		packetChan:      packetChan,
 	}
+
 	mainWindow.registerShortcuts(restart)
 	mainWindow.makeMenu(func() { settings.MakeSettingsUI(w, restart).Show() })
+	mainWindow.PacketFilter.AddListener(mainWindow.requestContent.UnsetPacket)
+	mainWindow.PacketFilter.AddListener(mainWindow.responseContent.UnsetPacket)
 	content = container.NewHSplit(
 		container.NewVSplit(
 			NewPacketList(mainWindow.PacketFilter, mainWindow),
