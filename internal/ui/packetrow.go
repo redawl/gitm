@@ -115,8 +115,6 @@ func (row *PacketRow) UpdateRow(p packet.Packet) {
 			case '5':
 				row.response.Importance = widget.WarningImportance
 			}
-		} else {
-			row.response.Importance = widget.MediumImportance
 		}
 		row.response.SetText(responseLine)
 	}
