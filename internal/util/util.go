@@ -24,7 +24,9 @@ func GetConfigDir() (string, error) {
 	var cfgDir string
 	if a != nil {
 		cfgDir = a.Preferences().String(internal.ConfigDir)
-	} else {
+	}
+
+	if cfgDir == "" {
 		// TODO: Use config here instead of hardcoding os config dir
 		userCfgDir, err := os.UserConfigDir()
 		if err != nil {
