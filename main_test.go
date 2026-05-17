@@ -11,30 +11,28 @@ import (
 	"github.com/redawl/gitm/internal/packet"
 )
 
-func setup(portOffset int, t *testing.T) (*internal.Config, []packet.Packet, func()) {
-	conf := internal.Config{
-		SocksListenURI:  fmt.Sprintf("127.0.0.1:%d", 1080+portOffset),
-		PACListenURI:    fmt.Sprintf("127.0.0.1:%d", 8080+portOffset),
-		EnablePACServer: true,
-	}
+var conf = internal.Config{
+	SocksListenURI:  "127.0.0.1:1080",
+	PACListenURI:    "127.0.0.1:8080",
+	EnablePACServer: true,
+}
 
+func TestMain(m *testing.M) {
 	packets := make([]packet.Packet, 0)
 
 	cleanup, err := setupBackend(conf, func(hp packet.Packet) {
 		packets = append(packets, hp)
 	})
 	if err != nil {
-		t.Errorf("Expected err = nil, got err = %v", err)
+		panic(fmt.Errorf("Expected err = nil, got err = %v", err))
 	}
-
-	return &conf, packets, cleanup
-}
-
-func TestProxyPacIsAccessible(t *testing.T) {
-	conf, _, cleanup := setup(1, t)
 
 	defer cleanup()
 
+	m.Run()
+}
+
+func TestProxyPacIsAccessible(t *testing.T) {
 	resp, err := http.DefaultClient.Get("http://" + conf.PACListenURI + "/proxy.pac")
 	if err != nil {
 		t.Errorf("Expected err = nil, got err = %v", err)
@@ -48,9 +46,6 @@ func TestProxyPacIsAccessible(t *testing.T) {
 }
 
 func TestCaCertIsAccessble(t *testing.T) {
-	conf, _, cleanup := setup(2, t)
-	defer cleanup()
-
 	proxyURL, _ := url.Parse("socks5://" + conf.SocksListenURI)
 	client := http.Client{
 		Transport: &http.Transport{
@@ -71,9 +66,6 @@ func TestCaCertIsAccessble(t *testing.T) {
 }
 
 func TestConnectivityThroughProxy(t *testing.T) {
-	conf, _, cleanup := setup(3, t)
-	defer cleanup()
-
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		_, _ = w.Write([]byte("<h1>Hello!</h1>"))

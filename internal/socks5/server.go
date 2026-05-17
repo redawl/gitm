@@ -80,8 +80,6 @@ func ListenAndServeSocks5(conf internal.Config, packetHandler func(packet.Packet
 }
 
 func handleConnection(client net.Conn, packetHandler func(packet.Packet)) error {
-	defer client.Close() //nolint:errcheck
-
 	logger := slog.With("RemoteAddr", client.RemoteAddr(), "LocalAddr", client.LocalAddr())
 	logger.Debug("Handling socks5 connection")
 
@@ -135,6 +133,7 @@ func handleConnection(client net.Conn, packetHandler func(packet.Packet)) error 
 
 		switch request.DstPort {
 		case 80:
+			defer client.Close() //nolint:errcheck
 			server, err := net.Dial("tcp", net.JoinHostPort(request.DstIP, strconv.FormatUint(uint64(request.DstPort), 10)))
 			if err != nil {
 				logger.Error("Error contacting proxied ip", "error", err)
@@ -192,11 +191,8 @@ func handleConnection(client net.Conn, packetHandler func(packet.Packet)) error 
 				return err
 			}
 			inboundConn := tls.Server(client, ServerConfig)
-			defer func() {
-				if err := inboundConn.Close(); err != nil {
-					logger.Error("Error closing inboundConn", "error", err)
-				}
-			}()
+			defer inboundConn.Close() //nolint:errcheck
+
 			if err := inboundConn.Handshake(); err != nil {
 				if errors.Is(err, io.EOF) || err.Error() == "tls: client using inappropriate protocol fallback" {
 					return nil
@@ -246,16 +242,23 @@ func handleConnection(client net.Conn, packetHandler func(packet.Packet)) error 
 // and you don't care about logging the traffic
 func transparentProxy(client net.Conn, server net.Conn) {
 	logger := slog.With("RemoteAddr", client.RemoteAddr(), "LocalAddr", client.LocalAddr())
+	done := make(chan struct{})
 	go func() {
 		if _, err := io.Copy(client, server); err != nil {
 			logger.Error("Error proxying server to client", "error", err)
 		}
+		done <- struct{}{}
 	}()
 	go func() {
 		if _, err := io.Copy(server, client); err != nil {
 			logger.Error("Error proxying client to server", "error", err)
 		}
+		done <- struct{}{}
 	}()
+	<-done
+	<-done
+	client.Close() //nolint:errcheck
+	server.Close() //nolint:errcheck
 }
 
 func handleGITM(client net.Conn) error {
