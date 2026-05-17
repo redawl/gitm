@@ -78,6 +78,20 @@ func (p *PacketFilter) AppendPacket(packet packet.Packet) {
 	p.triggerListeners()
 }
 
+// UpdatePacket updates an existing packet.
+// If a matching packet doesn't already exist, it calls AppendPacket.
+func (p *PacketFilter) UpdatePacket(packet packet.Packet) {
+	existingPacket := p.FindPacket(packet)
+
+	if existingPacket == nil {
+		p.AppendPacket(packet)
+		return
+	}
+
+	existingPacket.UpdatePacket(packet)
+	p.triggerListeners()
+}
+
 // SetPackets overwrites the tracked packets with packets
 // Calls all listeners added by AddListener
 func (p *PacketFilter) SetPackets(newPackets []packet.Packet) {

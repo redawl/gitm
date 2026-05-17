@@ -80,6 +80,8 @@ func ListenAndServeSocks5(conf internal.Config, packetHandler func(packet.Packet
 }
 
 func handleConnection(client net.Conn, packetHandler func(packet.Packet)) error {
+	defer client.Close() //nolint:errcheck
+
 	logger := slog.With("RemoteAddr", client.RemoteAddr(), "LocalAddr", client.LocalAddr())
 	logger.Debug("Handling socks5 connection")
 

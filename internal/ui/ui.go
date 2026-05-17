@@ -196,13 +196,7 @@ func (m *MainWindow) StartPacketHandler() {
 		for {
 			p := <-m.packetChan
 			if m.analysisToolbar.IsRecording {
-				existingPacket := m.PacketFilter.FindPacket(p)
-
-				if existingPacket != nil {
-					existingPacket.UpdatePacket(p)
-				} else {
-					m.PacketFilter.AppendPacket(p)
-				}
+				m.PacketFilter.UpdatePacket(p)
 			}
 		}
 	}()
