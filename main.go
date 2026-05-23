@@ -23,7 +23,7 @@ import (
 )
 
 func setupLogging(debugEnabled bool) error {
-	fileWriter, err := os.OpenFile(filepath.Join(os.TempDir(), "gitm.log"), os.O_RDWR|os.O_CREATE, 0o666)
+	fileWriter, err := os.OpenFile(filepath.Join(os.TempDir(), "gitm.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o666)
 	if err != nil {
 		return fmt.Errorf("opening log file: %w", err)
 	}
@@ -43,10 +43,6 @@ func setupLogging(debugEnabled bool) error {
 // setupBackend sets up the socks5 proxy.
 // Returns a cleanup function for gracefully shutting down the backend
 func setupBackend(conf internal.Config, httpHandler func(packet.Packet)) (func(), error) {
-	if err := setupLogging(conf.Debug); err != nil {
-		return nil, err
-	}
-
 	socksListener, err := socks5.ListenAndServeSocks5(conf, httpHandler)
 	if err != nil {
 		return nil, fmt.Errorf("socks5 proxy: %w", err)
@@ -75,6 +71,9 @@ func setupBackend(conf internal.Config, httpHandler func(packet.Packet)) (func()
 func main() {
 	app := app.NewWithID("com.github.redawl.gitm")
 	conf := internal.FromPreferences(app.Preferences())
+	if err := setupLogging(conf.Debug); err != nil {
+		slog.Error("Error initializing logging", "error", err)
+	}
 
 	packetChan := make(chan packet.Packet)
 
