@@ -1,0 +1,3 @@
+#!/bin/sh
+
+go test -coverprofile=/tmp/cover.out -count=1 -tags migrated_fynedo ./...
