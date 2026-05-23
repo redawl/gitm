@@ -54,12 +54,16 @@ func (m *MainWindow) updateRecentlyOpenedItems(parent *fyne.MenuItem) {
 							if confirmed {
 								m.analysisToolbar.stopRecording()
 								m.PacketFilter.LoadPacketsFromFile(recentlyOpened)
+								m.requestContent.UnsetPacket()
+								m.responseContent.UnsetPacket()
 							}
 						},
 						m,
 					)
 				} else {
 					m.PacketFilter.LoadPacketsFromFile(recentlyOpened)
+					m.requestContent.UnsetPacket()
+					m.responseContent.UnsetPacket()
 				}
 			})
 			if _, err := os.Stat(recentlyOpened); errors.Is(err, os.ErrNotExist) {
@@ -95,12 +99,16 @@ func (m *MainWindow) makeMenu(settingsHandler func()) {
 						func(confirmed bool) {
 							if confirmed {
 								m.PacketFilter.LoadPackets()
+								m.requestContent.UnsetPacket()
+								m.responseContent.UnsetPacket()
 							}
 						},
 						m,
 					)
 				} else {
 					m.PacketFilter.LoadPackets()
+					m.requestContent.UnsetPacket()
+					m.responseContent.UnsetPacket()
 				}
 			}, Shortcut: OpenShortcut},
 			recentlyOpenedItem,
@@ -157,8 +165,6 @@ func MakeMainWindow(packetChan chan packet.Packet, restart func()) *MainWindow {
 
 	mainWindow.registerShortcuts(restart)
 	mainWindow.makeMenu(func() { settings.MakeSettingsUI(w, restart).Show() })
-	mainWindow.PacketFilter.AddListener(mainWindow.requestContent.UnsetPacket)
-	mainWindow.PacketFilter.AddListener(mainWindow.responseContent.UnsetPacket)
 	content = container.NewHSplit(
 		container.NewVSplit(
 			NewPacketList(mainWindow.PacketFilter, mainWindow),
