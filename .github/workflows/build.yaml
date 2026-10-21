@@ -28,6 +28,7 @@ jobs:
         xvfb
         language-pack-en
         libwayland-dev
+        libxkbcommon-dev
     - name: test
       run: go test -v ./...
     - name: 'Build and package'
