@@ -27,6 +27,7 @@ jobs:
         xorg-dev
         xvfb
         language-pack-en
+        libwayland-dev
     - name: test
       run: go test -v ./...
     - name: 'Build and package'
