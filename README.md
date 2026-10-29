@@ -1,6 +1,5 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/redawl/gitm.svg)](https://pkg.go.dev/github.com/redawl/gitm)
 ![CI](https://github.com/redawl/gitm/actions/workflows/build.yaml/badge.svg)
-![go report card](https://goreportcard.com/badge/github.com/redawl/gitm)
 # Gopher in the middle
 
 
